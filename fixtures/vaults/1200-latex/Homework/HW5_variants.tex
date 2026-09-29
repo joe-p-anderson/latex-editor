@@ -1,0 +1,151 @@
+\documentclass{handout}
+\usepackage{tikz}
+
+\assignment{Homework 5 variants}
+\title{Extra practice}
+
+\begin{document}
+\maketitle
+\noindent\fbox{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{\small\textbf{AI-generated.} These problems and answers were written by an AI (Claude) from Homework 5. They have not been checked line by line, so they may contain mistakes. If an answer here disagrees with yours, bring it to class.}}
+
+\medskip
+\noindent Each problem below asks the same thing as the matching Homework 5 problem, with new numbers and a new situation. Try them after Homework 5, without looking back at it. Answers are on the last page. Not collected or graded.
+
+\section{Centripetal force}
+\begin{questions}
+    \question \textbf{Delivery van off-ramp:} A highway off-ramp curves on flat ground with a radius of 60 m. The delivery vans that use it weigh between 1,800 kg (empty) and 2,400 kg (fully loaded). Their tires can provide at most 14 kN of friction before they skid.
+    \begin{parts}
+        \part Which van mass should you use to set a safe speed limit, empty or loaded? Explain in one sentence.
+        \part Find the safe speed limit in m/s, then convert it to miles per hour.
+        \part Draw the three forces on the van on the flat ramp. Circle the force that acts as the \textbf{centripetal} force.
+        \part The ramp is rebuilt with a banked curve. Redraw the forces. Which force now helps friction provide the centripetal force, and why does that let the speed limit go up?
+    \end{parts}
+
+    \question \textbf{Swinging a bucket:} You swing a bucket of water in a vertical circle and want the water to stay in the bucket at the top. The bucket is moving at 2.8 m/s at the top of the circle.
+    \begin{parts}
+        \part Find the centripetal acceleration needed if the circle has a radius of 0.90 m (a long rope).
+        \part Find the centripetal acceleration needed if the circle has a radius of 0.60 m (your arm only).
+        \part Find the radius of the circle the water would follow if gravity were the only force on it.
+        \part For each radius, sketch the bucket's circle and, as a dotted line, the path the water would take under gravity alone. In which case does the water fall out?
+        \part In the case where the water stays in, which forces provide the \textbf{centripetal} force on the water at the top?
+    \end{parts}
+\end{questions}
+
+\section{Vectors, circles, and dot products}
+\begin{questions}
+    \question \textbf{Alignedness and dot products:} Consider the three pairs of vectors below. Notice that pair B is drawn \emph{head to tail}, not tail to tail.
+    \begin{center}
+    \begin{tikzpicture}[>=latex, very thick, scale=0.9]
+        % Pair A: perpendicular, tail to tail, rotated
+        \begin{scope}
+            \draw[->] (0,0) -- (25:2.2);
+            \draw[->] (0,0) -- (115:1.6);
+            \draw[thin] (25:0.3) -- ++(115:0.3) -- (115:0.3);
+            \node at (0.3,-0.9) {A};
+        \end{scope}
+        % Pair B: 60 degrees apart, drawn head to tail
+        \begin{scope}[xshift=4.2cm]
+            \draw[->] (-1,-0.4) -- (0.6,0.4);
+            \draw[->] (0.6,0.4) -- ++(86.6:1.6);
+            \node at (0,-0.9) {B};
+        \end{scope}
+        % Pair C: 150 degrees apart, tail to tail
+        \begin{scope}[xshift=8.4cm]
+            \draw[->] (0,0) -- (-10:2);
+            \draw[->] (0,0) -- (140:2);
+            \node at (0.3,-0.9) {C};
+        \end{scope}
+    \end{tikzpicture}
+    \end{center}
+    \begin{parts}
+        \part Which pair has a positive dot product? A negative one? Zero?
+        \part Explain the reasoning you used, including what you did about pair B.
+        \part Suppose both vectors in pair C are 2.0 m long and the angle between them is \ang{150}. Calculate their dot product.
+    \end{parts}
+
+    \question \textbf{Vectors and circular motion, the other way round:} An object moves according to
+    \begin{align*}
+        \vec{\boldsymbol{r}}(t)&= R \Big(\sin(\omega t)\hat{\boldsymbol{x}}+\cos(\omega t)\hat{\boldsymbol{y}}\Big)\\
+        \vec{\boldsymbol{v}}(t)&= \omega R \Big(\cos(\omega t)\hat{\boldsymbol{x}}-\sin(\omega t)\hat{\boldsymbol{y}}\Big)\\
+        \vec{\boldsymbol{a}}(t)&= -\omega^2 R \Big(\sin(\omega t)\hat{\boldsymbol{x}}+\cos(\omega t)\hat{\boldsymbol{y}}\Big)
+    \end{align*}
+    \begin{parts}
+        \part Where is the object at $t=0$? Does it go around clockwise or counter-clockwise? (Try a small positive $t$.)
+        \part Use a dot product to show that $\vec{\boldsymbol{v}}$ is always perpendicular to $\vec{\boldsymbol{r}}$. How do you know $\vec{\boldsymbol{a}}$ points toward the center?
+        \part For $R = 0.50$ m and $\omega = 4.0$ rad/s, find the object's speed and the size of its acceleration.
+    \end{parts}
+
+    \question \textbf{New derivatives, from the other side:}
+    \begin{parts}
+        \part Sketch $\cos\theta$ from $0$ to $2\pi$. Estimate its slope at $\theta = 0, \pi/2, \pi, 3\pi/2$, and compare your slopes with the values of $-\sin\theta$ at the same angles.
+        \part Take the derivative of $\cos\theta$ four times in a row. Explain how getting back where you started matches four \ang{90} turns taking a vector all the way around a circle.
+    \end{parts}
+\end{questions}
+
+\section{Simple harmonic motion}
+\begin{questions}
+    \question \textbf{Luggage scale:} A hand-held luggage scale uses a spring. Hanging a 2.0 kg calibration weight makes the spring 22 cm long; a 5.0 kg weight makes it 34 cm long.
+    \begin{parts}
+        \part What is the spring constant?
+        \part How long is the spring with nothing hanging from it?
+        \part A bag of apples stretches the spring to 29 cm. What is its mass?
+        \part Your lab partner says one calibration weight would have been enough, as long as you also measured the spring with nothing on it. Are they right? Explain.
+    \end{parts}
+
+    \question \textbf{Marble launcher:} You glue a 25 g marble to the spring from a toy launcher. Pulled and released, it oscillates with a period of 0.30 s.
+    \begin{parts}
+        \part Find the frequency $f$ and the angular frequency $\omega$.
+        \part Find the spring constant $k$ in N/m.
+        \part You unglue the marble, load it into the launcher, pull the spring back 5.0 cm, and let go. How long is the marble in contact with the spring?
+        \part How fast is the marble going when it leaves the spring?
+    \end{parts}
+\end{questions}
+
+\newpage
+\section*{Answers}
+{\small\setlist[enumerate]{nosep}
+Answers only, no work shown. Take $g = \SI{9.8}{m/s^2}$.
+
+\begin{enumerate}
+    \item \begin{enumerate}
+        \item Loaded, at 2,400 kg. Every van has the same friction limit, so the heaviest one skids at the lowest speed ($v = \sqrt{Fr/m}$).
+        \item \SI{18.7}{m/s}, about \SI{42}{mph}.
+        \item Gravity down, normal force up, friction horizontal toward the center of the curve. Friction is centripetal.
+        \item The normal force tilts toward the center, so part of it points inward and adds to friction. More inward force allows a larger $v$ at the same radius.
+    \end{enumerate}
+    \item \begin{enumerate}
+        \item \SI{8.7}{m/s^2}
+        \item \SI{13}{m/s^2}
+        \item \SI{0.80}{m}
+        \item The 0.90 m rope: the bucket needs less than $g$, so gravity pulls the water into a tighter circle than the bucket follows. With the 0.60 m arm the bucket needs more than $g$, so the water stays pressed against the bottom.
+        \item Gravity and the normal force from the bucket's bottom, both pointing down, toward the center.
+    \end{enumerate}
+    \item \begin{enumerate}
+        \item Positive: B. Negative: C. Zero: A.
+        \item The sign depends on the angle between the vectors when they are placed \emph{tail to tail}: under \ang{90} is positive, over is negative, exactly \ang{90} is zero. Pair B has to be slid tail to tail first; the angle between them is then \ang{60}, even though the drawing looks like a wide bend.
+        \item $(2.0)(2.0)\cos\ang{150} = \SI{-3.5}{m^2}$
+    \end{enumerate}
+    \item \begin{enumerate}
+        \item At $(0, R)$, the top of the circle. A moment later $x$ is positive and $y$ is shrinking, so it moves clockwise.
+        \item $\vec{\boldsymbol{r}}\cdot\vec{\boldsymbol{v}} = \omega R^2(\sin\omega t\cos\omega t - \cos\omega t\sin\omega t) = 0$. And $\vec{\boldsymbol{a}} = -\omega^2\vec{\boldsymbol{r}}$: it is the position vector reversed, so it always points from the object back to the center.
+        \item Speed \SI{2.0}{m/s}; acceleration \SI{8.0}{m/s^2}.
+    \end{enumerate}
+    \item \begin{enumerate}
+        \item Slopes are about $0, -1, 0, +1$, matching $-\sin\theta$ at those angles.
+        \item $\cos \to -\sin \to -\cos \to \sin \to \cos$. Each derivative turns $\vec{\boldsymbol{r}}$ by \ang{90} (and multiplies by $\omega$), as position $\to$ velocity $\to$ acceleration showed; four \ang{90} turns are \ang{360}, back to the start.
+    \end{enumerate}
+    \item \begin{enumerate}
+        \item \SI{245}{N/m}
+        \item \SI{14}{cm}
+        \item \SI{3.75}{kg}
+        \item Yes. The empty-spring length is itself a second calibration point (a mass of zero). You always need two points: one to find the spring constant, one to find the unstretched length.
+    \end{enumerate}
+    \item \begin{enumerate}
+        \item $f = \SI{3.3}{Hz}$, $\omega = \SI{21}{rad/s}$
+        \item \SI{11}{N/m}
+        \item One quarter of a period, \SI{0.075}{s}
+        \item $v = \omega A = \SI{1.0}{m/s}$
+    \end{enumerate}
+\end{enumerate}
+}
+\end{document}

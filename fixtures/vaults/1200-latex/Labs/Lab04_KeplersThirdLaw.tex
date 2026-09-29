@@ -1,0 +1,279 @@
+\documentclass{handout}
+
+\input{Labs/0LabNumbering.tex}
+
+\assignment{Lab \KeplerNumber}
+\title{Kepler's third law and circular motion}
+
+\begin{document}
+\maketitle
+
+Physics has succeeded very well in describing all sorts of complicated motion in terms of Newton's laws. Motion here on earth, however, is really messy. For one, we always have to deal with friction. Since ancient times, people have thought that bodies in the heavens (the literal meaning of \emph{celestial} bodies) move differently: their motion is regular, predictable, notably UN-messy. This naturally led people to guess that the celestial bodies were made of different stuff that naturally moved in a nicer way.
+
+People have been watching, cataloging, and predicting the motion of the heavens since \emph{before we had writing}! And yet, it took us a very long time to build up the current understanding of our solar system.
+
+In this lab, we will look at how we figured out that gravity is the force that ties the whole solar system together.
+
+\section{What's a planet?}
+Open up Solar System Scope. Do the following:
+\begin{enumerate}
+    \item On the left-hand side of the screen, hit the top button and go to \textbf{night sky}.
+    \item At the bottom of the screen, hit the \textbf{play button}. This brings up the animation menu.
+    \item Click \textbf{keep same day-time}. Now when you hit play, the date will increase but the time of day will stay the same.
+    \item On the left-hand menu, hit settings. Only show p\textbf{lanets, moons, and stars.}
+\end{enumerate}
+
+Things you will notice:
+\begin{enumerate}
+    \item The constellations, as a set, just tend to rotate rigidly around over the course of a year. These are the \textbf{fixed stars}
+    \item Some objects move \emph{relative} to the fixed stars. These were called the \textbf{wandering stars}, or as the Greeks say, \emph{planeteis asteris}. At some point we dropped the star bit and just started calling them planets (wanderers).
+\end{enumerate}
+
+There are seven planets that you can observe wandering with the naked eye: the sun, the moon, Mercury, Venus, Mars, Jupiter, and Saturn. We won't worry about the moon, we'll just consider the others.
+\clearpage
+\begin{questions}
+    \question Hit play and watch the sky for a while. Do the stars in a constellation move relative to each other, or does each constellation keep its shape?
+
+    \answerspace{1in}
+
+    \question Now find some objects that \emph{do} move relative to the constellations. List the wanderers you found and describe how they move against the background stars. (\textit{Hint}: Mercury and Venus never stray far from the sun. To see them, you may need to set the time to just after sunset.)
+
+    \answerspace{1.5in}
+
+    \question Find Mars, Jupiter, and Saturn, and rank them by how fast they wander across the constellations.
+
+    \ranking[3]{Fastest}{Slowest}
+
+    \answerspace{.75in}
+
+    \question Ancient astronomers guessed that the slowest wanderers were the farthest away. Based on your ranking, which of these three would they have put farthest from us? We'll test this guess with better data in the next section.
+
+    \answerspace{1in}
+\end{questions}
+
+\clearpage
+\section{Heliocentric motion}
+We ended up realizing that the planets' positions relative to the sun were simpler to explain than their positions in the sky (i.e.\ relative to the earth). Eventually, we just decided that it would be easier to think about the Earth going around the sun instead of the other way around. In Solar System Scope, go back to the heliocentric view:
+\begin{enumerate}
+    \item Click x on the animation menu.
+    \item Click the top button on the left-hand menu and go to `solar system'.
+    \item It also cleans things up to go to settings and hide the stars and constellation lines.
+\end{enumerate}
+
+\begin{questions}
+    \question On the screen, 1.5 major grid lines equal one astronomical unit (au, a unit of length). Measure the \textbf{radius} of each inner planet's orbit: its distance from the sun, not the width of the whole orbit. Check your scale on Earth first, whose orbit should come out to 1 au, and don't zoom in or out once you start measuring.
+    \begin{parts}
+        \part Mercury \blank[.75in] au
+
+        \answerspace{\baselineskip}
+        \part Venus \blank[.75in] au
+
+        \answerspace{\baselineskip}
+        \part Earth \blank[.75in] au
+
+        \answerspace{\baselineskip}
+        \part Mars \blank[.75in] au
+    \end{parts}
+
+    \question Notice you can drag the planets. Drag each to a location you can track and note a start date. Then drag it all the way around to find an end date. You can use a `days between' Google search to find how long the periods are in years (for example, 400 days is 400/365 = 1.09 yr).
+    \begin{parts}
+        \part Mercury: Start \blank[1.2in], End \blank[1.2in], Period \blank[1.2in] yr
+
+        \answerspace{\baselineskip}
+        \part Venus: Start \blank[1.2in], End \blank[1.2in], Period \blank[1.2in] yr
+
+        \answerspace{\baselineskip}
+        \part Earth: Start \blank[1.2in], End \blank[1.2in], Period \blank[1.2in] yr
+
+        \answerspace{\baselineskip}
+        \part Mars: Start \blank[1.2in], End \blank[1.2in], Period \blank[1.2in] yr
+
+        \answerspace{\baselineskip}
+    \end{parts}
+\end{questions}
+
+\section{Kepler's third law}
+
+Johannes Kepler worked from Tycho Brahe's painstaking measurements and eventually had a table like the one you now have (though much more precise than yours). Here is modern data for Jupiter and Saturn, the two outer planets Kepler could see:
+\begin{center}
+    \begin{tabular}{ccc}
+        \toprule
+        Planet & Distance (au) & Period (years) \\ \midrule
+        Jupiter & 5.20 & 11.86 \\
+        Saturn & 9.54 & 29.46 \\
+        \bottomrule
+    \end{tabular}
+\end{center}
+
+He eventually found a relationship that described this data:
+$$
+T^n=CR^m
+$$
+where $m,n$ are integers that you will find from your own data and $C$ is an appropriate constant. Notice that this constant has units of $(\text{Time})^n/(\text{Length})^m$.
+
+Open up ``Solar System Spreadsheet'' in Brightspace and do the following:
+\begin{enumerate}
+    \item Fill in the missing data. Distances $R$ go in column B and periods $T$ in column C.
+    \item Cell D3 holds the power $m$ and cell D4 holds the power $n$. Set both to 1 for now.
+
+\end{enumerate}
+Column D holds the data in column B ($R$) each raised to the power in D3 ($R^m$). Look at one of the formulae and you will see \verb|=B5^D$3|. 
+
+Similarly, column E holds the data in column C ($T$) each raised to the power in E3 ($T^n$). Look at one of the formulae and you will see \verb|=C5^E$3|. 
+
+The graph in the spreadsheet plots column E ($T^n$) against column D ($R^m$). The data above it are metrics of how well your physical law 
+\begin{align*}
+    T^n &\propto R^m &&\implies & T^n &= k R^m + 0
+\end{align*}
+describes the data.
+
+Use the shape of the graph for $m=1, n=1$ to answer the following questions:
+\begin{questions}
+    \question From this graph, would you say that the orbital period of planets appears to increase, decrease, or stay the same as they get farther from the sun?
+
+    \answerspace{.8in}
+
+    \clearpage
+    \question Which of the following best describes how a planet's orbital period will change (if at all) if its distance to the sun was \textbf{doubled}? Circle your choice.
+    \begin{parts}
+        \part The planet's orbital period will \textbf{decrease by half.}
+        \part The planet's orbital period will \textbf{not change.}
+        \part The planet's orbital period will \textbf{double.}
+        \part The planet's orbital period will \textbf{more than double.}
+    \end{parts}
+\end{questions}
+
+Now do the following to add a trendline to your graph:
+\begin{enumerate}
+    \item Double-click the graph.
+    \item Hit customize at the top.
+    \item Go to series, and check trendline all the way at the bottom.
+    \item Make sure ``Show $R^2$'' is checked, and set the label to ``Use Equation'' so you can see the slope and intercept.
+\end{enumerate}
+
+Now try playing with the values of $m,n$ (hint: they are both integers less than or equal to 4, so you only have 16 possibilities). $R^2$ is a measure of how well a straight line describes your data, and a perfect fit gives exactly 1. Several combinations get $R^2$ above 0.99, so close is not good enough. You are looking for the one combination where $R^2$ reads 1 to at least three decimal places \emph{and} the intercept of the trendline is close to zero.
+
+\begin{questions}
+    \question Kepler found the best $m,n$ such that the model predicted the relationship in the data. What powers $m,n$ did he find, and what was the proportionality constant $C$?
+
+    \answerspace{1in}
+    \answerspace{\fill}
+\end{questions}
+\begin{questions}
+    \question What are the units of the value of $C$ that you reported?
+
+    \answerspace{1in}
+    \answerspace{\fill}
+\end{questions}
+
+\clearpage
+Kepler never saw Uranus or Neptune. They were discovered in 1781 and 1846, long after he died, which makes them a good test of your law.
+
+\begin{questions}
+    \question Uranus takes 84.01 years to orbit the sun. Use your law to predict its distance from the sun.
+
+    \answerspace{1.5in}
+
+    \question Neptune is 30.06 au from the sun. Use your law to predict how long it takes to orbit the sun.
+
+    \answerspace{1.5in}
+
+    \question Look up the measured distance of Uranus and period of Neptune. How close were your predictions?
+
+    \answerspace{1in}
+    
+    \question Explain what an empirical model is (how is it different from a physical law?) and why it is useful in this situation.
+    \answerspace{1in}
+\end{questions}
+
+\clearpage
+\section{Deriving gravity}
+We can actually use this with what we know about circular motion to derive the strength of the gravitational force! Kepler found that orbits are really ellipses, not circles (that's his first law), but for most planets the ellipse is very close to a circle, so we'll treat the orbits as circles.
+
+On the whiteboard, work through the following steps. Don't fill in the answers until the instructor has approved your whiteboard work.
+\begin{questions}
+    \question A planet goes around its orbit at (nearly) constant speed. Is it accelerating? If so, in what direction?
+
+    \answerspace{1in}
+
+    \question Draw a free-body diagram for a planet. What object is pulling on it? Are there any other forces?
+
+    \answerspace{1.5in}
+\end{questions}
+
+
+
+\begin{questions}
+    \question Write an expression for the planet's speed in terms of the period $T$ and radius $R$. (\textit{Hint}: how far does the planet travel in one period?)
+
+    \answerspace{1.2in}
+
+    \question Write an expression for the planet's centripetal acceleration in terms of the period and radius. \label{accel}
+
+    \answerspace{1.2in}
+
+    \question Now eliminate the period using Kepler's third law.
+    \begin{parts}
+        \part Write Kepler's third law with your powers, and solve it for $T^2$ if it isn't already.
+
+        \answerspace{1in}
+        \part Substitute this into your acceleration from question \ref{accel}. Simplify the powers of $R$.
+
+        \answerspace{1.2in}
+    \end{parts}
+    You now have the acceleration as a function of distance from the sun.
+
+    \question Use Newton's second law, $F_\text{net}=ma$, to get the gravitational force on the planet in terms of the planet's mass $m$ and its distance $R$ from the sun. \label{gravForce}
+
+    \answerspace{1.2in}
+
+    \question What direction does gravity point? (\textit{Hint}: Which direction does centripetal acceleration point?)
+
+    \answerspace{1in}
+
+\end{questions}
+\clearpage
+The formal definition for the gravitational interaction between the sun and a planet is
+$$
+\vec{\boldsymbol{F}}_g=(-\hat{\boldsymbol{r}}) \frac{GM_\odot M_\text{planet}}{R^2}
+$$
+where $M_\odot$ is the mass of the sun (look it up), $M_\text{planet}$ is the mass of the planet, and $G$ is the gravitational constant ($6.6743\times 10^{-11}$ m$^3$/(kg s$^2$)). Notice that this is a vector. Its direction is determined by the $(-\hat{\boldsymbol{r}})$, which means gravity pulls planets back toward the sun.
+
+The stuff in your answer to question \ref{gravForce} that is in front of $m/R^2$ (let's call it a prefactor) should be $GM_\odot$. Your prefactor has units of au$^3$/yr$^2$. To compare, we'll measure mass in \emph{solar masses}, $M_\odot$, so that the sun's mass is exactly $1\,M_\odot$. Then $GM_\odot$ is the same number as $G$.
+
+\begin{questions}
+
+    \question Fill in the following dimensional analysis table to convert $G$ to the units \mbox{au$^3$/($M_\odot$ yr$^2$)}:
+
+    \begin{tabular}{c|c|c|c}
+         $6.6743\times 10^{-11}$ m$^3$& $\Bigg($\hspace{1.5in} s$\Bigg)^2$ & au$^3$&$\Bigg($\hspace{.7in} kg$\Bigg)$\\\hline
+         kg s$^2$& yr$^2$ &  $\Bigg($\hspace{.7in} m$\Bigg)^3$ & $M_\odot$
+    \end{tabular}
+
+    \answerspace{1in}
+
+    \question Check that this value of $G$ agrees with your prefactor. If they don't agree, what might explain the difference?
+
+    \answerspace{1.5in}
+    \clearpage
+
+\end{questions}
+
+\section{Conclusion}
+\begin{questions}
+    \question Explain why Newton's laws of motion are the key to unearthing the gravitational formula hidden in Kepler's third law.
+
+    \answerspace{1.5in}
+
+    \question Which part of this process would have been the hardest to accomplish on your own and why?
+
+    \answerspace{1.5in}
+
+    \question The law of universal gravity is like a surprising theorem proved to be a consequence of Newton's laws of motion and Kepler's third law.\footnote{Actually, a full proof involves using Kepler's first and second law about the elliptical shape of orbits.} Explain our evidential basis for the two priors being true.
+
+    \answerspace{1.5in}
+
+    \question What did you learn about the process of experimental and/or theoretical physics in this exercise?
+
+\end{questions}
+\end{document}

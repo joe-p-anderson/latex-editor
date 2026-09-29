@@ -1,0 +1,79 @@
+\documentclass{handout}
+
+\assignment{Homework 2}
+\title{Kinematics and calculus}
+
+\begin{document}
+\maketitle
+\practiceinstructions
+
+\section{Position, velocity, and acceleration}
+
+\begin{questions}
+    \question \textbf{Average walking velocity:} Estimate your average velocity when walking from the dorms to Straz. Explain how you measured the distance and the time it takes, also explain how you used these quantities to calculate your average walking velocity. Express your answer both in meters per second and feet per second.
+
+    \question \textbf{Mean speed theorem:} Use the picture bellow to explain the mean speed theorem. 
+    \begin{center}
+        \includegraphics[width=0.5\textwidth]{Images/hw_2_mean_speed.pdf}
+    \end{center}
+    \begin{parts}
+        \part Explain why the area under the velocity graph can be given by 
+        $$
+        \Delta x = \frac{1}{2} (v_i + v_f) \Delta t
+        $$
+        \part Explain why the area under the velocity graph can also be given by either of the following:
+        \begin{align*}
+            \Delta x &= v_i \Delta t + \frac{1}{2} a \Delta t^2\\
+            &= v_f \Delta t - \frac{1}{2} a \Delta t^2
+        \end{align*}
+    \end{parts}
+    \question \textbf{Building height:} Physics lets use a stopwatch as a measuring stick to measure tall buildings. You can use ft/s ($g$=32 ft/s$^2$) or m/s ($g$=9.8m/s$^2$). Say you drop a ball and it takes 2 s to hit the ground.
+    \begin{parts}
+        \part Draw a velocity-time graph for a ball dropped off the top of a building (\textit{hint}: what is the initial velocity?).
+        \part What is the velocity of the ball when it hits the ground?
+        \part Draw a position-time graph for the ball, let your position on top of the building be $z=0$ (\textit{hint}: what is the initial position and how does the initial velocity affect the graph?).
+        \part Calculate the height of the building.
+        \part If you go to a different building where the ball takes twice as long to reach the ground, how much taller is the building?
+    \end{parts}
+
+\end{questions}
+
+\section{Basics of calculus}
+
+\begin{questions}
+    \question \textbf{Skateboarder on a hill:} \label{q:skateboard}For the following, consider a skateboarder coasting up a hill. Due to the slope, his acceleration due to gravity is $a_0=-5.0$ m/s$^2$. He starts at the bottom of the hill with an initial velocity of $v_0=5$ m/s and an initial position of $x_0=0.0$ m.
+    \begin{parts}
+        \part How long does it take for the skateboarder to return to his starting position?
+        \part What is the skateboarder's velocity when he returns to his starting position?
+        \part How far up the hill does the skateboarder get before he starts rolling back down?
+    \end{parts}
+
+    \question \textbf{Tangent lines:} In class we found the equations of motion for an object undergoing constant acceleration: 
+    \begin{align}
+        a(t) &= a_0\\
+        v(t) &= v_0 + a_0 t\\
+        x(t) &= x_0 + v_0 t + \frac{1}{2} a_0 t^2
+    \end{align}
+    Lets examine the claim that $v(t)$ is the instantaneous slope of $x(t)$. 
+
+    You may remember that in addition to the slope-intercept form of a line, $y=mx+b$, there is also the point-slope form: $y-y_1=m(x-x_1)$, used when you know a general point $(x_1, y_1)$ that the line passes through. 
+
+    Consider the constant-velocity equations of motion passing through known locations on the graph from question \ref{q:skateboard}. This should pass through the point $(t_0, x(t_0))$ at that time and have slope $v(t_0)$. 
+    \begin{parts}
+        \part What is the equation of this line for $t_0=0$ s?
+        \part What is the equation of this line when he returns to his starting position?
+        \part What is the equation of this line when he reaches the top of his motion?
+        \part What is the equation of this line for $t_0=1.5$ s?
+        \part Plot these alongside a plot of $x(t)$. What do you notice about the lines' relationship to the curved graph?
+        \part Explain why the derivative isn't the `instantaneous slope' but rather the `slope of the best straight line approximation' of the curve at a point.
+    \end{parts}
+
+    \question \textbf{Derivative product rule:} In class we learned how to obtain derivatives of polynomials: $$\frac{d}{dt} t^n=nt^{n-1}.$$
+    Use a drawing to explain the case of $n=$2, and 3.
+    \begin{parts}
+        \part Use a square with variable side length to show that when the side length changes by a small amount $d t$, the area of the square changes by an amount $dA=2t(dt)$.
+        \part Use a cube with variable side length to show that when the side length changes by a small amount $d t$, the volume of the cube changes by an amount $dV=3t^2(dt)$.
+    \end{parts}
+\end{questions}
+
+\end{document}

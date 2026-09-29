@@ -1,0 +1,152 @@
+\documentclass{handout}
+
+\assignment{Activity}
+\title{Algebra and geometry}
+
+\begin{document}
+\maketitle
+\lectureactivity
+
+\section{Why Pythagoras?}
+In this activity, we will be `demonstrating' the Pythagorean theorem, i.e. for a right triangle where the two right legs are of length $a,b$, the hypotenuse (leg opposite the right angle) $c$ satisfies:
+$$a^2 + b^2 = c^2. $$
+
+Sure, it is good to know the Pythagorean theorem, but the point of this exercise is to think about math in a particular way. In the activity, please take note of the following things:
+\begin{enumerate}
+    \item Algebra (rearranging symbols) often has a geometric meaning.
+    \item Geometric statements can be manipulated with algebra.
+    \item It is easy to reason in geometry, but hard to be precise.
+    \item It is easy to be precise in algebra, but sometimes hard to reason.
+    \item Manipulating expressions composed of symbols is useful for focusing on what is universal about a mathematical statement. For example, the Pythagorean theorem holds for all right triangles, no matter the lengths $a,b$.
+\end{enumerate}
+Knowing the tradeoff between thinking spatially or conceptually about a problem and manipulating symbolic expressions will be a tool that will help you throughout your adventures in physics.
+
+\section{Preliminaries}
+To start off, we will need the following geometric facts.
+\begin{enumerate}
+    \item Drawing a diagonal across a rectangle produces two right triangles identical in every respect.
+    \item Two right angles make up a straight line.
+    \item Due to 1 (why?), the area of a right triangle of legs $a,b$ is $ab/2$.
+    \item Also due to 1 (why?), the two non-right angles of a right triangle together make up a right angle.
+\end{enumerate}
+In terms of places to begin, 1 and 2 are pretty close to brute facts (called postulates in mathematics) that are just accepted immediately by common sense without proof. As you can guess from the (why?) comments above, 3 and 4 follow from the first two.
+
+Some other math terms you might see around town:
+\begin{enumerate}
+    \item \textbf{Postulate}: brute fact perceived immediately from which other things are proved. Tagline: \emph{duh.}
+    \item \textbf{Theorem}: a mathematical fact that follows logically from lower level facts (e.g. postulates), but the relationship is complex enough that it is not necessarily immediately intuitive. Distinct from lemmas and corrolaries that it is interesting in its own right. Tagline: \emph{whoa.}
+    \item \textbf{Lemma}: a theorem that isn't interesting enough to care about on its own; usually just an intermediate statement useful for proving a theorem. Tagline: \emph{umm... so?}
+    \item \textbf{Corrolary}: a result that follows as an obvious immediate consequence of a theorem. Tagline: \emph{me too!}
+\end{enumerate}
+As you can see, theorems, lemmas, and corrolaries are all composite statements proved eventually from postulates. The only distinction is a matter of subjective opinion/taste. `Cool' results get to be theorems. Less cool results that come before the theorem are lemmas, and less cool results that come after the theorem are corrolaries.
+
+\subsection{Lemma 1: some algebra}
+To illustrate our main character of the activity, we'll start of with a lemma: 
+
+\textbf{Lemma 1:} a square of side lengths $a+b$ has area $$a^2 + 2 ab + b^2.$$
+
+\begin{questions}
+\question Show that this follows from the expansion of the binomial expression $(a+b)(a+b)$. 
+\vspace{1in}
+\question Interpret this statement geometrically in terms of two squares and two rectangles.
+\vspace{1in}
+\end{questions}
+
+\section{The Pythagorean theorem}
+Let's start by looking at the square $(a+b)^2$ from a geometric perspective. The whole theorem we are thinking about centers on the right triangle of sides $a,b,c$. Since we've already named the sides, let's name the area: $A$ (for Area). 
+
+\subsection{Geometrically speaking}
+In this section, you are going to find two arrangements of the triangles that demonstrate the following mathematical statements. The goal here is to have voids left over that are clearly the parts of the right hand side besides $4A$.
+\begin{questions}
+    \question $(a+b)^2 = a^2 +b^2 + 4 A$. Draw a schematic of your arrangement.
+    \vspace{1in}
+    \question $(a+b)^2 = c^2 + 4 A$. Draw a schematic of your arrangement.
+    \vspace{1in}
+\end{questions}
+You have now gotten the big idea of the proof, but there are still some hidden logical steps you passed over. Rearrangement puzzles have a problem: you aren't very good at telling the difference between squares and barely-not-squares. Maybe the angles are barely off (a parallelogram), maybe the sides are different lengths (rectangle). 
+
+\subsection{Formalizing}
+
+How do we know the squares are squares? Squares have 4 equal sides and all their interior angles are right angles.
+
+\begin{questions}
+    \question Explain how you know that all four sides of your $a^2$ square have length $a$. 
+    \vspace{1in}
+
+    \question Explain how you know that all four angles of your $a^2$ square are right angles.
+    \vspace{1in}
+
+    \question Explain how you know that all four sides of your $c^2$ square have length $c$. 
+    \vspace{1in}
+
+    \question Explain how you know that all four angles of your $c^2$ square are right angles.
+    \vspace{1in}
+
+\end{questions}
+
+\section{Area of a parallelogram}
+Next, we will prove that the area of a parallelogram is given by the formula $A = b h$, where $b$ is the length of the base and $h$ is the height, measured at right angles to the base. Curiously, the area of a parallelogram has nothing to do with the angles of the shape (how leaned over it is).
+
+\section{More mathematical preliminaries: Trigonometry}
+Right triangles are important, as we have seen. They are great for measuring things (distances, areas, etc.). They show up al the time in physics, often closely followed by their cousin, circles. Wait, circles? Yes. 
+
+Trigonometry is actually about circles; one special circle, in fact. The **unit circle** is a circle of radius 1, centered at the origin of a Cartesian coordinate system. This is the collection of all possible right triangles, which then just need to be scaled up by their particular hypotenuse.
+
+The important thing to know about trigonometry is that
+\begin{enumerate}
+    \item An angle is defined counterclockwise from the positive $x$-axis.
+    \item The sine of an angle is the $y$-coordinate of the point on the unit circle corresponding to that angle.
+    \item The cosine of an angle is the $x$-coordinate of the point on the unit circle corresponding to that angle.
+    \item The tangent of an angle is the slope of the line from the origin to the point on the unit circle corresponding to that angle.
+\end{enumerate}
+This leads to the following mnemonic: ``SOHCAHTOA'':
+\begin{itemize}
+    \item Sine = Opposite / Hypotenuse
+    \item Cosine = Adjacent / Hypotenuse
+    \item Tangent = Opposite / Adjacent
+\end{itemize}
+
+Notice, for the unit circle, the hypotenuse is always 1, so the sine and cosine are just the opposite and adjacent sides of the triangle, respectively. 
+
+Why is this useful? It gives us the ability to talk about **non-right triangles**, which is what this next theorem is all about.
+
+Before that, however, we need a new lemma, which is just a corrolary of the definition of sine and cosine:
+\subsection{Lemma 2}: The sum of the square of the sine and cosine of an angle is 1. In symbols, for any angle $\theta$:
+$$\sin^2 \theta + \cos^2 \theta = 1.$$
+
+This is often called the \textbf{Pythagorean identity}. **Exercise:** Prove this identity using the definition of sine and cosine on the unit circle and the Pythagorean theorem.
+
+\section{Law of cosines}
+Next, we will prove the law of cosines, which is a generalization of the Pythagorean theorem to non-right triangles. The law of cosines states that for any triangle with sides $a$, $b$, and $c$, and angle $\gamma$ opposite side $c$:
+$$c^2 = a^2 + b^2 + 2ab \cos(\theta).$$
+where $\theta$ is the exterior angle between the two sides $a$ and $b$.
+
+You're on your own for this one. Use the following picture as a guide
+\begin{figure}[h!]
+    \centering
+    \includegraphics[height=2in]{Images/law of cosines.pdf}
+\end{figure}
+\vspace{\fill}
+\clearpage
+Put your proof here (pictures encouraged), but algebra should be clear.
+\vspace{4in}
+
+
+
+Another exercise, explain why the area of a parallelogram is given by 
+$$
+A = ab\sin(\theta)
+$$
+where $a$ and $b$ are the lengths of the two sides and $\theta$ is the angle between them (same angle as in the law of cosines).
+\vspace{2in}
+
+\clearpage
+\section{Conclusion}
+Explain the relationship between geometric and algebraic reasoning in your own words. How do you know when to use one or the other? When is it useful to use both?
+\vspace{2in}
+
+Explain what a mathematical proof is, and why they might be useful in physics.
+
+
+
+\end{document}

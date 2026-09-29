@@ -1,0 +1,135 @@
+\documentclass{handout}
+
+\assignment{Lab 3}
+\title{Free falling objects}
+
+\begin{document}
+\maketitle
+
+In this lab we will be measuring the motion of objects in free fall. We will do this using two methods. First, we will use the basic tools of a ruler and a stopwatch. Next, we will use video analysis software to generate the motion graphs.
+
+\section{The old-fashioned way}
+Using a meter stick, drop a ball from a range of heights and time how long it takes to reach the ground. For each height, drop the ball three times. For the error, we will use the following form:
+$$
+\sigma_{av}= \frac{\sigma_0}{\sqrt{n}}
+$$
+where $\sigma_0$ is the error in one time measurement and $n$ is the number of measurements averaged together.
+
+\begin{questions}
+    \question Fill in the following table and draw a motion plot (vertical position vs time), including horizontal error bars.
+\end{questions}
+
+\vspace{\baselineskip}
+\begin{tabular}{c|c c c| c l}
+     height (m) & Time 1 (s) & Time 2 & Time 3 & Average (s) & Error \\ \hline
+     \\[2\baselineskip] \hline
+     \\[2\baselineskip] \hline
+     \\[2\baselineskip] \hline
+     \\[2\baselineskip] \hline
+\end{tabular}
+
+\vspace{\baselineskip}
+\begin{questions}
+    \question Use your data to calculate the average velocity in each interval (between rows 1 and 2, 2 and 3, etc.) and make a velocity plot below. Associate each velocity with the time halfway between the two points.
+\end{questions}
+\clearpage
+\begin{questions}
+    \question Draw two trendlines on your velocity-time diagram and use the slope to estimate the acceleration. Report your answer as the average $\pm$ half the difference.
+
+    \answerspace{2in}
+
+    \question The data in your position table should look like $x(t)=Ct^2$ for some constant $C$. How is this constant related to the value you obtained for the acceleration?
+
+    \answerspace{2in}
+
+\end{questions}
+In experimental results, it is common to have both random error and systematic error. Random error means your data is noisy: less error means that repeated measurements are tightly clustered around a certain value. However, it is also possible to have systematic error in your experiment: some unaccounted for way that all your measurements are off the mark in the same way; this results in the location of that cluster being away from the `true' value.
+\begin{questions}
+    \question List one source of random error and one source of systematic error that could have affected the values you measured for the acceleration due to gravity.
+\end{questions}
+\clearpage
+
+\section{Video motion tracking}
+We will be using motion tracking software to analyze a video frame-by-frame to generate a motion graph. This requires two things:
+\begin{itemize}
+    \item A reference object of known size
+    \item A steady camera over the course of the video.
+\end{itemize}
+Record a video of you dropping a ball from a predetermined height (somewhere between 1.5-3 m).
+
+Here are the steps to follow once you open up tracker and get your video on the computer. Getting your video set up consists of a few steps...
+\begin{enumerate}
+    \item Open your video (file menu $\to$ open file... $\to$ find your file and click “open”)
+    \item Play your video (click the green triangular play button) and make sure
+everything worked.
+\item Isolate the portion of your video containing the motion of interest (from
+just after the object is thrown to a few frames after it hits the ground)
+by clicking and dragging the black triangles beneath the time scrollbar.
+\item Create a “calibration stick” (tracks menu $\to$ new $\to$ calibration tools $\to$
+calibration stick)
+\item Calibrate with your known size (click and drag the endpoints of your
+calibration stick to move it over your object of known size, click the
+magnifying class button to select a more zoomed-in view, use the scroll
+bars to find your object of known size, then refine the position of your
+calibration stick.)
+\item Change the length of your calibration stick to the length of you object
+(click on the number near the midpoint of the calibration stick, type
+the proper length in meters, and press enter)
+\item Change the origin of the coordinate system to something convenient
+(click the “show or hide the coordinate axes” button, looks like a pair
+of axes, the 7th button from the left in the toolbar. Then click and drag
+the origin to a convenient point. You can also click and drag the +x
+axis (the one with the mark on it) to change the angle – do this if you
+weren’t holding the camera level.)
+\end{enumerate}
+Tracker tracks “point masses”. To track your point mass, first create a point
+mass (create button, point mass), then scroll to the moment just after the
+object is thrown, then zoom in on your object and shift-click to set a location.
+Doing so automatically advances to the next frame, so shift-click again on the
+new object location. Continue doing this until you have at least a few frames
+after the object hits the ground.
+
+At this point, save your progress (file $\to$ save tab as...). You have now saved
+all your hard work in case anything gets screwed up later.
+
+As you track your object, you will notice data being recorded in a table and
+points appearing in a plot in the right panels. You can adjust the quantity
+plotted by clicking on the axis label (e.g. “x” and “t” by default). Many
+quantities are available, so play around a bit. If anything is unclear, or if you
+get stuck, please ask.
+\subsection{Questions}
+\begin{questions}
+    \question How do tracker's position and velocity graphs compare to the ones you made earlier?
+    \clearpage
+
+    \question Tracker is actually computing the velocity and accelerations very similarly to how you did earlier: every pair of position measurements is used to calculate a velocity, and every pair of velocities is used to calculate an acceleration. Explain why the acceleration vs time graph looks bad.
+
+    \answerspace{\fill}
+
+    \question Use the velocity-time graph to obtain an estimate for the acceleration due to gravity. Draw a schematic to illustrate how you used the graph to do this. Report your answers in m/s$^2$, no need for error estimates this time.
+
+    \answerspace{\fill}
+
+    \question The position behavior should look like $x(t)=Ct^2$ for some constant $C$. How is this constant related to the value you obtained for the acceleration?
+
+    \answerspace{\fill}
+    \answerspace{.5in}
+    \clearpage
+
+    \question Comment on possible sources of error (random and systematic) in this method of measuring position vs time. Are these more or less significant than in the ruler and stopwatch case, and why?
+
+    \answerspace{2in}
+\end{questions}
+
+\section{Conclusion}
+\begin{questions}
+    \question Today you found that the position behavior of an object falling from rest is given by $x(t)=$ \blank[.5in] $gt^2$, where
+
+    \answerspace{\baselineskip}
+
+    $g=$ \blank[1in]
+
+    \question Does this apply to all falling objects? Identify three factors that might make an object's behavior deviate from the above statement.
+\end{questions}
+
+\end{document}

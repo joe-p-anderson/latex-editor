@@ -1,0 +1,99 @@
+\documentclass{handout}
+
+\assignment{Homework 1}
+\title{Units and expressions --- answers}
+\DeclareSIUnit{\solarmass}{\text{M}_{\odot}}
+
+% No name blank on an answer key.
+\firstpageheader{}{}{\footnotesize Physics 1200 Homework 1 --- answers}
+
+\begin{document}
+\maketitle
+
+\noindent\emph{Answers only --- no work is shown.} Numerical answers are given to
+two significant figures, so yours may differ in the last digit depending on the
+conversion factors you looked up. Where the point of a problem is the reasoning
+rather than the number, a one-line note says what the reasoning should land on.
+
+\section{Units}
+\begin{questions}
+  \question \textbf{Expression units}
+  \begin{parts}
+    \part $\si{kg.m/s^2}$. (This combination is a force; later in the course it
+      gets the name \emph{newton}.)
+    \part No units --- $\gamma$ is dimensionless. $v^2/c^2$ is a velocity divided
+      by a velocity, so the whole expression is a pure number.
+  \end{parts}
+
+  \question \textbf{Adding together}
+  \begin{parts}
+    \part Consistent. Both terms come out to $\si{kg.m^2/s^2}$.
+    \part Not consistent. $T/2\pi$ is in \si{s}, while $c/\lambda$ is in
+      \si{1/s}. Seconds and per-seconds cannot be added.
+  \end{parts}
+
+  \question \textbf{Metric prefixes}
+  \begin{parts}
+    \part \SI{75.9}{Mm} (megameters)
+    \part \SI{7.4}{mm}
+    \part \SI{88}{pm} (picometers)
+    \part \SI{16.3}{Tm} (terameters)
+  \end{parts}
+
+  \question \textbf{Landmarks in SI}
+  \begin{parts}
+    \part \SI{3.1}{miles} (1 mile $=$ \SI{1.61}{km})
+    \part \SI{73}{kg} (1 lb $=$ \SI{0.454}{kg})
+    \part \SI{5}{mph} $=$ \SI{2.2}{m/s}; \SI{60}{mph} $=$ \SI{27}{m/s}.
+      (1 mph $=$ \SI{0.447}{m/s}, so \SI{1}{m/s} is a little over \SI{2}{mph}.)
+  \end{parts}
+
+  \question \textbf{Unit conversions}
+  \begin{parts}
+    \part \SI{1e12}{km^3}, and \SI{1e27}{cm^3} $=$ \SI{1e27}{mL}. The
+      conversion factor gets cubed along with the unit: \SI{1}{km^3} $=$
+      \SI{1e9}{m^3}, not \SI{1e3}{m^3}.
+    \part $G \approx 40\ \si{au^3 \solarmass^{-1} year^{-2}}$ (39.5 if you carry
+      more digits). That number is $4\pi^2$, which is not a coincidence --- it
+      turns up again in the Kepler's laws unit.
+  \end{parts}
+\end{questions}
+
+\section{Dimensional analysis}
+\begin{questions}
+  \question \textbf{Mystery quantities I}
+  \begin{parts}
+    \part $ac = \SI{30}{m/s}$ (the only combination that works)
+    \part $ac^2 = \SI{90}{m}$ (again the only combination)
+    \part This is free fall: $a$ is $g$ and $c$ is an elapsed time. $ac$ is the
+      speed after falling for \SI{3}{s}, and $ac^2$ is the distance fallen ---
+      except that the real distance is $\tfrac12 ac^2 = \SI{45}{m}$. Dimensional
+      analysis found the right ingredients but not the $\tfrac12$. The mass $b$
+      cannot appear, which is correct: mass does not affect free fall.
+  \end{parts}
+
+  \question \textbf{Mystery quantities II}
+  \begin{parts}
+    \part $\sqrt{a/c} = \SI{320}{m/s}$. Note $b$ cannot appear.
+    \part $ab^2 = \SI{10}{kg.m/s^2}$. Note $c$ cannot appear.
+    \part $a$ is atmospheric pressure (\SI{101.3}{kPa} is 1 atm), $c$ is about
+      the density of air, and $b$ is \SI{1}{cm}. So $\sqrt{a/c}$ is essentially
+      the speed of sound in air (really \SI{343}{m/s}), and $ab^2$ is pressure
+      $\times$ area $=$ the force the atmosphere puts on a \SI{1}{cm^2} patch,
+      about \SI{10}{kg.m/s^2} --- the weight of a \SI{1}{kg} object.
+  \end{parts}
+
+  \question \textbf{Pendulum swing}
+  \begin{parts}
+    \part $T = \sqrt{l/g} = \SI{0.17}{s}$. The mass $m$ cannot appear.
+    \part The period grows by a factor of $\sqrt{2} \approx 1.4$.
+    \part Dimensional analysis tells you which quantities can matter (not $m$),
+      and how the answer scales with each of them ($T \propto \sqrt{l}$) --- and
+      those parts are exact, which is why (b) is right. What it can never tell
+      you is the dimensionless factor out front, here $2\pi$, because a pure
+      number has no units to leave a trace in. That is why (a) is off by $2\pi$
+      even though nothing about the reasoning was wrong.
+  \end{parts}
+\end{questions}
+
+\end{document}

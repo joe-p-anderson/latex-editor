@@ -1,0 +1,192 @@
+\documentclass{handout}
+
+\assignment{Lab 7}
+\title{Ray optics}
+
+\begin{document}
+\maketitle
+
+\section{Refraction}
+
+Instructions: Place the D shaped prism on the raytable as shown. Turn on the light source and set it to emit several beams of light.
+\begin{questions}
+    \question \textbf{Explore:} Shine the beams of light into the prism at various angles and define the following terms using your observations:
+    \begin{parts}
+        \part Refraction:
+
+        \answerspace{2\baselineskip}
+        \part Total internal reflection:
+
+        \answerspace{2\baselineskip}
+        \part Critical angle:
+
+        \answerspace{2\baselineskip}
+    \end{parts}
+
+\end{questions}
+We are using a semicircular prism. As long as you keep the ray of light passing into the center of the flat face, the outgoing light will only refract at the flat face. This is because all possible rays that could emanate from the center of the circle will always hit the curved surface perfectly normal the interface. Important: in your measurements, be sure to keep the ray going only into crosshairs of the raytable and keep the prism aligned with the outline on the raytable.
+\begin{questions}
+    \question Set the light source to emit a single beam. Shine the beam on the center of the raytable. Record several measurements of the incoming and outgoing beam angles in the table below:
+    \begin{table}[h!]
+        \centering
+        \begin{tabular}{c|c}
+             $\theta_1$ (deg.) & $\theta_2$ (deg.) \\\hline
+             & \\
+             & \\
+             & \\
+             & \\
+             & \\
+             & \\
+             & \\
+             & \\
+             & \\
+             & \\
+        \end{tabular}
+    \end{table}
+    \clearpage
+
+    \question Enter these numbers into an excel spreadsheet and plot them against each other. Draw a schematic of the plot below.
+
+    \answerspace{2in}
+
+\end{questions}
+Your previous plot is not a good candidate for a physical law: it is non-linear. Create two new columns, and in the first box type the following formula: \texttt{=TAN(RADIANS(A2))} (or wherever your first $\theta_1$ value is located). Drag this formula down to compute the tangent of all the $\theta_1$ values, then drag this column over one space to compute the tangent of all $\theta_2$ values. Make a scatter plot of these two columns.
+\begin{questions}
+    \question Draw a plot of the tangents of all your values, and explain why there does not seem to be a physical relationship between the tangents of the angles.
+
+    \answerspace{2in}
+
+    \question Change the \texttt{TAN} in your formula to \texttt{SIN} (drag it to update the rest of the cells). Your scatter plot should update automatically. Draw a schematic of the plot below. Explain why there seems to be a physical relationship between the sines of the angles.
+
+    \answerspace{2in}
+
+    \question Turn on the trendline, and show the equation. Write your equation below:
+
+    \answerspace{\baselineskip}
+$$
+\sin\theta_2 = \text{\blank[1in]} \sin \theta_1 + \text{\blank[1in]}
+$$
+    \question Rearrange your formula in the form of Snell's law: $n_1 \sin\theta_1=n_2\sin\theta_2$. If the refractive index of air is $n_{air}\approx1$, what is the refractive index of acrylic (the material the prism is made of)?
+
+    \answerspace{1in}
+
+    \question Use your answer above to determine the critical angle of total internal reflection for a ray passing from the acrylic to air.
+
+    \answerspace{1in}
+
+    \question Shine the beam into the curved surface of the acrylic, aiming at the crosshairs. Measure the critical angle of internal reflection. What was the percent error in your calculation above? (error =$(\theta_{\text{measured}}-\theta_{\text{calculated}})/\theta_{\text{measured}}$
+
+    \answerspace{1in}
+
+\end{questions}
+
+\section{Lenses}
+\begin{wrapfigure}{r}{0.45\textwidth}
+  \begin{center}
+    \includegraphics[width=0.4\textwidth]{Images/lensFocus.png}
+    \end{center}
+\end{wrapfigure}
+
+Parallel light rays entering a converging (double-convex) lens
+change direction as the rays are refracted at both the front
+(incident) and back (emergent) surfaces of the lens. If we
+assume that the path of the light entering the lens is
+perpendicular to the plane of the lens, the final refracted angle
+of the ray as it leaves the lens will direct it to a focal point $P$
+along the optical axis. The distance from the lens to $P$ is
+known as the focal length $f$ of the lens. Vice versa, if a light source is located at the focal point $P$, the light rays will emerge from the lens parallel.
+
+We can examine the behavior of a lens using a \textbf{ray diagram}. We utilize these two `principal rays': a) in through the focus $\to$ out parallel and b) in parallel $\to$ out through the focus to determine the formation of images. \textbf{Real images} mean that the light is \textbf{really} at the location of the real image: if you put a screen there to scatter the light, it will look like the object that originally emitted the light. For example, your eye produces a real image on your retina that is then measured using specialized light sensing cells. Another type of image is a \textbf{virtual image}, whereby we associate a diverging pattern of rays with the supposed source (the place where they would intersect). There is no actual light at that location, so we say it is not real.
+
+\clearpage
+\subsection{What do ray diagrams mean}
+Go to the Phet simulation \textbf{Geometric optics}. Set up a convex lens and place an object (whichever you like) somewhere to the left of the focus. Turn on the `principal' rays option.
+
+\begin{questions}
+    \question Is the image formed real or virtual? (Is there really a convergence of light at the image?)
+
+    \answerspace{1.5in}
+
+    \question This is not the only place you could put the screen and see an image of the object. Explain in terms of rays why a screen placed near but not at the `image' plane would form a blurry image.
+
+    \answerspace{1.5in}
+
+    \question We call it an image plane because the effect is similar for all points in the image plane. Check the second point option and move it around. Explain why this allows us to see an image of an extended object in the plane.
+
+    \answerspace{1.5in}
+
+    \question Change the rays option to `many' and vary the diameter of the lens. Explain why the diameter of the lens affects the brightness of the image formed.
+
+    \answerspace{1.5in}
+\clearpage
+    \question Change the lens to a concave (diverging) lens. Rays in this lens go in parallel and out in the direction as if they originated from the focus on the left, and if they go in aimed at the focus on the right they emerge parallel. Explain why this setup can only produce virtual images.
+
+    \answerspace{1.5in}
+\end{questions}
+
+\subsection{Lens equation}
+The object plane, the image plane, and the focal length seem to have some relationship. Let's determine that relationship using an actual lens.
+
+You'll use an optics track, a lens of unknown focal distance, a light source, and a viewing screen. The light source looks like two crossed arrows so you can tell when it gets flipped, and has mm markings to tell magnification. NOTE: the image plane is where the image formed is in focus, or minimally blurry. You will still see blurry images away from the image plane.
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=.8\linewidth]{Images/OpticsTrack.png}
+    \caption{Optics track meanings.}
+\end{figure}
+
+\begin{questions}
+    \question Open up an excel spreadsheet. Make a column for source, lens, and screen locations. Make two new columns that calculate the object plane distance and the image plane distances. Move the lens to vary the object distance, adjusting the screen to find the corresponding image location. Put these locations into your spreadsheet and record the distances below:
+     \begin{table}[h!]
+        \begin{tabular}{c|c}
+             Object distance $d_o$ (cm) & Image distance $d_i$ (cm) \\\hline
+             & \\
+             & \\
+             & \\
+             & \\
+             & \\
+             & \\
+             & \\
+             & \\
+             & \\
+             & \\
+        \end{tabular}
+    \end{table}
+
+\clearpage
+    \question Plot these and explain why this is not a good candidate for a physical relationship.
+
+    \answerspace{2in}
+
+    \question Calculate two new columns: $1/d_o$, $1/d_i$. Plot these with respect to each other and explain why this is a good candidate for a physical relationship.
+
+    \answerspace{1.5in}
+
+    \question Write the equation for the trendline below:
+
+    \answerspace{\baselineskip}
+$$
+\frac{1}{d_i}= \text{\blank[1in]} \frac{1}{d_o} + \text{\blank[1in]}
+$$
+    \question The slope should be close to $-1$. What are the units of the y-intercept?
+
+    \answerspace{1.5in}
+
+    \question What is the length corresponding to this y-intercept? This is the focal length of your lens.
+
+    \answerspace{1.5in}
+\clearpage
+    \question Replace your lens with a 200 mm (20 cm) lens, and use your equation (with a revised focal length!) to predict the image location:
+
+    \answerspace{1.5in}
+
+    \question Measure the location of the image plane. What was the percent error in your prediction?
+
+    \answerspace{1.5in}
+
+    \question Change your setup until you get a magnification of two (you can use the crosshairs to achieve this). What is the relationship between the object and image distances that achieves this?
+
+    \answerspace{1.5in}
+
+\end{questions}
+
+\end{document}

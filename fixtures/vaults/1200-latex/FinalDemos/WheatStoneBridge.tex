@@ -1,0 +1,55 @@
+\documentclass[phy1200]{handout}
+
+\usepackage{siunitx}
+
+\title{Bridge circuits and Voltage Dividers}
+
+\begin{document}
+
+\maketitle
+
+In this activity you will be building a bridge circuit, which can be used to measure unknown resistances. A handheld ohmmeter can do this too, but we can figure out an unknown resistance without directly measuring it with an ohmmeter, and you can actually get more precise values this way. 
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.5\linewidth]{FinalDemos/WheatstoneBridge.pdf}
+    \caption{Circuit schematic for a Wheatstone bridge circuit}
+\end{figure}
+
+Consider the circuit above. We are looking for the configuration where the bridge circuit is \textbf{balanced}, that is, when $V_A=V_B$. Notice that the two legs are just made of two resistors in series. Figure out what the value of the potential would be at $V_A,V_B$ in terms of the resistances and the source voltage.
+
+Now consider the case where the circuit is balanced. If these two voltages are equal, show that the ratios of the resistances are equal as follows:
+$$
+\frac{R_1}{R_2}=\frac{R_3}{R_4}.
+$$
+
+\section{Making the circuit}
+You will use a breadboard in this activity. This is a way of plugging wires into each other without having to solder them. The little holes can have wires plugged in to them. The rows of 5 plugs are all connected on the back, and the big `rails' (the blue and red columns) are connected all the way down as well. Hook up two resistors in series and parallel and measure with an Ohmmeter to make sure they follow the right resistance addition formula. 
+
+Now we will use a potentiometer for the left leg of our circuit. This is a single resistor, where the middle leg is adjustable where it touches along the resistor. Think of it as two resistors in series, where the sum is fixed but each leg is adjustable by turning a screw. 
+
+Build the bridge circuit with known value of $R_3$. Connect a voltmeter across the two points in question. The circuit is balanced when this potential reads 0.
+
+Turn the power supply off and use and Ohmmeter to measure the resistance of the two legs of the potentiometer. These should always sum to the same value, so you might want to keep track of that total resistance so you only have to make one measurement. 
+
+\section{Weirder resistors}
+All sorts of things can be resistors. Anything that weakly conducts electricity is a resistor. Today you will use your circuit to measure the resistance of a couple bananas and a cup of water. Use R3 as something on the order of 2 M$\Omega$. 
+
+Open the capstone Wheatstone bridge file on the desktop. Go to `calculator' on the left-hand side of the screen. Rpot is the total potentiometer resistance, Rleg is the resistance of the bottom leg of the potentiometer, and R3 is the known resistor on the other branch of the circuit. You should now be able to go back to the table display, enter your data in those three columns, and the resistance of your odd object will display on the screen! 
+
+If you don't believe it, you can always double check that value with your Ohmmeter.
+
+\section{Report}
+
+In your report be sure to explain:
+\begin{enumerate}
+    \item How a breadboard works, with a picture of your completed circuit. Explain how your breadboard plugs match the schematic.
+    \item How the voltage dividers (the two branches of the circuit), how to figure out the voltage in the middle.
+    \item What it means for the circuit to be balanced and the relationship between the four resistances in that condition.
+    \item How to choose R3 to measure changes to 
+    \item How to practically use the bridge circuit with a known resistor and a potentiometer to measure an unknown resistance, e.g. a banana and water.
+\end{enumerate}
+
+
+
+\end{document}

@@ -1,0 +1,202 @@
+\documentclass{handout}
+
+\assignment{Lab 4}
+\title{Hot wheels and potential energy}
+
+\begin{document}
+\maketitle
+
+\section{Kinetic energy, potential energy, and friction work}
+
+Energy is a quantity that an object has. It comes in two varieties:
+\begin{enumerate}
+    \item \textbf{Kinetic energy}: How much motion is in an object at this instant. This is primarily a function of the object's \textit{speed}:
+    $$
+    K=\frac{1}{2} m |\vec{\boldsymbol{v}}|^2
+    $$
+    \item \textbf{Potential energy}: Energy stored in an interaction (e.g. between you and the earth). This is a function primarily of \textit{location} relative to the source of the interaction. $$ U_\text{gravity} = mgy$$
+\end{enumerate}
+
+At any instant, a system (a collection of objects and their interactions) has a certain energy. Think of this as water in two buckets: a Kinetic bucket and a Potential bucket.
+
+In the absence of external forces on the system (i.e. forces that aren't considered by a potential energy), this energy is conserved:$$\Delta (K+U)=(K_f+U_f)-(K_i+U_i)=0,$$
+i.e. water sloshes between the two buckets but \textit{none of it spills out}. In this instance we say energy is \textbf{conserved}.
+
+\subsection{Systems with conserved energy}
+We will be looking at a simple physics simulation. To get started:
+\begin{enumerate}
+    \item Google ``phet energy skate park''.
+    \item Launch the simulation and go to the `intro' option.
+    \item Check the pie chart and bar graph options.
+    \item Click pause and drag the person around.
+\end{enumerate}
+
+\begin{questions}
+    \question As you drag the person around, their potential energy should change. Draw two locations where the earth-person interaction stores different amounts of energy, and indicate at which location this energy is greater.
+
+    \answerspace{1.5in}
+
+    \question Change the person's mass. What happens to the earth-person potential energy?
+
+    \answerspace{1.5in}
+
+    \question Explain how your answers to 1-3 relate to the equation for gravitational potential energy.
+
+    \answerspace{1.5in}
+
+    \question Drop the person from a height of 12 m and pause the movie just before they hit the ground. What has happened to the energy?
+
+    \answerspace{1.5in}
+
+    \question Suppose the person has mas 50 kg. What was their total energy when dropped? Record your answer in Joules and note whether this is potential or kinetic energy.
+
+    \answerspace{1.5in}
+
+    \question Suppose the person has mas 50 kg. What is their total energy when they hit the ground? Record your answer in Joules and note whether this is potential or kinetic energy.
+
+    \answerspace{1.5in}
+
+    \question In light of your previous answer, how fast will the person be going when they hit the ground? Record your answer in m/s.
+
+    \answerspace{1.5in}
+
+    \question How would your answer to the previous question change if the person had a different mass?
+
+    \answerspace{1.5in}
+
+    \question Place the person on the track and let them go. Explain the energy behavior you see when you play the animation.
+
+    \answerspace{1.5in}
+
+    \question In the space below, draw the places where the energy is entirely stored in kinetic or potential energy and indicate which it is. Explain why this occurs.
+
+    \answerspace{1.5in}
+\end{questions}
+\clearpage
+
+\subsection{Systems with friction}
+Some forces don't return you to the same energy if you return to the same location. One of these is friction. Such forces are called \textbf{non-conservative}. They cannot be described as a potential energy. They can only be described as external forces doing work on the system. In this case, we have
+\begin{align*}
+    \Delta (K+U)&=W_1 +W_2+\dots \\&= \vec{\boldsymbol{F}}_1 \cdot \Delta \vec{\boldsymbol{r}}+\vec{\boldsymbol{F}}_2 \cdot \Delta \vec{\boldsymbol{r}} + \dots\\
+    &= (\vec{\boldsymbol{F}}_1 + \vec{\boldsymbol{F}}_2 + \dots) \cdot \Delta \vec{\boldsymbol{r}}
+\end{align*}
+
+We will now consider friction. Friction always points in the opposite direction as $\Delta \vec{r}$.
+
+In the simulation, click the `friction' option at the bottom.
+\begin{questions}
+    \question The sign of work due to friction is always:
+    \begin{parts}
+        \part Positive
+        \part Negative
+        \part Zero
+    \end{parts}
+    Why? Explain below.
+
+    \answerspace{1in}
+
+    \question If energy is like water sloshing around in a bucket, friction means:
+    \begin{parts}
+        \part Nothing for the water in the bucket.
+        \part Water slowly drains from the bucket
+        \part Water is slowly added to the bucket.
+        \part Friction is another place for the water to slosh to but you can still slosh it back to Kinetic and Potential.
+    \end{parts}
+
+    \question Place the skater on the ramp and play the animation. What are some ways that this motion is different from the motion you observed in the previous case?
+
+    \answerspace{1in}
+
+    \question From the information available, estimate how much work was done by friction in one trip across the track supposing the person had mass 50 kg. Your answer should have the correct sign and be in Joules.
+
+    \answerspace{1in}
+\end{questions}
+
+\section{Measurements}
+Now we will measure the friction work being done on a hot wheels car in similar fashion.
+
+We will assume that over the whole course of the motion, the \textbf{friction force is constant}.\footnote{Note that this is different from the simulation, where friction was proportional to speed.}
+
+Consider the following diagram.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.7\linewidth]{Images/Car figure.pdf}
+\end{figure}
+
+\begin{questions}
+    \question Write an \textbf{expression} for the work done by gravity in terms of the mass of the car $m$, the two heights $h_1$ and $h_2$, and any appropriate constants. Is your answer a positive or negative number?
+
+    \answerspace{1.5in}
+
+    \question Write an expression for the force of friction in terms of this work and $d$.
+
+    \answerspace{1.5in}
+
+    \question Combine these expressions to obtain an expression for the force of work only using $h_1,h_2, d$ and any other known quantities.
+
+    \answerspace{1.5in}
+\end{questions}
+
+\clearpage
+To measure the friction force for this specific car, we will need various measurements of these quantities. We will use a hot wheels car propped up on books. Make sure your track is straight, not twisted, and is reasonably stable.
+
+\begin{questions}
+    \question What is the mass of your car? Include units.
+
+    \answerspace{.75in}
+\end{questions}
+
+Drop the car from a known height $h_1$ 3 times and note the location where it turns around. You should be able to get the distance $d$ and the final height $h_2$.
+\begin{questions}
+    \question Fill in the following table, making sure to note which units you used.
+\end{questions}
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{c|c|c|c}
+         trial& $h_1$ (units: \blank[.75in])& $h_2$ (units: \blank[.75in])& $d$ (units: \blank[.75in]) \\\hline
+         2 &&&\\
+         &&&\\\hline
+         3&&&\\
+         &&&\\\hline
+         4&&&\\
+         &&&\\
+    \end{tabular}
+\end{table}
+
+\begin{questions}
+    \question What is the average friction force?
+
+    \answerspace{1.5in}
+\end{questions}
+
+\subsection{Fiery death}
+Now let's test your skills... Consider the following scenario.
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.7\linewidth]{Images/Fiery Death.pdf}
+\end{figure}
+
+Place the track on a table.
+\begin{questions}
+    \question Measure the distance $d$ over which you hope and pray that the friction will slow your car to a stop.
+
+\clearpage
+    \question Calculate the maximum height at which you should drop your car to come just to the edge of the cliff.
+
+    \answerspace{1.5in}
+\end{questions}
+
+Set up your track in this position (you may wish to adjust it). DO NOT DROP THE CAR until you have called the instructor over.
+\begin{questions}
+    \question \textbf{(Instructor use only)} This group
+    \begin{parts}
+        \part does not have faith in physics (stopped far from the edge).
+        \part lives on the edge (stopped near the edge).
+        \part careened to a fiery death due only to their own misjudgment (car goes over the edge).
+        \part apparently can't follow instructions (was seen doing test runs).
+    \end{parts}
+\end{questions}
+
+\end{document}

@@ -1,0 +1,141 @@
+\documentclass{handout}
+
+\assignment{Homework 3}
+\title{Vectors and kinematics}
+
+\begin{document}
+\maketitle
+\practiceinstructions
+
+\section{Vector algebra}
+
+\begin{questions}
+% The grid sits in a right-hand minipage rather than a wrapfigure: wrapfig
+% cannot wrap a list (see its own documentation -- "if the paragraph is not in
+% a section title or a list"), and every part below is a list item. Given a
+% short paragraph it also drops the figure silently rather than warning.
+\question \textbf{Vectors and components}:
+
+\noindent\begin{minipage}[t]{0.55\linewidth}
+\begin{parts}
+    \part What are the components of vector $\vec{a}$?
+
+    \answerspace{0.5\baselineskip}
+    $\vec{a} = $ \blank[.6in]\ $\hat{x}+$ \blank[.6in]\ $\hat{y}$
+
+    \answerspace{0.5\baselineskip}
+    \part What are the components of vector $\vec{b}$?
+
+    \answerspace{0.5\baselineskip}
+    $b_x = $ \blank[.6in] \hfill $b_y = $ \blank[.6in]
+
+    \answerspace{0.5\baselineskip}
+    \part True or false: $\vec{c}=-\vec{a}$? \blank[.6in]
+
+    \answerspace{0.5\baselineskip}
+    \part Draw the vector $\vec{p} = 8 \hat{x} + 4\hat{y}$ with its tail at
+    $(-10,5)$. Label the vector $\vec{p}$ on your diagram.
+
+    \answerspace{0.5\baselineskip}
+    \part Draw $-\vec{p}/2$ on your diagram with its tail at $(5,-5)$. Label
+    it accordingly.
+\end{parts}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.42\linewidth}
+    \vspace{0pt}
+    \includegraphics[width=\linewidth]{Images/vector_grid_arrows.pdf}
+\end{minipage}
+
+% Every part of this question asks for something to be drawn on the grid, so
+% the whole question starts a page rather than risk the grid landing on the
+% page before its parts.
+\newpage
+\question \textbf{Vector addition and subtraction}:
+
+\noindent\begin{minipage}[t]{0.55\linewidth}
+You are standing watching a monkey who is interested in a nearby banana tree.
+Because you are the center of your world, you define a coordinate system where
+you are located at the origin. The banana tree is located at position
+$\vec{r}_b=(4\hat{x}+ 5 \hat{y})m$. The monkey is located at $\vec{r}_m=(-8\hat{x}+5\hat{y})$.
+\end{minipage}\hfill
+\begin{minipage}[t]{0.42\linewidth}
+    \vspace{0pt}
+    \includegraphics[width=\linewidth]{Images/vector_grid.pdf}
+\end{minipage}
+
+\answerspace{\baselineskip}
+\begin{parts}
+    \part Draw the position vectors $\vec{r}_b, \vec{r}_m$
+
+    \answerspace{0.5\baselineskip}
+    \part Draw the sum of the position vectors $\vec{r}_b+\vec{r}_m$.
+
+    \answerspace{0.5\baselineskip}
+    \part Note the location of $\frac{1}{2}(\vec{r}_b+\vec{r}_m)$. Explain why
+    this might be called the average position of the tree and the monkey.
+
+    \answerspace{0.75in}
+    \part Find the position vector of the banana tree from the monkey's
+    perspective (he is the origin of his coordinates!). Draw it on the diagram
+    and find its components.
+
+    \answerspace{0.5\baselineskip}
+    $\vec{a} = $ \blank[.75in]\  $\hat{x}+$ \blank[.75in]\ $\hat{y}$
+\end{parts}
+
+\answerspace{0.5\baselineskip}
+
+\question \textbf{Polar form of vectors}: Vectors might be given in terms of magnitude and angle, or in component form. Suppose that the coordinate system in the previous problem was $\hat{x}=$ East and $\hat{y}$ = North.
+\begin{parts}
+    \part What is the magnitude of the position vector of the tree? 
+
+    \answerspace{0.5\baselineskip}
+    $|\vec{a}| = $ \blank[.75in]
+    \answerspace{0.5\baselineskip}
+
+    \clearpage
+
+    \part What is the direction of the position of the tree? Express your answer in terms of an angle relative to the nearest cardinal direction (e.g. 20$^\circ$ N of E or 30$^\circ$ E of S).
+    
+    \answerspace{1in}
+
+    \part What is the proper angle\footnote{Proper angles in math/physics are measured counterclockwise, starting from the $x$ axis.} of the tree's heading (i.e. your previous answer).
+
+    \answerspace{1in}
+
+    \part You happen to be holding a treasure map that has an $x$ marked\footnote{Congratulations, you have finally found $x$.} at a location 7.5 m away from your location in the direction 30$^\circ$ S of E (proper angle: -30). What is the position vector of the treasure in component form?
+    $\vec{r}_T = $ \blank[.75in]\  $\hat{x}+$ \blank[.75in]\ $\hat{y}$
+
+    \answerspace{1in}
+
+\end{parts}
+
+\end{questions}
+
+\clearpage
+
+\section{Vectors and motion}
+\begin{figure*}[h!]
+    \centering
+    \includegraphics[width=0.5\textwidth]{Images/track_motion_diagram.pdf}
+
+\end{figure*}
+\begin{questions}
+    \question \textbf{Displacement and velocity}: The above diagram shows the GPS location (in 5 s intervals) of a car going clockwise around a racetrack and coming to a stop at the finish line. 
+    \begin{parts}
+        \part When is the car going the fastest? Draw the displacement $\Delta \vec{r}$ in the fastest interval. Explain your reasoning.
+        \answerspace{1in}
+        \part At the above identified interval, draw $\vec{r}_i$ and $\vec{r}_f$, the initial and final positions of the car over the course of that interval. Explain how your diagram shows $\vec{r}_f = \vec{r}_i + \Delta \vec{r}$.
+
+        \answerspace{1in}
+        \part What is the instantaneous velocity vector at one of the moments where the car is in one of the corners. Explain your reasoning.
+        \answerspace{1in}
+    \end{parts}
+
+    \question \textbf{Tangents}: On the last homework, you showed that the velocity can be read off a position vs. time graph using the tangent to the generally curved graph. The slope of this tangent line is the velocity. 
+
+    In the above, you will notice that the tangent line to the racetrack also makes an appearance. 
+
+    What is different about the tangent lines in the two cases, and what information about the velocity is present in the 1D graph version that is not present in the 2D trajectory version?
+\end{questions}
+\end{document}

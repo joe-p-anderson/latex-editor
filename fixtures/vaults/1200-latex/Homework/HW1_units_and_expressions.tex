@@ -1,0 +1,109 @@
+\documentclass{handout}
+
+\assignment{Homework 1}
+\title{Units and expressions}
+\DeclareSIUnit{\solarmass}{\text{M}_{\odot}}
+
+
+
+
+\begin{document}
+\maketitle
+\practiceinstructions
+
+\section{Units}
+\begin{questions}
+  \question \textbf{Expression units}: For each of the following expressions, determine the units of the result.\footnote{Note: expressions can return a pure number (i.e. with no dimensions at all)We call such a quantity \emph{dimensionless}.}
+  \begin{parts}
+    \part If $m$ is mass, $v$ is velocity, and $R$ is a radius, what are the units of the following expression? $$\frac{mv^2}{R}$$
+    \part If $v,c$ are both velocities, what are the units of $\gamma$ below?
+    $$\gamma = \frac{1}{\sqrt{1 - \frac{v^2}{c^2}}}$$
+  \end{parts} 
+  \question \textbf{Adding together}: For each of the following expressions, determine whether the expression is valid (i.e. whether the units are consistent).
+  \begin{parts}
+    \part Consider the following: $$\frac{1}{2} m v^2 + \frac{1}{2} k s^2,$$ where $m$ is mass, $v$ is velocity, $k$ is a spring constant (units: $\si{kg/s^2}$), and $s$ is a distance. Are the units consistent? Why or why not?
+    \part Consider the following: $$\frac{T}{2\pi} + \frac{c}{\lambda}$$
+    where $T$ is a period (units: $\si{s}$), $c$ is a wave speed (units: $\si{m/s}$), and $\lambda$ is a wavelength (units: $\si{m}$). Are the units consistent? Why or why not?
+  \end{parts}
+
+  \question \textbf{Metric prefixes}: The following lengths are given in meters. Use metric prefixes to rewrite them so the numerical value is bigger than one but less than 1000. For example, \SI{7.9e-2}{m} could be written either as \SI{7.9}{cm} or \SI{79}{mm}.
+  \begin{parts}
+    \part \SI{7.59e7}{m}
+    \part \SI{0.0074}{m}
+    \part \SI{8.8e-11}{m}
+    \part \SI{1.63e13}{m}
+  \end{parts}
+
+  \question \textbf{Landmarks in SI}: You are probably more used to thinking about many quantities in terms of imperial units. 
+  \begin{parts}
+    \part How many miles are in 5 km (typical running distance)?
+    \part What is the mass of a typical human (say 160 lb) in kg?
+    \part How fast is 5 mph in m/s? 60 mph?
+  \end{parts}
+  \question \textbf{Unit conversions}: 
+  \begin{parts}
+    \part The volume of the Earth is on the order of \SI{1e21}{m^3}. What is this in cubic kilometers (\si{km^3})? What is it in cubic centimeters (\si{cm^3}$=$\si{mL})?
+    \part One important physical constant is the gravitational constant, $G$. It is often given in SI units as $\SI{6.7e-11}{m^3 kg^{-1} s^{-2}}$. However, often for astronomical calculations, it is more convenient to use units of $\si{au^3 \solarmass^{-1} year^{-2}}$. What is $G$ in these units? (1 au = \SI{1.5e11}{m} is the distance from the earth to the sun and \SI{1}{\solarmass} = \SI{2e30}{kg} is the mass of the sun)
+  \end{parts}
+\end{questions}
+
+
+\section{Dimensional analysis}
+
+Dimensional analysis is a handy trick to make an educated guess at the answer to a question just by looking at the units of the relevant quantities.
+
+For example, suppose you know a car with mass of $m = \SI{1200}{kg}$ is traveling at a speed of $v = \SI{20}{m/s}$ and you want to know how far it will travel in $t = \SI{15}{s}$. Even knowing nothing about speed, distance, and time, you can look at the units. Since you know you're looking for a distance, you know you want meters as your final unit. Since you have quantities in kg, m/s, and s, the only combination that makes any sense is $\si{m/s} \cdot \si{s} \rightarrow \si{m}$.
+
+That would lead you to compute $vt$, which is the correct answer. It also allows you to state with some confidence $m$ can't possibly have anything to do with the answer, also correct.
+
+That's a simple example, but it also works with more complicated examples. Knowing \emph{nothing} about the physics of the relevant quantities, let's try it out\ldots
+
+
+
+
+\begin{questions}
+
+  \question \textbf{Mystery quantities I}: Given $a = \SI{10}{m/s^2}$, $b = \SI{5}{kg}$, and $c = \SI{3}{s}$\ldots
+  \begin{parts}
+      \part \ldots write an expression that has the units of \si{m/s} and evaluate your expression.
+
+    \part \ldots write an expression that has the units of \si{m} and evaluate your expression.
+
+    \part Do you recognize any of these quantities? What calculations do you think you're actually making here?
+  \end{parts}
+
+  \question \textbf{Mystery quantities II}: Given $a = \SI{101.3e3}{kg\  m^{-1} s^{-2}}$, $b = \SI{0.01}{m}$, $c = \SI{1}{kg/m^3}$\ldots
+  \begin{parts}
+
+    \part \ldots write an expression that has the units of \si{m/s} and evaluate your expression.
+
+    \part \ldots write an expression that has the units of \si{kg.m/s^2} and evaluate your expression.
+
+    \part Do you recognize any of these quantities? What calculations do you think you're actually making here?
+
+  \end{parts}
+
+  \question \textbf{Pendulum swing}: The \emph{period} (time to complete a swing) of a pendulum is measured in \si{s}. Given other properties relevant to a pendulum: acceleration due to gravity $g = \SI{10}{m/s^2}$, mass $m = \SI{0.5}{kg}$, and length $l = \SI{0.3}{m}$\ldots
+
+  \begin{parts}
+
+    \part \ldots work out an expression for the period $T$ (in \si{s}) of the pendulum and evaluate your expression.
+
+    \part Given your expression, if the length of the pendulum doubled, by what factor would the period change?
+
+    \part A real pendulum \SI{0.3}{m} long takes about \SI{1.1}{s} to swing back and forth. This means that your expression in part (a) is off by a dimensionless factor. What is that factor (note it is a nice number, there should be no decimals if you use an appropriate constant)?
+    \part  Nonetheless, your answer to part (b) still holds, even in light of the constant factor of part (c). Explain in your own words the benefits and shortcomings of approaching physical problems using dimensional analysis.
+    
+
+  \end{parts}
+
+
+\end{questions}
+
+
+
+
+
+
+
+\end{document}

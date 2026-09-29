@@ -1,0 +1,102 @@
+\documentclass{handout}
+
+\assignment{Homework 5}
+\title{Circular motion}
+
+\begin{document}
+\maketitle
+\practiceinstructions
+
+\section{Centripetal force}
+\begin{questions}
+    \question \textbf{Race track speed limit:} There is only so much force tires can provide from friction before they start to skid. Knowing this, you hope to do a public service and put up a speed limit sign at your local race track so nobody skids. You know the following information about the cars:
+    \begin{itemize}
+        \item The cars are all heavier than 1,500 kg.
+        \item The cars' tires can all provide 23 kN of friction force before skidding.
+        \item The radius of the turns on the track are 150 m.
+    \end{itemize}
+    \begin{parts}
+        \part What number should you put on the speed limit sign? (your answer will probably be in m/s but try converting it to miles per hour).
+        \part Draw the three forces on the car if it is on \textbf{flat} ground. You should have friction, normal force, and gravity. Circle the force that counts as \textbf{centripetal}.
+        \part Draw the three forces on the car if it is on a \textbf{banked} turn. Which forces now contribute to the \textbf{centripetal} force?
+        \part Explain why having a banked turn would let you raise the speed limit on the track.
+    \end{parts}
+
+    \question \textbf{Loop-de-loop}: You are building a marble drop track and you want to add a loop-de-loop. You're pretty sure that you can get the marble going 1.5 m/s at the top of the loop. We need to figure out how big the loop should be.
+    \begin{parts}
+        \part Calculate the centripetal acceleration needed to go around a 20 cm radius loop.
+        \part Calculate the centripetal acceleration needed to go around a 25 cm radius loop.
+        \part Calculate the radius of the motion if the centripetal acceleration all coming from the gravitational force on the marble.
+        \part Draw two pictures: a track with radius 20 cm and a track with 25 cm radius. On both, draw a dotted line representing the circular motion which would occur under only the influence of gravity.
+        \part Should you build the 20 cm or the 30 cm loop? Which forces will be providing the \textbf{centripetal force} on the marble at the top of the loop in the case of your choice?
+    \end{parts}
+
+    % \question \textbf{Periods}: Suppose we know a mass is moving in a circular motion, and it is being kept in that motion by the tension from a string.
+    % \begin{parts}
+    %     \part If the string is 1 m long and you are spinning the mass around 4 times a second. What is the force provided by the string if the object has a mass of 50 g?
+    %     \part Suppose your answer to part (a) was 1/4 of the breaking force of the string. What is the smallest circle you could spin the object in \textbf{with the same period} before the string breaks?
+    % \end{parts}
+\end{questions}
+
+\section{Vectors, circles, and dot products}
+
+\begin{questions}
+    \question \textbf{Alignedness and dot products:} Consider the following pairs of vectors:
+    \begin{figure}[h!]
+        \centering
+        \includegraphics[width=0.5\linewidth]{Images/dotProductPairs.pdf}
+    \end{figure}
+    \begin{parts}
+        \part Which pair of vectors has a positive dot product?
+        \part Which pair of vectors has a negative dot product?
+        \part Which pair of vectors has zero dot product?
+        \part Explain the reasoning you used to answer the above questions.
+    \end{parts}
+
+    \question \textbf{Vectors and circular motion}: Explain in your own words the meaning of the following kinematic equations for circular motion:
+    \begin{align*}
+        \vec{\boldsymbol{r}}(t)&= R \Big(\cos(\omega t)\hat{\boldsymbol{x}}+\sin(\omega t)\hat{\boldsymbol{y}}\Big)\\
+        \vec{\boldsymbol{v}}(t)&= \omega R \Big(-\sin(\omega t)\hat{\boldsymbol{x}}+\cos(\omega t)\hat{\boldsymbol{y}}\Big)\\
+        \vec{\boldsymbol{a}}(t)&= \omega^2 R \Big(\cos(\omega t)\hat{\boldsymbol{x}}+\sin(\omega t)\hat{\boldsymbol{y}}\Big)
+    \end{align*}
+    \begin{parts}
+        \part Explain why the magnitudes of these vectors are not dependent on time and given by $R, \omega R, \omega^2 R$.\footnote{The pythagorean identity $\sin^2 \theta +\cos^2 \theta = 1$ for any $\theta$.} Explain why these quantities have the right units to be a position, velocity, and acceleration.
+        \part Explain how we know that these have the right geometric relationship (velocity $\perp$ to position, acceleration, and acceleration has a \textbf{centripetal} direction).
+    \end{parts}
+
+    \question \textbf{New derivatives}: In the above kinematic equations, we notice that it actually uses the following derivatives:
+    \begin{align*}
+        \frac{d (\sin\theta)}{d\theta} &= \cos\theta & \frac{d (\cos\theta)}{d\theta} &= -\sin\theta 
+    \end{align*}
+    \begin{figure}[h!]
+        \centering
+        \includegraphics[width=5in]{Images/TrigDerivatives.pdf}
+    \end{figure}
+    \begin{parts}
+        \part Recall that the \emph{slope} of the tangent line to a function's graph for a given input is the \emph{value} of its derivative. Explain why it looks like the function value of any of the graphs shown seems to be the slope of the function above it.
+        \part Explain how the four-fold cycle is related to the 90 degree counter-clockwise rotations in the equations in question 5.
+    \end{parts}
+\end{questions}
+
+
+\section{Simple harmonic motion}
+
+\begin{questions}
+\question \textbf{Spring scales}: Springs are normally how you measure masses (this is how most balances work with very stiff springs measuring small displacements). You have a set of calibrated masses; when you hang a 3 kg weight vertically from one end of the spring it has a total length (one end to the other) of 27 cm. When you hang a 7 kg weight from the end it has a length of 41 cm. 
+\begin{parts}
+    \part What is the spring constant of this particular spring?
+    \part What will be the length of the spring when you remove all weight?
+    \part You now want to weigh your dog. You put a sling around him and hang him from the spring.\footnote{Luckily, he is a well-behaved dog, and simply pants contentedly. A squirmy dog would make the measurement step quite cumbersome.} The spring stretches to a length of 31 cm. What is the mass of the dog?
+    \part Explain the importance of having \emph{two} calibration weights.
+\end{parts}    
+
+\question \textbf{Periods and amplitude}: You glue a 10 g Nerf dart to a spring. You pull it and let go, resulting in harmonic motion. It has a period of 4.2 s. 
+\begin{parts}
+    \part What is the frequency $f$ of this motion?
+    \part What is the angular frequency $\omega$ of this motion? 
+    \part What is the spring constant $k$ (in N/m)of the spring?\footnote{Note: Newtons require masses in kg, not g.}
+    \part You unglue the dart and put the spring back in the blaster where it belongs. You then load the dart, cock the spring by 12 cm, and fire. How long before the dart loses contact with the spring?\footnote{Note: this is some fraction of the period. Because it is not connected to the spring, the spring can no longer pull the dart back (no negative forces).}
+    \part How fast is the dart going when it loses contact the spring?
+\end{parts}
+\end{questions}
+\end{document}

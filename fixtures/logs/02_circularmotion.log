@@ -1,0 +1,242 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (MiKTeX 26.5) (preloaded format=pdflatex 2026.8.13)  13 AUG 2026 09:42
+entering extended mode
+ restricted \write18 enabled.
+ file:line:error style messages enabled.
+ %&-line parsing enabled.
+**./FieldWork/02_circularmotion.tex
+(FieldWork/02_circularmotion.tex
+LaTeX2e <2026-06-01>
+L3 programming layer <2026-07-20>
+(reflection.cls
+Document Class: reflection 2026/08/13 field work and reflection sheets
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/base\article.cls
+Document Class: article 2025/01/22 v1.4n Standard LaTeX document class
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/base\size10.clo
+File: size10.clo 2025/01/22 v1.4n Standard LaTeX file (size option)
+)
+\c@part=\count276
+\c@section=\count277
+\c@subsection=\count278
+\c@subsubsection=\count279
+\c@paragraph=\count280
+\c@subparagraph=\count281
+\c@figure=\count282
+\c@table=\count283
+\abovecaptionskip=\skip49
+\belowcaptionskip=\skip50
+\bibindent=\dimen150
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/geometry\geometry
+.sty
+Package: geometry 2026/03/07 v6.0 Page Geometry
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/graphics\keyval.s
+ty
+Package: keyval 2026-05-17 v1.15 key=value parser (DPC)
+\KV@toks@=\toks17
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/iftex\ifvtex.st
+y
+Package: ifvtex 2019/10/25 v1.7 ifvtex legacy package. Use iftex instead.
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/iftex\iftex.sty
+Package: iftex 2024/12/12 v1.0g TeX engine tests
+))
+\Gm@cnth=\count284
+\Gm@cntv=\count285
+\c@Gm@tempcnt=\count286
+\Gm@bindingoffset=\dimen151
+\Gm@wd@mp=\dimen152
+\Gm@odd@mp=\dimen153
+\Gm@even@mp=\dimen154
+\Gm@layoutwidth=\dimen155
+\Gm@layoutheight=\dimen156
+\Gm@layouthoffset=\dimen157
+\Gm@layoutvoffset=\dimen158
+\Gm@dimlist=\toks18
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/geometry\geometry
+.cfg))
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphicx
+.sty
+Package: graphicx 2026-05-17 v1.2e Enhanced LaTeX Graphics (DPC,SPQR)
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphics
+.sty
+Package: graphics 2026-05-17 v1.4h Standard LaTeX Graphics (DPC,SPQR)
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/graphics\trig.sty
+Package: trig 2023/12/02 v1.11 sin cos tan (DPC)
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\grap
+hics.cfg
+File: graphics.cfg 2016/06/04 v1.11 sample graphics configuration
+)
+Package graphics Info: Driver file: pdftex.def on input line 106.
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/graphics-def\pdft
+ex.def
+File: pdftex.def 2025/09/29 v1.2d Graphics/color driver for pdftex
+))
+\Gin@req@height=\dimen159
+\Gin@req@width=\dimen160
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/xcolor\xcolor.sty
+Package: xcolor 2024/09/29 v3.02 LaTeX color extensions (UK)
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\colo
+r.cfg
+File: color.cfg 2016/01/02 v1.6 sample color configuration
+)
+Package xcolor Info: Driver file: pdftex.def on input line 274.
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/graphics\mathcolo
+r.ltx)
+Package xcolor Info: Model `cmy' substituted by `cmy0' on input line 1349.
+Package xcolor Info: Model `hsb' substituted by `rgb' on input line 1353.
+Package xcolor Info: Model `RGB' extended on input line 1365.
+Package xcolor Info: Model `HTML' substituted by `rgb' on input line 1367.
+Package xcolor Info: Model `Hsb' substituted by `hsb' on input line 1368.
+Package xcolor Info: Model `tHsb' substituted by `hsb' on input line 1369.
+Package xcolor Info: Model `HSB' substituted by `hsb' on input line 1370.
+Package xcolor Info: Model `Gray' substituted by `gray' on input line 1371.
+Package xcolor Info: Model `wave' substituted by `hsb' on input line 1372.
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/forloop\forloop.s
+ty
+Package: forloop 2023/05/03 v3.0 For Loops for LaTeX
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/base\ifthen.sty
+Package: ifthen 2024/03/16 v1.1e Standard LaTeX ifthen package (DPC)
+))
+\c@rf@line=\count287
+\c@rf@lastline=\count288
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/l3backend\l3backe
+nd-pdftex.def
+File: l3backend-pdftex.def 2026-07-20 L3 backend support: PDF output (pdfTeX)
+\l__color_backend_stack_int=\count289
+)
+(C:\Users\janderson19\Documents\GitHub\course-sandbox\1200\latex\build\02_circu
+larmotion.aux)
+\openout1 = `02_circularmotion.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 7.
+LaTeX Font Info:    ... okay on input line 7.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 7.
+LaTeX Font Info:    ... okay on input line 7.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 7.
+LaTeX Font Info:    ... okay on input line 7.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 7.
+LaTeX Font Info:    ... okay on input line 7.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 7.
+LaTeX Font Info:    ... okay on input line 7.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 7.
+LaTeX Font Info:    ... okay on input line 7.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 7.
+LaTeX Font Info:    ... okay on input line 7.
+
+*geometry* driver: auto-detecting
+*geometry* detected driver: pdftex
+*geometry* verbose mode - [ preamble ] result:
+* driver: pdftex
+* paper: <default>
+* layout: <same size as paper>
+* layoutoffset:(h,v)=(0.0pt,0.0pt)
+* modes: 
+* h-part:(L,W,R)=(72.26999pt, 469.75502pt, 72.26999pt)
+* v-part:(T,H,B)=(72.26999pt, 650.43001pt, 72.26999pt)
+* \paperwidth=614.295pt
+* \paperheight=794.96999pt
+* \textwidth=469.75502pt
+* \textheight=650.43001pt
+* \oddsidemargin=0.0pt
+* \evensidemargin=0.0pt
+* \topmargin=-37.0pt
+* \headheight=12.0pt
+* \headsep=25.0pt
+* \topskip=10.0pt
+* \footskip=30.0pt
+* \marginparwidth=65.0pt
+* \marginparsep=11.0pt
+* \columnsep=10.0pt
+* \skip\footins=9.0pt plus 4.0pt minus 2.0pt
+* \hoffset=0.0pt
+* \voffset=0.0pt
+* \mag=1000
+* \@twocolumnfalse
+* \@twosidefalse
+* \@mparswitchfalse
+* \@reversemarginfalse
+* (1in=72.27pt=25.4mm, 1cm=28.453pt)
+
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/context/base/mkii\supp-
+pdf.mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+\scratchcounter=\count290
+\scratchdimen=\dimen161
+\scratchbox=\box53
+\nofMPsegments=\count291
+\nofMParguments=\count292
+\everyMPshowfont=\toks19
+\MPscratchCnt=\count293
+\MPscratchDim=\dimen162
+\MPnumerator=\count294
+\makeMPintoPDFobject=\count295
+\everyMPtoPDFconversion=\toks20
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/epstopdf-pkg\epst
+opdf-base.sty
+Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
+Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
+85.
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/00miktex\epstopdf
+-sys.cfg
+File: epstopdf-sys.cfg 2021/03/18 v2.0 Configuration of epstopdf for MiKTeX
+))
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <7> on input line 9.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <5> on input line 9.
+
+Underfull \hbox (badness 10000) in paragraph at lines 9--9
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 21--22
+
+ []
+
+[1
+
+{C:/Users/janderson19/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}]
+(C:\Users\janderson19\Documents\GitHub\course-sandbox\1200\latex\build\02_circu
+larmotion.aux)
+ ***********
+LaTeX2e <2026-06-01>
+L3 programming layer <2026-07-20>
+ ***********
+ ) 
+Here is how much of TeX's memory you used:
+ 2474 strings out of 467500
+ 40429 string characters out of 5405613
+ 465565 words of memory out of 5000000
+ 31730 multiletter control sequences out of 15000+600000
+ 628933 words of font info for 44 fonts, out of 8000000 for 9000
+ 1141 hyphenation exceptions out of 8191
+ 72i,5n,79p,288b,148s stack positions out of 10000i,1000n,20000p,200000b,200000s
+<C:/Users/janderson19/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfon
+ts/cm/cmbx10.pfb><C:/Users/janderson19/AppData/Local/Programs/MiKTeX/fonts/type
+1/public/amsfonts/cm/cmbx12.pfb><C:/Users/janderson19/AppData/Local/Programs/Mi
+KTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/janderson19/AppData/Loc
+al/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr12.pfb>
+Output written on C:\Users\janderson19\Documents\GitHub\course-sandbox\1200\lat
+ex\build\02_circularmotion.pdf (1 page, 55504 bytes).
+PDF statistics:
+ 26 PDF objects out of 1000 (max. 8388607)
+ 0 named destinations out of 1000 (max. 500000)
+ 1 words of extra memory for PDF output out of 10000 (max. 10000000)
+

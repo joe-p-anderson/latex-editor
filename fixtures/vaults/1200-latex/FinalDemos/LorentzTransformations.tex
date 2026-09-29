@@ -1,0 +1,72 @@
+\documentclass[phy1200]{handout}
+
+\title{Lorentz transformations and velocity addition}
+
+\begin{document}
+
+\maketitle
+
+One popular way to visualize the reference frames talked about in special relativity is using spacetime diagrams, also known as Minkowski diagrams.\footnote{Minkowski was one of Einstein's professors in undergraduate, and an early proponent of Einsteins theories.} Usually we only consider one spatial dimension + time in such diagrams as 3D drawing is hard. Position $x$ is on the x-axis, and time $t$ is on the y-axis. Additionally, for these diagrams, we usually assume $c=1$.\footnote{Sometimes instead of a time axis some people draw a $ct$ axis, which has the same effect.} On schoology, you will find a desmos graph where you can play around with Minkowski diagrams
+
+\section{Reading a Minkowski diagram}
+Points on the diagram are \textbf{events}, happening at a specific point in space and specific time.
+
+As time proceeds, an object's position traces out a \textbf{world line} (basically a position-time graph turned on its side). Make a world line in the Desmos tool in the apporpriate folder. Consider what the following world lines would look like:
+\begin{enumerate}
+    \item A stationary object at $x=0$.
+    \item A stationary object at some other location.
+    \item An object moving with some velocity $v<c$.
+    \item A beam of light traveling at $v=c$.\mgpar{World lines moving at the speed of light are called light cones.}
+\end{enumerate}
+Given that things can't travel faster than the speed of light, what world lines would be impossible?
+
+Another set of lines on the diagram are simultaneity lines. Where are all the events that take place at a given time (start with $t=0$ and move up to general $t$).
+
+\section{Lorentz Transformations}
+The Lorentz transformations encode the length contraction and time dilation we discussed in class, but it applies it to all possible ticks of the moving clock (the $t'$ axis) and all possible measuring rods passing the origin (the $x'$ axis).
+
+Lets denote by $(x,t)$ a location in the stationary frame (based on stationary measuring rods and stationary clock ticks). We will denote by $(x',t')$  a location in the moving frame (based on measuring rods and clocks moving at speed $v$ relative to the stationary frame). These coordinate frames are related by the Lorentz transformation:
+\begin{align*}
+    x'&=\gamma (x-vt)\\
+t'&=\gamma \left(ct- \frac{vx}{c^2}\right)
+\end{align*}
+What are the inverse Lorentz transformations (solve this system of equations for $x,t$)? Why does this make sense in terms of the principle of relativity?
+
+We could make a new grid of all the ticks of our moving clock ($t'=0,1,2,\dots$) and how far points are according to the moving measuring rod ($x'=0,1,2,\dots$). These will no longer be straight up and down. 
+
+To explore the stationary frame representation of the moving grid, we would want formulas for $x(x',t)$ so that we can put in the measuring rod values $x'$ and still know what it looks like on our graph. Similarly, $t(t',x)$. Put these on lines 4-5.
+
+Turn off the rest frame grid and turn on the the moving grid. Explain what the $x'=const.$ lines look like in the stationary frame (they are world lines corresponding to). Why does this make sense?
+
+Notice that the set of all events happening at the same stationary time $t=0$ and the set of events happening at the same moving time are not the same. Explain the term `relativity of simultaneity'.
+
+\section{Velocity addition formula}
+Turn off the moving grid and turn on the stationary grid. Make a new world line for an object moving with velocity $u$. This object will be moving in both the stationary and moving frames (since $u\neq v$). Set $u$ to such a value that it passes through one of the grid points.\footnote{There should be a folder that already does this} How is $u$ related to that grid point?
+
+Switch back to the moving grid. Tune $u$ and $v$ such that the $u$ world line passes through a moving grid point. Make a note of the moving grid coordinates ($x',t'$). Given those moving grid coordinates, what does the moving observer find the velocity of the object to be ($u'$)? Make a note of the numerical values of all three velocities $u,v,u'$.
+
+Repeat this process; try to find $u,v$ such that $|u-v|>c$. Make a note of $u,v,u'$ again in this case.
+
+For a general $u$, transform the point $(x=u,t=1)$ into its coordinates in the moving frame ($x',t'$). A velocity is distance over time, so $u'=x'/t'$. With a little algebra you should get
+$$
+u'=\frac{u-v}{1-uv/c^2}
+$$
+Check that your two examples you wrote down fit this equation (plug in $u,v$).
+
+\section{Report}
+Some things to make sure you explain in your report:
+\begin{enumerate}
+    \item How are events, world lines, simultaneity, and light cones read off of a Minkowski diagram?
+    \item What do the world lines of moving objects look like?
+    \item How does the Lorentz transform give us the form of a moving grid in a Minkowski diagram and what does that look like? 
+    \item Explain from the appearance of the moving grid: the second postulate (speed of light is constant for all observers) and the relativity of simultaneity.
+    \item Explain using the two grids and a world line why the two frames observe different velocities for a single object moving relative to both.
+    \item Explain how this leads to the velocity addition formula.
+\end{enumerate}
+
+
+
+
+
+
+\end{document}
