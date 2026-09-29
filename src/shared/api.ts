@@ -17,11 +17,42 @@ export interface VaultInfo {
   tree: TreeNode[]
 }
 
-export interface LogMessage {
-  /** Vault-relative when the file is inside the vault, otherwise absolute. */
+export type Severity = 'error' | 'warning' | 'layout'
+
+/**
+ * One text change. `find` is located on `line` (1-based) of `file`; when it
+ * occurs more than once, the occurrence starting nearest column `near` wins.
+ * With `append`, the text is added at the end of the file instead.
+ * `replace` may contain \n, which becomes the file's own line break.
+ */
+export type TextEdit =
+  | { file: string; line: number; find: string; replace: string; near?: number }
+  | { file: string; append: string }
+
+export interface QuickFix {
+  label: string
+  edits: TextEdit[]
+}
+
+/** A diagnosed log message: what went wrong, in plain words, and how to fix it. */
+export interface Problem {
+  /** Which rule produced it, e.g. "undefined-command". */
+  rule: string
+  severity: Severity
+  /** Vault-relative when inside the vault, otherwise absolute. */
   file: string | null
   line: number | null
-  message: string
+  title: string
+  explanation?: string
+  fixes: QuickFix[]
+  /** Other places involved, e.g. where a mismatched environment was opened. */
+  related?: { file: string; line: number; label: string }[]
+  /** Probably caused by an earlier error; fixing that one may clear this. */
+  followOn?: boolean
+  /** Noise (font substitutions, rerun notices): shown only on request. */
+  hidden?: boolean
+  /** TeX's own words: the log lines this came from. */
+  tex: string
 }
 
 export interface CompileResult {
@@ -31,7 +62,9 @@ export interface CompileResult {
   passes: number
   /** Absolute path of the PDF in .texcache (the one SyncTeX pairs with). */
   pdf: string | null
-  errors: LogMessage[]
+  problems: Problem[]
+  /** The full log of the last pass, for the raw view. */
+  log: string
   durationMs: number
 }
 

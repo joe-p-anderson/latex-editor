@@ -15,6 +15,26 @@ Pass `-- --vault=<folder>` to open a vault directly. For example, `npm run dev -
 
 `npm run check` type-checks everything.
 
+## Testing
+
+```bash
+npm test
+```
+
+Unit tests. These cover the log parser, the source scanners, and the error diagnosis for every broken document in `fixtures/errors`. Each one declares its expected result in a `% expect:` line. They run against committed logs, so no TeX is needed.
+
+```bash
+npm run test:e2e
+```
+
+End to end, and slow because it needs MiKTeX. For each broken document, this applies the first quick fix, recompiles with pdflatex, and requires a clean build.
+
+```bash
+npm run fixtures:logs
+```
+
+Regenerates `fixtures/errors/logs/`. Run it after adding or changing a broken document.
+
 ## How a vault is laid out
 
 ```

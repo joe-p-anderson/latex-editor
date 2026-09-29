@@ -1,0 +1,9 @@
+% expect: undefined-environment @6 package=tikz
+\documentclass{handout}
+\title{Environment from a package that is not loaded}
+\begin{document}
+\maketitle
+\begin{tikzpicture}
+  \draw (0,0) -- (1,1);
+\end{tikzpicture}
+\end{document}

@@ -71,6 +71,16 @@ export class Vault {
     )
   }
 
+  /** Every visible file in the vault, vault-relative. */
+  async files(): Promise<string[]> {
+    const out: string[] = []
+    const walk = (nodes: TreeNode[]) => {
+      for (const n of nodes) n.kind === 'dir' ? walk(n.children ?? []) : out.push(n.rel)
+    }
+    walk(await this.tree())
+    return out
+  }
+
   /** Calls `onChange` (debounced) when files are added, removed or renamed. */
   watch(onChange: () => void): void {
     let timer: NodeJS.Timeout | undefined

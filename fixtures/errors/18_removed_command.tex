@@ -1,0 +1,8 @@
+% expect: undefined-command @7 nosuggest
+% The real-world case: \mgpar was removed from handout.cls, as in FinalDemos/Difraction.tex.
+\documentclass{handout}
+\title{Command removed from the class}
+\begin{document}
+\maketitle
+Today we will be doing diffraction with a laser.\mgpar{Be safe with the laser.}
+\end{document}

@@ -5,13 +5,18 @@
 //   - a successful PDF is copied to pdf/<reldir>/<name>.pdf.
 import { spawn, type ChildProcess } from 'node:child_process'
 import { copyFile, mkdir, readFile, stat } from 'node:fs/promises'
-import { join, posix, resolve } from 'node:path'
-import type { CompileResult, LogMessage } from '../shared/api'
+import { isAbsolute, join, posix } from 'node:path'
+import type { CompileResult } from '../shared/api'
+import { diagnose, type DiagnoseContext } from './diagnose'
+import { parseLog } from './logparser'
+import { definitionsFor } from './macros'
 import type { Vault } from './vault'
 
 const MAX_PASSES = 4
 const PASS_TIMEOUT_MS = 120_000
 const RERUN = /Rerun to get|Label\(s\) may have changed|Rerun LaTeX/
+// Any error line, in -file-line-error form (`path:12: ...`) or TeX's own (`! ...`).
+const HAS_ERROR = /^(?:.+?\.[A-Za-z]{1,8}:\d+: |! )/m
 
 let running: ChildProcess | null = null
 /** Bumped by every compile; an older compile stops once it sees a newer one. */
@@ -37,8 +42,12 @@ export async function compile(vault: Vault, rel: string): Promise<CompileResult>
   const root = await resolveRoot(vault, rel)
   if (!root) {
     return {
-      ok: false, root: rel, passes: 0, pdf: null, durationMs: 0,
-      errors: [{ file: rel, line: null, message: 'Not a document (no \\documentclass), and nothing compiled yet to rebuild instead.' }],
+      ok: false, root: rel, passes: 0, pdf: null, durationMs: 0, log: '',
+      problems: [{
+        rule: 'not-a-document', severity: 'error', file: rel, line: null, fixes: [], tex: '',
+        title: 'Nothing to compile',
+        explanation: 'This file has no \\documentclass, and no document has been compiled yet to rebuild instead. Open and save the main document first.',
+      }],
     }
   }
   lastRoot = root
@@ -63,25 +72,53 @@ export async function compile(vault: Vault, rel: string): Promise<CompileResult>
   const logPath = join(cacheDir, `${name}.log`)
   let passes = 0
   let log = ''
-  let errors: LogMessage[] = []
   do {
     passes++
     await runPdflatex(args, vault.root, env)
     if (gen !== generation) {
-      return { ok: false, root, passes, pdf: null, errors: [], durationMs: Date.now() - started }
+      return { ok: false, root, passes, pdf: null, problems: [], log: '', durationMs: Date.now() - started }
     }
     log = await readFile(logPath, 'utf8').catch(() => '')
-    errors = parseErrors(log, vault)
-  } while (errors.length === 0 && RERUN.test(log) && passes < MAX_PASSES)
+    // Rerunning can't fix an error, so only rerun a clean pass that asks for it.
+  } while (!HAS_ERROR.test(log) && RERUN.test(log) && passes < MAX_PASSES)
 
+  const problems = await diagnose(parseLog(log), diagnoseContext(vault, root, log, join(cacheDir, `${name}.aux`)))
   const cachePdf = join(cacheDir, `${name}.pdf`)
   const pdfExists = await stat(cachePdf).then(() => true, () => false)
-  const ok = pdfExists && errors.length === 0
+  const ok = pdfExists && !problems.some((p) => p.severity === 'error' && !p.hidden)
   if (ok) {
     await mkdir(pdfDir, { recursive: true })
     await copyFile(cachePdf, join(pdfDir, `${name}.pdf`))
   }
-  return { ok, root, passes, pdf: pdfExists ? cachePdf : null, errors, durationMs: Date.now() - started }
+  return { ok, root, passes, pdf: pdfExists ? cachePdf : null, problems, log, durationMs: Date.now() - started }
+}
+
+/** What the diagnosis rules may look at, read lazily and at most once. */
+export function diagnoseContext(vault: Vault, doc: string, log: string, auxPath: string): DiagnoseContext {
+  const once = <T>(f: () => Promise<T>) => {
+    let p: Promise<T> | null = null
+    return () => (p ??= f())
+  }
+  const texts = new Map<string, Promise<string | null>>()
+  const read = (file: string) => {
+    const abs = isAbsolute(file) ? file : vault.abs(file)
+    if (!texts.has(abs)) texts.set(abs, readFile(abs, 'utf8').catch(() => null))
+    return texts.get(abs)!
+  }
+  return {
+    root: vault.root,
+    doc,
+    read,
+    files: once(() => vault.files()),
+    // Labels from the .aux (what LaTeX actually recorded), else the source.
+    labels: once(async () => {
+      const aux = await readFile(auxPath, 'utf8').catch(() => null)
+      const text = aux ?? (await read(doc)) ?? ''
+      const re = aux ? /\\newlabel\{([^}]+)\}/g : /\\label\{([^}]+)\}/g
+      return [...new Set([...text.matchAll(re)].map((m) => m[1]))]
+    }),
+    definitions: once(() => definitionsFor(log, vault.root)),
+  }
 }
 
 /** Runs one pdflatex pass, cancelling any pass still in flight from an earlier save. */
@@ -101,26 +138,3 @@ function runPdflatex(args: string[], cwd: string, env: NodeJS.ProcessEnv): Promi
     })
   })
 }
-
-/**
- * Minimal error extraction: with -file-line-error every TeX error is written
- * as `path:line: message`. The full parser with warnings and explanations
- * comes later; this is enough to list errors and jump to them.
- */
-function parseErrors(log: string, vault: Vault): LogMessage[] {
-  const seen = new Set<string>()
-  const out: LogMessage[] = []
-  for (const line of log.split(/\r?\n/)) {
-    const m = /^(.+?):(\d+): (.+)$/.exec(line)
-    if (!m) continue
-    const abs = resolve(vault.root, m[1])
-    const msg: LogMessage = { file: vault.rel(abs) ?? abs, line: Number(m[2]), message: m[3] }
-    const key = `${msg.file}:${msg.line}:${msg.message}`
-    if (!seen.has(key)) {
-      seen.add(key)
-      out.push(msg)
-    }
-  }
-  return out
-}
-

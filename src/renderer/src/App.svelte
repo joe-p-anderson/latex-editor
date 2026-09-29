@@ -1,9 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import type { CompileResult, LogMessage, VaultInfo } from '@shared/api'
+  import type { CompileResult, Problem, QuickFix, TextEdit, VaultInfo } from '@shared/api'
   import FileTree from './lib/FileTree.svelte'
   import Editor from './lib/Editor.svelte'
   import PdfViewer from './lib/PdfViewer.svelte'
+  import ProblemsPanel from './lib/ProblemsPanel.svelte'
 
   const TEXT_FILE = /\.(tex|cls|sty|bib|cfg|txt|md|json)$/i
 
@@ -78,6 +79,7 @@
       const r = await window.api.compile(rel)
       if (seq !== compileSeq) return // a newer save superseded this compile
       result = r
+      editor?.setProblems(r.problems)
       if (r.pdf) {
         pdf = r.pdf
         pdfVersion++
@@ -87,10 +89,37 @@
     }
   }
 
-  async function jumpTo(e: LogMessage): Promise<void> {
-    if (!e.file || /^[a-zA-Z]:|^\//.test(e.file)) return // outside the vault (e.g. a template)
-    await openFile(e.file)
-    if (e.line) editor?.gotoLine(e.line)
+  const outsideVault = (file: string) => /^[a-zA-Z]:|^\//.test(file)
+
+  async function jumpTo(p: Problem): Promise<void> {
+    if (!p.file) return
+    if (outsideVault(p.file)) {
+      flash(`That's in ${p.file.split(/[\\/]/).pop()}, outside this vault`)
+      return
+    }
+    await openFile(p.file)
+    if (p.line) editor?.gotoLine(p.line)
+  }
+
+  /**
+   * Applies a quick fix: each file's edits go in as one undoable change, the
+   * file is saved, and the save recompiles as usual. Ctrl+Z undoes it.
+   */
+  async function applyFix(fix: QuickFix): Promise<void> {
+    const byFile = new Map<string, TextEdit[]>()
+    for (const e of fix.edits) byFile.set(e.file, [...(byFile.get(e.file) ?? []), e])
+    for (const [file, edits] of byFile) {
+      if (outsideVault(file)) {
+        flash(`Can't apply: ${file.split(/[\\/]/).pop()} is outside this vault`)
+        return
+      }
+      await openFile(file)
+      if (!editor?.applyEdits(edits)) {
+        flash(`Couldn't apply "${fix.label}": the text has changed since the last compile`)
+        return
+      }
+      editor.saveCurrent()
+    }
   }
 
   /** Source → PDF: highlight where the cursor's line appears. */
@@ -141,10 +170,14 @@
       {#if compiling}
         <span class="status">Compiling…</span>
       {:else if result}
-        {#if result.ok}
-          <span class="status ok">✓ {result.root} · {result.passes} pass{result.passes === 1 ? '' : 'es'} · {(result.durationMs / 1000).toFixed(1)} s</span>
+        {@const errors = result.problems.filter((p) => p.severity === 'error' && !p.hidden && !p.followOn).length}
+        {@const warnings = result.problems.filter((p) => p.severity === 'warning' && !p.hidden).length}
+        {#if errors}
+          <span class="status err">✗ {errors} error{errors === 1 ? '' : 's'} in {result.root}</span>
         {:else}
-          <span class="status err">✗ {result.errors.length} error{result.errors.length === 1 ? '' : 's'} in {result.root}</span>
+          <span class="status ok">
+            ✓ {result.root} · {(result.durationMs / 1000).toFixed(1)} s{#if warnings}<span class="warn"> · {warnings} warning{warnings === 1 ? '' : 's'}</span>{/if}
+          </span>
         {/if}
       {/if}
       <button disabled={!active || compiling} onclick={() => active && compile(active)}>Recompile</button>
@@ -158,13 +191,7 @@
       <section class="editor-pane">
         <div class="editor"><Editor bind:this={editor} onsave={save} ondirtychange={setDirty} onsyncforward={syncForward} /></div>
         {#if !active}<p class="hint">Pick a file on the left.</p>{/if}
-        {#if result && result.errors.length > 0}
-          <ul class="errors">
-            {#each result.errors as e, i (i)}
-              <li><button onclick={() => jumpTo(e)}><span class="loc">{e.file}{e.line ? `:${e.line}` : ''}</span> {e.message}</button></li>
-            {/each}
-          </ul>
-        {/if}
+        {#if result}<ProblemsPanel {result} onjump={jumpTo} onfix={applyFix} />{/if}
       </section>
       <div class="splitter" role="separator" aria-orientation="vertical" onpointerdown={startDrag}></div>
       <section class="pdf-pane"><PdfViewer bind:this={viewer} {pdf} version={pdfVersion} onsyncclick={syncInverse} /></section>
@@ -257,32 +284,8 @@
     text-align: center;
     color: var(--muted);
   }
-  .errors {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    max-height: 30%;
-    overflow: auto;
-    border-top: 2px solid var(--err);
-    background: #fff5f5;
-  }
-  .errors button {
-    display: block;
-    width: 100%;
-    text-align: left;
-    border: none;
-    border-radius: 0;
-    background: none;
-    padding: 5px 10px;
-    font-family: Consolas, monospace;
-    font-size: 12px;
-  }
-  .errors button:hover {
-    background: #ffe3e3;
-  }
-  .loc {
-    color: var(--err);
-    font-weight: 600;
+  .status .warn {
+    color: #9a6700;
   }
   .splitter {
     cursor: col-resize;
