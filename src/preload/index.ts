@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { Api, TreeNode } from '../shared/api'
 
 // The renderer's only door to the filesystem and compiler. Everything goes
@@ -13,6 +13,10 @@ const api: Api & { onMenuOpenVault(cb: () => void): () => void } = {
   syncForward: (pdf, rel, line) => ipcRenderer.invoke('synctex:forward', pdf, rel, line),
   syncInverse: (pdf, page, x, y) => ipcRenderer.invoke('synctex:inverse', pdf, page, x, y),
   mathMacros: (rel) => ipcRenderer.invoke('math:macros', rel),
+  listImages: () => ipcRenderer.invoke('images:list'),
+  importImage: (sourcePath) => ipcRenderer.invoke('images:import', sourcePath),
+  saveImage: (name, bytes) => ipcRenderer.invoke('images:save', name, bytes),
+  pathForFile: (file) => webUtils.getPathForFile(file),
   onTreeChanged: (cb) => {
     const listener = (_e: unknown, tree: TreeNode[]) => cb(tree)
     ipcRenderer.on('tree-changed', listener)

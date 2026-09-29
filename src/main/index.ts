@@ -1,10 +1,13 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, net, protocol } from 'electron'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join, resolve, sep } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { compile, resolveRoot } from './compile'
+import { importImage, saveImage } from './images'
 import { macrosFor } from './mathmacros'
 import { forward, inverse } from './synctex'
 import { Vault } from './vault'
+import { isImage } from '../shared/images'
 
 let win: BrowserWindow | null = null
 let vault: Vault | null = null
@@ -61,6 +64,9 @@ ipcMain.handle('synctex:inverse', async (_e, pdf: string, page: number, x: numbe
   return hit && { file: requireVault().rel(hit.file) ?? hit.file, line: hit.line }
 })
 // Macros for previewing math in `rel`: those of the document it belongs to.
+ipcMain.handle('images:list', async () => (await requireVault().files()).filter(isImage))
+ipcMain.handle('images:import', (_e, source: string) => importImage(requireVault(), source))
+ipcMain.handle('images:save', (_e, name: string, bytes: Uint8Array) => saveImage(requireVault(), name, bytes))
 ipcMain.handle('math:macros', async (_e, rel: string) => {
   const v = requireVault()
   return macrosFor(v, (await resolveRoot(v, rel).catch(() => null)) ?? rel)
@@ -109,7 +115,26 @@ async function createWindow(): Promise<void> {
   else await win.loadFile(join(import.meta.dirname, '../renderer/index.html'))
 }
 
+// vault://files/<vault-relative path> serves images and PDFs from the open
+// vault to <img> tags and thumbnail rendering, and nothing outside it.
+protocol.registerSchemesAsPrivileged([{ scheme: 'vault', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }])
+
+async function serveVaultFile(request: Request): Promise<Response> {
+  try {
+    const rel = decodeURIComponent(new URL(request.url).pathname.slice(1))
+    if (!isImage(rel)) return new Response('Only images are served', { status: 403 })
+    const file = await net.fetch(pathToFileURL(requireVault().abs(rel)).toString())
+    // The page's origin is file://, so fetch() (for PDF thumbnails) needs CORS.
+    const headers = new Headers(file.headers)
+    headers.set('Access-Control-Allow-Origin', '*')
+    return new Response(file.body, { status: file.status, headers })
+  } catch {
+    return new Response('Not found', { status: 404 })
+  }
+}
+
 app.whenReady().then(() => {
+  protocol.handle('vault', serveVaultFile)
   buildMenu()
   createWindow()
 })

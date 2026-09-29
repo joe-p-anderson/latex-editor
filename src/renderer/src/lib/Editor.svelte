@@ -11,16 +11,20 @@
   import { locateOnLine } from '@shared/edits'
   import { createRenderer, type MacroDefs } from '@shared/mathrender'
   import { mathPreview, refreshMath, type RenderFn } from './mathPreview'
+  import { imageSupport, insertAt, type ImageHooks } from './imageSupport'
 
   let {
     onsave,
     ondirtychange,
     onsyncforward,
+    imageHooks,
   }: {
     onsave: (rel: string, text: string) => void
     ondirtychange: (rel: string, dirty: boolean) => void
     /** Ctrl+J: show the cursor's line in the PDF. */
     onsyncforward: () => void
+    /** Image picker, autocomplete, hover previews, drop and paste. */
+    imageHooks: ImageHooks
   } = $props()
 
   let host: HTMLDivElement
@@ -43,6 +47,12 @@
   let render: RenderFn = createRenderer()
   let macrosKey = '{}'
   const preview = mathPreview(() => render)
+  const images = imageSupport({
+    images: () => imageHooks.images(),
+    openPicker: () => imageHooks.openPicker(),
+    importFiles: (files) => imageHooks.importFiles(files),
+    savePasted: (blob) => imageHooks.savePasted(blob),
+  })
 
   function makeState(text: string): EditorState {
     return EditorState.create({
@@ -55,6 +65,7 @@
         latex,
         lintGutter(),
         preview,
+        images,
         EditorView.lineWrapping,
         Prec.highest(
           keymap.of([
@@ -143,6 +154,18 @@
     }
     view.dispatch({ changes, scrollIntoView: true })
     return true
+  }
+
+  /** Gives the editor keyboard focus (e.g. after a dialog closes). */
+  export function focus(): void {
+    view.focus()
+  }
+
+  /** Inserts text at the cursor (replacing any selection). */
+  export function insertAtCursor(text: string): void {
+    const { from, to } = view.state.selection.main
+    if (from !== to) view.dispatch({ changes: { from, to, insert: '' } })
+    insertAt(view, from, text)
   }
 
   /** Saves the open file, as Ctrl+S does. */

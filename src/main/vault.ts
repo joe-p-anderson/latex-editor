@@ -1,4 +1,4 @@
-import { readdir, readFile } from 'node:fs/promises'
+import { readdir, readFile, stat } from 'node:fs/promises'
 import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { watch, type FSWatcher } from 'chokidar'
 import type { TreeNode, VaultInfo } from '../shared/api'
@@ -7,7 +7,12 @@ import type { TreeNode, VaultInfo } from '../shared/api'
 interface VaultSettings {
   /** Template library, absolute or relative to the vault root. */
   templates?: string
+  /** Folder (vault-relative) where imported and pasted images go. */
+  images?: string
 }
+
+// Where images go when none is configured: the first of these that exists.
+const IMAGE_DIR_CANDIDATES = ['Images', 'images', 'Assets', 'assets', 'figures', 'Figures']
 
 // Build products and tool folders never shown in the file tree. The editor's
 // own outputs (.texcache, pdf) are hidden too; pdf/ is for opening outside
@@ -18,6 +23,8 @@ const HIDDEN_EXTS = /\.(aux|log|out|synctex\.gz|fls|fdb_latexmk|toc|nav|snm|vrb|
 export class Vault {
   readonly name: string
   templates: string | null = null
+  /** Vault-relative folder for imported and pasted images. */
+  imagesDir = 'Images'
   private watcher: FSWatcher | null = null
 
   constructor(readonly root: string) {
@@ -32,10 +39,18 @@ export class Vault {
       // No settings file: fine, everything has a default.
     }
     this.templates = settings.templates ? resolve(this.root, settings.templates) : null
+    this.imagesDir = settings.images ?? (await this.firstExistingDir(IMAGE_DIR_CANDIDATES)) ?? 'Images'
+  }
+
+  private async firstExistingDir(names: string[]): Promise<string | null> {
+    for (const n of names) {
+      if ((await stat(join(this.root, n)).catch(() => null))?.isDirectory()) return n
+    }
+    return null
   }
 
   async info(): Promise<VaultInfo> {
-    return { root: this.root, name: this.name, templates: this.templates, tree: await this.tree() }
+    return { root: this.root, name: this.name, templates: this.templates, imagesDir: this.imagesDir, tree: await this.tree() }
   }
 
   /** Absolute path for a vault-relative one, refusing anything outside the vault. */

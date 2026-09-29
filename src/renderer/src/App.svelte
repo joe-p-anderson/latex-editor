@@ -5,6 +5,10 @@
   import Editor from './lib/Editor.svelte'
   import PdfViewer from './lib/PdfViewer.svelte'
   import ProblemsPanel from './lib/ProblemsPanel.svelte'
+  import ImagePicker from './lib/ImagePicker.svelte'
+  import { includegraphics, type ImageHooks } from './lib/imageSupport'
+  import { clearThumbnails } from './lib/thumbnails'
+  import { isImage } from '@shared/images'
 
   const TEXT_FILE = /\.(tex|cls|sty|bib|cfg|txt|md|json)$/i
 
@@ -37,9 +41,52 @@
     document.title = vault ? `${vault.name} — LaTeX Editor` : 'LaTeX Editor'
   })
 
+  // The vault's images, for the picker, autocomplete and hover previews.
+  let images = $state<string[]>([])
+  // The picker: 'insert' puts the chosen image at the cursor; 'view' just shows images.
+  let picker = $state<{ mode: 'insert' | 'view'; initial: string } | null>(null)
+
+  async function loadImages(): Promise<void> {
+    clearThumbnails() // files may have been replaced on disk
+    images = vault ? await window.api.listImages() : []
+  }
+
+  const imageHooks: ImageHooks = {
+    images: () => images,
+    openPicker: () => (picker = { mode: 'insert', initial: '' }),
+    importFiles: async (files) => {
+      const rels: string[] = []
+      for (const f of files) {
+        const path = window.api.pathForFile(f)
+        rels.push(path ? await window.api.importImage(path) : await window.api.saveImage(f.name, new Uint8Array(await f.arrayBuffer())))
+      }
+      await loadImages()
+      return rels
+    },
+    savePasted: async (blob) => {
+      const stamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-')
+      const ext = blob.type === 'image/jpeg' ? 'jpg' : 'png'
+      const rel = await window.api.saveImage(`pasted-${stamp}.${ext}`, new Uint8Array(await blob.arrayBuffer()))
+      await loadImages()
+      flash(`Saved ${rel}`)
+      return rel
+    },
+  }
+
+  function pickImage(rel: string): void {
+    picker = null
+    editor?.insertAtCursor(includegraphics(rel))
+  }
+
   onMount(() => {
-    window.api.getVault().then((v) => (vault = v))
-    const offTree = window.api.onTreeChanged((tree) => vault && (vault.tree = tree))
+    window.api.getVault().then((v) => {
+      vault = v
+      loadImages()
+    })
+    const offTree = window.api.onTreeChanged((tree) => {
+      if (vault) vault.tree = tree
+      loadImages()
+    })
     const offMenu = window.api.onMenuOpenVault(openVault)
     return () => (offTree(), offMenu())
   })
@@ -52,10 +99,16 @@
     dirty = new Set()
     result = null
     pdf = null
+    loadImages()
   }
 
   async function openFile(rel: string): Promise<void> {
-    if (!TEXT_FILE.test(rel)) return // images etc. get a preview later
+    if (isImage(rel)) {
+      // Images open in the picker's view mode, filtered to this one.
+      picker = { mode: 'view', initial: rel }
+      return
+    }
+    if (!TEXT_FILE.test(rel)) return
     await editor?.open(rel)
     active = rel
     loadMacros(rel)
@@ -175,6 +228,7 @@
       <span class="file">{active ?? ''}</span>
       <span class="spacer"></span>
       {#if note}<span class="note">{note}</span>{/if}
+      <button disabled={!active?.endsWith('.tex')} onclick={() => (picker = { mode: 'insert', initial: '' })} title="Insert an image from the vault (or type ![[ in the editor)">Insert image</button>
       <button disabled={!pdf || !active} onclick={syncForward} title="Show the cursor's line in the PDF (Ctrl+J)">Show in PDF →</button>
       {#if compiling}
         <span class="status">Compiling…</span>
@@ -198,7 +252,7 @@
 
     <div class="main" bind:this={main} style:grid-template-columns="{split}fr 6px {1 - split}fr">
       <section class="editor-pane">
-        <div class="editor"><Editor bind:this={editor} onsave={save} ondirtychange={setDirty} onsyncforward={syncForward} /></div>
+        <div class="editor"><Editor bind:this={editor} onsave={save} ondirtychange={setDirty} onsyncforward={syncForward} {imageHooks} /></div>
         {#if !active}<p class="hint">Pick a file on the left.</p>{/if}
         {#if result}<ProblemsPanel {result} onjump={jumpTo} onfix={applyFix} />{/if}
       </section>
@@ -206,6 +260,19 @@
       <section class="pdf-pane"><PdfViewer bind:this={viewer} {pdf} version={pdfVersion} onsyncclick={syncInverse} /></section>
     </div>
   </div>
+{/if}
+
+{#if picker}
+  <ImagePicker
+    {images}
+    initial={picker.initial}
+    title={picker.mode === 'insert' ? 'Insert image' : 'Images in this vault'}
+    onpick={picker.mode === 'insert' ? pickImage : undefined}
+    onclose={() => {
+      picker = null
+      editor?.focus() // so typing continues where it left off
+    }}
+  />
 {/if}
 
 <style>

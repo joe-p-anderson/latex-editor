@@ -16,6 +16,8 @@ export interface VaultInfo {
   name: string
   /** Absolute path of the shared template library, if one is configured. */
   templates: string | null
+  /** Vault-relative folder where imported and pasted images go. */
+  imagesDir: string
   tree: TreeNode[]
 }
 
@@ -102,5 +104,13 @@ export interface Api {
   syncInverse(pdf: string, page: number, x: number, y: number): Promise<SourceLocation | null>
   /** Macros (MathJax format) for previewing math in `rel`, and the files they came from. */
   mathMacros(rel: string): Promise<{ macros: MacroDefs; sources: string[] }>
+  /** Every image in the vault, vault-relative. */
+  listImages(): Promise<string[]>
+  /** Copies an image from outside the vault into its image folder (or returns its path if inside). */
+  importImage(sourcePath: string): Promise<string>
+  /** Saves image bytes (a pasted screenshot) into the image folder. */
+  saveImage(name: string, bytes: Uint8Array): Promise<string>
+  /** Filesystem path of a dropped File, or '' if it has none. */
+  pathForFile(file: File): string
   onTreeChanged(cb: (tree: TreeNode[]) => void): () => void
 }
