@@ -24,7 +24,7 @@ export async function documentFiles(vault: Vault, root: string): Promise<string[
   const rootAbs = vault.abs(root)
   const name = posix.basename(root, '.tex')
   const log = await readFile(join(cacheDirFor(vault, root), `${name}.log`), 'utf8').catch(() => null)
-  const ownFile = (p: string) => [vault.root, vault.templates].some((dir) => dir && (p === dir || p.startsWith(dir + sep)))
+  const ownFile = (p: string) => [vault.root, ...vault.templateDirs].some((dir) => p === dir || p.startsWith(dir + sep))
 
   let files: string[]
   if (log) {
@@ -67,8 +67,10 @@ async function guessFiles(vault: Vault, rootAbs: string): Promise<string[]> {
   const text = (await readFile(rootAbs, 'utf8').catch(() => '')).replace(/(?<!\\)%.*$/gm, '')
   const files: string[] = []
   const cls = /\\documentclass(?:\[[^\]]*\])?\{([^}]+)\}/.exec(text)?.[1]
-  for (const dir of [vault.templates, vault.root]) {
-    if (dir && cls) files.push(join(dir, `${cls}.cls`))
+  // Every candidate is listed; the ones that don't exist are skipped when read.
+  // Later files win, so this runs lowest priority first: global, vault's own, vault root.
+  for (const dir of [...vault.templateDirs].reverse().concat(vault.root)) {
+    if (cls) files.push(join(dir, `${cls}.cls`))
   }
   for (const m of text.matchAll(/\\(?:input|include)\{([^}]+)\}/g)) {
     files.push(vault.abs(m[1].endsWith('.tex') ? m[1] : `${m[1]}.tex`))

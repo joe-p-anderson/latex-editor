@@ -1,10 +1,11 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, net, protocol } from 'electron'
-import { readFile, writeFile } from 'node:fs/promises'
-import { join, resolve, sep } from 'node:path'
+import { app, BrowserWindow, dialog, ipcMain, Menu, net, protocol, shell } from 'electron'
+import { copyFile, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises'
+import { basename, join, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { compile, resolveRoot } from './compile'
 import { importImage, saveImage } from './images'
 import { editorContextFor, macrosFor } from './mathmacros'
+import { globalTemplatesDir, loadSettings, saveSettings } from './settings'
 import { forward, inverse } from './synctex'
 import { Vault } from './vault'
 import { isImage } from '../shared/images'
@@ -12,26 +13,59 @@ import { isImage } from '../shared/images'
 let win: BrowserWindow | null = null
 let vault: Vault | null = null
 
-// Remembers the last opened vault between launches.
-const settingsPath = () => join(app.getPath('userData'), 'settings.json')
-async function loadSettings(): Promise<{ lastVault?: string }> {
-  try {
-    return JSON.parse(await readFile(settingsPath(), 'utf8'))
-  } catch {
-    return {}
-  }
-}
-async function saveSettings(s: { lastVault?: string }): Promise<void> {
-  await writeFile(settingsPath(), JSON.stringify(s, null, 2))
-}
-
 async function openVault(root: string): Promise<Vault> {
   await vault?.close()
-  vault = new Vault(resolve(root))
+  vault = new Vault(resolve(root), await globalTemplatesDir())
   await vault.load()
   vault.watch(async () => win?.webContents.send('tree-changed', await vault!.tree()))
   await saveSettings({ lastVault: vault.root })
   return vault
+}
+
+/**
+ * Moves a vault file into the global template library, asking before
+ * replacing a file of the same name there. Returns where it went, or null
+ * if the user said no.
+ */
+async function moveToGlobalTemplates(rel: string): Promise<string | null> {
+  const v = requireVault()
+  const from = v.abs(rel)
+  const dir = await globalTemplatesDir()
+  const to = join(dir, basename(from))
+  if (await stat(to).then(() => true, () => false)) {
+    const r = await dialog.showMessageBox(win!, {
+      type: 'question',
+      message: `${basename(from)} is already in the global template folder`,
+      detail: `Replace it with the copy from this vault?\n\n${dir}`,
+      buttons: ['Replace', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+    })
+    if (r.response !== 0) return null
+  }
+  try {
+    await rename(from, to)
+  } catch {
+    // rename can't cross drives: copy, then remove the original.
+    await copyFile(from, to)
+    await unlink(from)
+  }
+  return to
+}
+
+/** Lets the user pick a new global template folder, and uses it from now on. */
+async function changeGlobalTemplates(): Promise<void> {
+  const r = await dialog.showOpenDialog(win!, {
+    title: 'Choose the global template folder',
+    defaultPath: await globalTemplatesDir(),
+    properties: ['openDirectory', 'createDirectory'],
+  })
+  if (r.canceled || !r.filePaths[0]) return
+  await saveSettings({ templates: r.filePaths[0] })
+  if (vault) {
+    vault.globalTemplates = await globalTemplatesDir()
+    win?.webContents.send('vault-changed', await vault.info())
+  }
 }
 
 function requireVault(): Vault {
@@ -67,7 +101,8 @@ ipcMain.handle('synctex:inverse', async (_e, pdf: string, page: number, x: numbe
 ipcMain.handle('images:list', async () => (await requireVault().files()).filter(isImage))
 ipcMain.handle('images:import', (_e, source: string) => importImage(requireVault(), source))
 ipcMain.handle('images:save', (_e, name: string, bytes: Uint8Array) => saveImage(requireVault(), name, bytes))
-ipcMain.handle('math:macros', async (_e, rel: string) => {
+ipcMain.handle('templates:move', (_e, rel: string) => moveToGlobalTemplates(rel))
+ipcMain.handle('math:macros',async (_e, rel: string) => {
   const v = requireVault()
   return macrosFor(v, (await resolveRoot(v, rel).catch(() => null)) ?? rel)
 })
@@ -83,6 +118,13 @@ function buildMenu(): void {
         label: 'File',
         submenu: [
           { label: 'Open Vault…', accelerator: 'CmdOrCtrl+O', click: () => win?.webContents.send('menu:open-vault') },
+          {
+            label: 'Template Folder',
+            submenu: [
+              { label: 'Show in Explorer', click: async () => shell.openPath(await globalTemplatesDir()) },
+              { label: 'Change…', click: () => changeGlobalTemplates() },
+            ],
+          },
           { type: 'separator' },
           { role: 'quit' },
         ],

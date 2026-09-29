@@ -305,7 +305,7 @@ async function missingFile(
   if (/\.(sty|cls)$/.test(name)) {
     const kind = name.endsWith('.cls') ? 'class' : 'package'
     return base('error', 'missing-package', `The ${kind} ${name} isn't installed`, {
-      explanation: `MiKTeX couldn't find or install ${name}. Check the spelling in \\${kind === 'class' ? 'documentclass' : 'usepackage'}; ${kind === 'class' ? 'if it is one of your templates, check the template library path in .vault.json' : 'if the name is right, install it with the MiKTeX Console'}.`,
+      explanation: `MiKTeX couldn't find or install ${name}. Check the spelling in \\${kind === 'class' ? 'documentclass' : 'usepackage'}; ${kind === 'class' ? 'if it is one of your templates, check that it is in the global template folder (File → Template Folder)' : 'if the name is right, install it with the MiKTeX Console'}.`,
     })
   }
   const wantExt = /\.[A-Za-z0-9]+$/.exec(name)?.[0] ?? ''

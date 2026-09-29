@@ -39,7 +39,7 @@ Regenerates `fixtures/errors/logs/`. Run it after adding or changing a broken do
 
 ```
 <vault>/
-  .vault.json        { "templates": "<path to shared .cls/.sty library>" }
+  .vault.json        optional; { "templates": "<vault-only .cls/.sty folder>" }
   Homework/HW3.tex   sources, organised however you like
   Images/...         referenced relative to the vault root
   pdf/Homework/HW3.pdf      finished PDFs (mirrored tree)
@@ -51,7 +51,11 @@ Regenerates `fixtures/errors/logs/`. Run it after adding or changing a broken do
   - a `% !TEX root = ../main.tex` comment names the document to build;
   - otherwise the file itself, if it has a `\documentclass`;
   - otherwise the document compiled last, so saving an `\input`'ed piece rebuilds its parent.
-- Classes are found through `TEXINPUTS` pointing at the shared template library, so a vault holds no copies of them. See `spikes/README.md` for how that was tested.
+- Classes are found through `TEXINPUTS`, so a vault holds no copies of them. See `spikes/README.md` for how that was tested. The folders searched, in order:
+  1. the vault itself;
+  2. the vault's own template folder, if `.vault.json` names one;
+  3. the global template folder, one per install and shared by every vault. It defaults to `%APPDATA%\<app>\templates` and is set in `settings.json` beside it. Use **File → Template Folder** to open it or pick another.
+- Opening a `.cls` file from the vault shows a banner offering to move it to the global template folder. **Not now** hides the banner for that file until the app restarts, so a new template can be worked on inside the vault first.
 
 ## Editing
 

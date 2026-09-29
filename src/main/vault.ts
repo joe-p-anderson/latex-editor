@@ -6,7 +6,7 @@ import { DEFAULT_LISTS } from '../shared/latexedit'
 
 /** Optional per-vault settings, read from <vault>/.vault.json. */
 interface VaultSettings {
-  /** Template library, absolute or relative to the vault root. */
+  /** A vault-only template library, absolute or relative to the vault root; searched before the global one. */
   templates?: string
   /** Folder (vault-relative) where imported and pasted images go. */
   images?: string
@@ -27,7 +27,8 @@ const HIDDEN_EXTS = /\.(aux|log|out|synctex\.gz|fls|fdb_latexmk|toc|nav|snm|vrb|
 
 export class Vault {
   readonly name: string
-  templates: string | null = null
+  /** The vault's own template library (from .vault.json), if any. */
+  vaultTemplates: string | null = null
   /** Vault-relative folder for imported and pasted images. */
   imagesDir = 'Images'
   /** List environment → item command (no backslash), for Enter in the editor. */
@@ -36,8 +37,18 @@ export class Vault {
   snippets = 'snippets.txt'
   private watcher: FSWatcher | null = null
 
-  constructor(readonly root: string) {
+  /** `globalTemplates` is the per-install template library shared by every vault. */
+  constructor(
+    readonly root: string,
+    public globalTemplates: string | null = null,
+  ) {
     this.name = basename(root)
+  }
+
+  /** Template libraries in search order: the vault's own, then the global one. */
+  get templateDirs(): string[] {
+    const dirs = [this.vaultTemplates, this.globalTemplates].filter((d): d is string => !!d)
+    return [...new Set(dirs)]
   }
 
   async load(): Promise<void> {
@@ -47,7 +58,7 @@ export class Vault {
     } catch {
       // No settings file: fine, everything has a default.
     }
-    this.templates = settings.templates ? resolve(this.root, settings.templates) : null
+    this.vaultTemplates = settings.templates ? resolve(this.root, settings.templates) : null
     this.imagesDir = settings.images ?? (await this.firstExistingDir(IMAGE_DIR_CANDIDATES)) ?? 'Images'
     this.lists = { ...DEFAULT_LISTS }
     for (const [env, marker] of Object.entries(settings.lists ?? {})) {
@@ -68,7 +79,8 @@ export class Vault {
     return {
       root: this.root,
       name: this.name,
-      templates: this.templates,
+      templates: this.templateDirs,
+      globalTemplates: this.globalTemplates,
       imagesDir: this.imagesDir,
       lists: this.lists,
       snippets: this.snippets,

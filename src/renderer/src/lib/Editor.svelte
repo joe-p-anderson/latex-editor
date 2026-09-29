@@ -196,6 +196,21 @@
     insertAt(view, from, text)
   }
 
+  /** The open file's current text, saved or not. */
+  export function currentText(): string {
+    return view.state.sliceDoc()
+  }
+
+  /** Forgets `rel` (e.g. it was moved out of the vault), leaving the editor empty if it was open. */
+  export function close(rel: string): void {
+    states.delete(rel)
+    saved.delete(rel)
+    if (current !== rel) return
+    current = null
+    view.setState(EditorState.create({ doc: '' }))
+    onoutline([])
+  }
+
   /** Saves the open file, as Ctrl+S does. */
   export function saveCurrent(): void {
     save()

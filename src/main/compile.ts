@@ -1,11 +1,11 @@
 // The compile pipeline proven in spikes/compile.ps1:
 //   - pdflatex runs from the vault root, so Images/... resolves as before;
-//   - classes come from the shared template library via TEXINPUTS;
+//   - classes come from the template libraries (the vault's, then the global one) via TEXINPUTS;
 //   - aux, log, synctex and the working PDF live in .texcache/<reldir>/<name>/;
 //   - a successful PDF is copied to pdf/<reldir>/<name>.pdf.
 import { spawn, type ChildProcess } from 'node:child_process'
 import { copyFile, mkdir, readFile, stat } from 'node:fs/promises'
-import { isAbsolute, join, posix } from 'node:path'
+import { delimiter, isAbsolute, join, posix } from 'node:path'
 import type { CompileResult } from '../shared/api'
 import { diagnose, type DiagnoseContext } from './diagnose'
 import { parseLog } from './logparser'
@@ -66,8 +66,9 @@ export async function compile(vault: Vault, rel: string): Promise<CompileResult>
   await mkdir(cacheDir, { recursive: true })
 
   const env = { ...process.env }
-  // '//' searches subfolders; the trailing ';' keeps MiKTeX's default path.
-  if (vault.templates) env.TEXINPUTS = `${vault.templates}//;`
+  // '//' searches subfolders; the trailing separator keeps MiKTeX's default path.
+  const dirs = vault.templateDirs
+  if (dirs.length) env.TEXINPUTS = dirs.map((d) => `${d}//${delimiter}`).join('')
 
   const args = [
     '-synctex=1', '-interaction=nonstopmode', '-file-line-error',

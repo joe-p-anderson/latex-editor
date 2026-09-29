@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import type { Api, TreeNode } from '../shared/api'
+import type { Api, TreeNode, VaultInfo } from '../shared/api'
 
 // The renderer's only door to the filesystem and compiler. Everything goes
 // through named IPC channels handled in src/main/index.ts.
@@ -17,11 +17,17 @@ const api: Api & { onMenuOpenVault(cb: () => void): () => void } = {
   listImages: () => ipcRenderer.invoke('images:list'),
   importImage: (sourcePath) => ipcRenderer.invoke('images:import', sourcePath),
   saveImage: (name, bytes) => ipcRenderer.invoke('images:save', name, bytes),
+  moveToGlobalTemplates: (rel) => ipcRenderer.invoke('templates:move', rel),
   pathForFile: (file) => webUtils.getPathForFile(file),
   onTreeChanged: (cb) => {
     const listener = (_e: unknown, tree: TreeNode[]) => cb(tree)
     ipcRenderer.on('tree-changed', listener)
     return () => ipcRenderer.removeListener('tree-changed', listener)
+  },
+  onVaultChanged: (cb) => {
+    const listener = (_e: unknown, vault: VaultInfo) => cb(vault)
+    ipcRenderer.on('vault-changed', listener)
+    return () => ipcRenderer.removeListener('vault-changed', listener)
   },
   onMenuOpenVault: (cb) => {
     const listener = () => cb()

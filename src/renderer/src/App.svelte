@@ -111,7 +111,8 @@
       loadImages()
     })
     const offMenu = window.api.onMenuOpenVault(openVault)
-    return () => (offTree(), offMenu())
+    const offVault = window.api.onVaultChanged((v) => (vault = v))
+    return () => (offTree(), offMenu(), offVault())
   })
 
   async function openVault(): Promise<void> {
@@ -152,6 +153,24 @@
     if (rel !== active) return
     editor?.setMacros(macros)
     if (ctx) context = ctx
+  }
+
+  // A class file open from the vault gets a banner offering to move it to the
+  // global template folder. "Not now" hides it for that file until the app
+  // restarts, so a new template can be worked on in place first.
+  let keptInVault = $state(new Set<string>())
+  const offerMove = $derived(!!active && active.toLowerCase().endsWith('.cls') && !keptInVault.has(active))
+
+  async function moveActiveToGlobal(): Promise<void> {
+    const rel = active
+    if (!rel || !editor) return
+    if (dirty.has(rel)) await window.api.writeFile(rel, editor.currentText())
+    const to = await window.api.moveToGlobalTemplates(rel).catch((e: Error) => (flash(`Couldn't move ${rel}: ${e.message}`), null))
+    if (!to) return
+    editor.close(rel)
+    setDirty(rel, false)
+    active = null
+    flash(`Moved to ${to}`)
   }
 
   function setDirty(rel: string, isDirty: boolean): void {
@@ -289,6 +308,18 @@
 
     <div class="main" bind:this={main} style:grid-template-columns="{split}fr 6px {1 - split}fr">
       <section class="editor-pane">
+        {#if offerMove && active}
+          {@const file = active.split('/').pop()}
+          <div class="banner">
+            <span>
+              <strong>{file}</strong> is a template. Move it to the global template folder so every vault can use it?
+              {#if vault.globalTemplates}<span class="where" title={vault.globalTemplates}>{vault.globalTemplates}</span>{/if}
+            </span>
+            <span class="spacer"></span>
+            <button onclick={moveActiveToGlobal}>Move</button>
+            <button onclick={() => (keptInVault = new Set(keptInVault).add(active!))} title="Keep editing it here; asked again next time the app starts">Not now</button>
+          </div>
+        {/if}
         <div class="editor">
           <Editor
             bind:this={editor}
@@ -411,6 +442,20 @@
   .editor {
     flex: 1;
     min-height: 0;
+  }
+  .banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    color: #0a3069;
+    background: #ddf4ff;
+    border-bottom: 1px solid #54aeff66;
+  }
+  .banner .where {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
   }
   .hint {
     position: absolute;

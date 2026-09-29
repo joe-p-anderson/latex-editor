@@ -15,8 +15,10 @@ export interface TreeNode {
 export interface VaultInfo {
   root: string
   name: string
-  /** Absolute path of the shared template library, if one is configured. */
-  templates: string | null
+  /** Absolute paths of the template libraries, in search order (the vault's own, then the global one). */
+  templates: string[]
+  /** The per-install template library shared by every vault. */
+  globalTemplates: string | null
   /** Vault-relative folder where imported and pasted images go. */
   imagesDir: string
   /** List environment → item command without the backslash, e.g. questions → question. */
@@ -123,7 +125,11 @@ export interface Api {
   importImage(sourcePath: string): Promise<string>
   /** Saves image bytes (a pasted screenshot) into the image folder. */
   saveImage(name: string, bytes: Uint8Array): Promise<string>
+  /** Moves a vault file into the global template library; its new absolute path, or null if cancelled. */
+  moveToGlobalTemplates(rel: string): Promise<string | null>
   /** Filesystem path of a dropped File, or '' if it has none. */
   pathForFile(file: File): string
   onTreeChanged(cb: (tree: TreeNode[]) => void): () => void
+  /** The vault's settings changed (e.g. a new global template folder). */
+  onVaultChanged(cb: (vault: VaultInfo) => void): () => void
 }
