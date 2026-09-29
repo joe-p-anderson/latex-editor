@@ -10,9 +10,12 @@
   let {
     onsave,
     ondirtychange,
+    onsyncforward,
   }: {
     onsave: (rel: string, text: string) => void
     ondirtychange: (rel: string, dirty: boolean) => void
+    /** Ctrl+J: show the cursor's line in the PDF. */
+    onsyncforward: () => void
   } = $props()
 
   let host: HTMLDivElement
@@ -37,7 +40,12 @@
         basicSetup,
         latex,
         EditorView.lineWrapping,
-        Prec.highest(keymap.of([{ key: 'Mod-s', preventDefault: true, run: () => (save(), true) }])),
+        Prec.highest(
+          keymap.of([
+            { key: 'Mod-s', preventDefault: true, run: () => (save(), true) },
+            { key: 'Mod-j', preventDefault: true, run: () => (onsyncforward(), true) },
+          ]),
+        ),
         keymap.of([indentWithTab]),
         EditorView.updateListener.of((u) => {
           if (u.docChanged && current) ondirtychange(current, u.state.sliceDoc() !== saved.get(current))
@@ -66,6 +74,11 @@
     const l = view.state.doc.line(Math.max(1, Math.min(line, view.state.doc.lines)))
     view.dispatch({ selection: { anchor: l.from }, effects: EditorView.scrollIntoView(l.from, { y: 'center' }) })
     view.focus()
+  }
+
+  /** 1-based line number of the cursor. */
+  export function cursorLine(): number {
+    return view.state.doc.lineAt(view.state.selection.main.head).number
   }
 
   function save(): void {

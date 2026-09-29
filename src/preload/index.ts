@@ -10,6 +10,8 @@ const api: Api & { onMenuOpenVault(cb: () => void): () => void } = {
   writeFile: (rel, text) => ipcRenderer.invoke('file:write', rel, text),
   compile: (rel) => ipcRenderer.invoke('compile', rel),
   readPdf: (abs) => ipcRenderer.invoke('pdf:read', abs),
+  syncForward: (pdf, rel, line) => ipcRenderer.invoke('synctex:forward', pdf, rel, line),
+  syncInverse: (pdf, page, x, y) => ipcRenderer.invoke('synctex:inverse', pdf, page, x, y),
   onTreeChanged: (cb) => {
     const listener = (_e: unknown, tree: TreeNode[]) => cb(tree)
     ipcRenderer.on('tree-changed', listener)

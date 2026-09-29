@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, Menu } from 'electron'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join, resolve, sep } from 'node:path'
 import { compile } from './compile'
+import { forward, inverse } from './synctex'
 import { Vault } from './vault'
 
 let win: BrowserWindow | null = null
@@ -43,12 +44,20 @@ ipcMain.handle('vault:get', async () => vault?.info() ?? null)
 ipcMain.handle('file:read', (_e, rel: string) => readFile(requireVault().abs(rel), 'utf8'))
 ipcMain.handle('file:write', (_e, rel: string, text: string) => writeFile(requireVault().abs(rel), text, 'utf8'))
 ipcMain.handle('compile', (_e, rel: string) => compile(requireVault(), rel))
-ipcMain.handle('pdf:read', async (_e, abs: string) => {
-  // Only PDFs the compiler produced, never arbitrary files.
-  const v = requireVault()
-  const cache = join(v.root, '.texcache') + sep
+/** Only PDFs the compiler produced (in .texcache), never arbitrary files. */
+function requireCompiledPdf(abs: string): string {
+  const cache = join(requireVault().root, '.texcache') + sep
   if (!resolve(abs).startsWith(cache) || !abs.endsWith('.pdf')) throw new Error('Not a compiled PDF')
-  return new Uint8Array(await readFile(abs))
+  return abs
+}
+
+ipcMain.handle('pdf:read', async (_e, abs: string) => new Uint8Array(await readFile(requireCompiledPdf(abs))))
+ipcMain.handle('synctex:forward', (_e, pdf: string, rel: string, line: number) =>
+  forward(requireCompiledPdf(pdf), requireVault().abs(rel), line),
+)
+ipcMain.handle('synctex:inverse', async (_e, pdf: string, page: number, x: number, y: number) => {
+  const hit = await inverse(requireCompiledPdf(pdf), page, x, y)
+  return hit && { file: requireVault().rel(hit.file) ?? hit.file, line: hit.line }
 })
 
 function buildMenu(): void {

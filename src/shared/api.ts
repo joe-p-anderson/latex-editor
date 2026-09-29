@@ -35,6 +35,25 @@ export interface CompileResult {
   durationMs: number
 }
 
+/** A rectangle on a PDF page, in PDF points from the page's top-left corner. */
+export interface PdfRect {
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
+export interface SyncTarget {
+  page: number
+  rects: PdfRect[]
+}
+
+export interface SourceLocation {
+  /** Vault-relative when inside the vault, otherwise absolute (e.g. a template). */
+  file: string
+  line: number
+}
+
 export interface Api {
   openVault(): Promise<VaultInfo | null>
   getVault(): Promise<VaultInfo | null>
@@ -42,5 +61,9 @@ export interface Api {
   writeFile(rel: string, text: string): Promise<void>
   compile(rel: string): Promise<CompileResult>
   readPdf(abs: string): Promise<Uint8Array>
+  /** Source line → where it appears in `pdf`. */
+  syncForward(pdf: string, rel: string, line: number): Promise<SyncTarget | null>
+  /** Point on a PDF page → the source line that produced it. */
+  syncInverse(pdf: string, page: number, x: number, y: number): Promise<SourceLocation | null>
   onTreeChanged(cb: (tree: TreeNode[]) => void): () => void
 }

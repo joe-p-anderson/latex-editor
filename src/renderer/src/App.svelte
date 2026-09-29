@@ -11,6 +11,16 @@
   let active = $state<string | null>(null)
   let dirty = $state(new Set<string>())
   let editor = $state<Editor>()
+  let viewer = $state<PdfViewer>()
+
+  // A short-lived message in the header (e.g. why a jump went nowhere).
+  let note = $state<string | null>(null)
+  let noteTimer: ReturnType<typeof setTimeout> | undefined
+  function flash(msg: string): void {
+    note = msg
+    clearTimeout(noteTimer)
+    noteTimer = setTimeout(() => (note = null), 3500)
+  }
 
   let compiling = $state(false)
   let result = $state<CompileResult | null>(null)
@@ -83,6 +93,27 @@
     if (e.line) editor?.gotoLine(e.line)
   }
 
+  /** Source → PDF: highlight where the cursor's line appears. */
+  async function syncForward(): Promise<void> {
+    if (!pdf || !active || !editor) return
+    const target = await window.api.syncForward(pdf, active, editor.cursorLine())
+    if (target) viewer?.show(target)
+    else flash(`${active} isn't part of the PDF being shown`)
+  }
+
+  /** PDF → source: open the file and line behind a double-clicked point. */
+  async function syncInverse(page: number, x: number, y: number): Promise<void> {
+    if (!pdf) return
+    const loc = await window.api.syncInverse(pdf, page, x, y)
+    if (!loc) return
+    if (/^[a-zA-Z]:|^\//.test(loc.file)) {
+      flash(`That comes from ${loc.file.split(/[\\/]/).pop()}:${loc.line}, outside this vault`)
+      return
+    }
+    await openFile(loc.file)
+    editor?.gotoLine(loc.line)
+  }
+
   function startDrag(ev: PointerEvent): void {
     const target = ev.currentTarget as HTMLElement
     target.setPointerCapture(ev.pointerId)
@@ -105,6 +136,8 @@
       <strong>{vault.name}</strong>
       <span class="file">{active ?? ''}</span>
       <span class="spacer"></span>
+      {#if note}<span class="note">{note}</span>{/if}
+      <button disabled={!pdf || !active} onclick={syncForward} title="Show the cursor's line in the PDF (Ctrl+J)">Show in PDF →</button>
       {#if compiling}
         <span class="status">Compiling…</span>
       {:else if result}
@@ -123,7 +156,7 @@
 
     <div class="main" bind:this={main} style:grid-template-columns="{split}fr 6px {1 - split}fr">
       <section class="editor-pane">
-        <div class="editor"><Editor bind:this={editor} onsave={save} ondirtychange={setDirty} /></div>
+        <div class="editor"><Editor bind:this={editor} onsave={save} ondirtychange={setDirty} onsyncforward={syncForward} /></div>
         {#if !active}<p class="hint">Pick a file on the left.</p>{/if}
         {#if result && result.errors.length > 0}
           <ul class="errors">
@@ -134,7 +167,7 @@
         {/if}
       </section>
       <div class="splitter" role="separator" aria-orientation="vertical" onpointerdown={startDrag}></div>
-      <section class="pdf-pane"><PdfViewer {pdf} version={pdfVersion} /></section>
+      <section class="pdf-pane"><PdfViewer bind:this={viewer} {pdf} version={pdfVersion} onsyncclick={syncInverse} /></section>
     </div>
   </div>
 {/if}
@@ -180,6 +213,12 @@
   }
   .status {
     color: var(--muted);
+  }
+  .note {
+    color: #9a6700;
+    background: #fff8c5;
+    border-radius: 4px;
+    padding: 2px 8px;
   }
   .status.ok {
     color: var(--ok);
