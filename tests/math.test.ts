@@ -6,6 +6,7 @@ import { extractMacros, macrosFor } from '../src/main/mathmacros'
 import { Vault } from '../src/main/vault'
 import { findMathRegions, regionAt } from '../src/shared/mathregions'
 import { createRenderer } from '../src/shared/mathrender'
+import { stablePreview } from '../src/shared/mathstable'
 import { expandSiunitx, formatNumber, formatUnit } from '../src/shared/siunitx'
 
 const REPO = resolve(import.meta.dirname, '..')
@@ -121,4 +122,28 @@ describe('fixture corpus', () => {
     expect(count).toBeGreaterThan(500)
     expect(failures).toEqual([])
   }, 60_000)
+})
+
+describe('stablePreview', () => {
+  const render = createRenderer()
+  it('keeps the last good rendering while \\hat{x} is typed, then shows the new one', () => {
+    let last = stablePreview(render('x', false), true, 0, null, true).last
+    const shown: string[] = []
+    for (const tex of ['\\hat{', '\\hat{x', '\\hat{x}']) {
+      const s = stablePreview(render(tex, false), true, 0, last, false)
+      last = s.last
+      shown.push(s.shown.stale ? 'last good' : s.shown.error ? 'error' : 'new')
+    }
+    expect(shown).toEqual(['last good', 'last good', 'new'])
+  })
+  it('reports the error once typing settles, still showing the last good rendering', () => {
+    const last = stablePreview(render('x', false), true, 0, null, true).last
+    const s = stablePreview(render('\\hat{', false), true, 0, last, true)
+    expect(s.shown).toMatchObject({ stale: true, svg: last!.svg })
+    expect(s.shown.error).toBeTruthy()
+  })
+  it("doesn't carry a rendering over to other math", () => {
+    const last = stablePreview(render('x', false), true, 0, null, true).last
+    expect(stablePreview(render('\\hat{', false), true, 50, last, false).shown).toMatchObject({ svg: null, error: null })
+  })
 })

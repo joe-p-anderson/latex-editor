@@ -14,6 +14,7 @@
   import { imageSupport, insertAt, type ImageHooks } from './imageSupport'
   import { latexEditing, type EditingHooks } from './editing'
   import { outline, type OutlineItem } from '@shared/latexedit'
+  import { liveMode, isLive, setLive, toggleLive } from './live/live'
 
   let {
     onsave,
@@ -23,6 +24,7 @@
     editingHooks,
     onoutline,
     oncursorline,
+    onlivechange,
   }: {
     onsave: (rel: string, text: string) => void
     ondirtychange: (rel: string, dirty: boolean) => void
@@ -36,6 +38,8 @@
     onoutline: (items: OutlineItem[]) => void
     /** 1-based line of the cursor, when it moves. */
     oncursorline: (line: number) => void
+    /** Live mode was turned on or off (or a file with the other setting was opened). */
+    onlivechange: (live: boolean) => void
   } = $props()
 
   let host: HTMLDivElement
@@ -71,6 +75,24 @@
     snippets: () => editingHooks.snippets(),
   })
 
+  // Live mode: on by default; toggling it sets the default for files opened later.
+  const LIVE_KEY = 'liveByDefault'
+  const liveDefault = () => {
+    try {
+      return localStorage.getItem(LIVE_KEY) !== 'false'
+    } catch {
+      return true
+    }
+  }
+  const live = liveMode(
+    {
+      render: () => render,
+      images: () => imageHooks.images(),
+      lists: () => editingHooks.lists(),
+    },
+    liveDefault,
+  )
+
   let outlineTimer: ReturnType<typeof setTimeout> | undefined
   function publishOutline(delay: number): void {
     clearTimeout(outlineTimer)
@@ -78,8 +100,12 @@
   }
 
   function makeState(text: string): EditorState {
+    // In live mode a file opens past its (folded) preamble. CodeMirror counts
+    // a line break as one character, so the offset is taken with \n breaks.
+    const body = liveDefault() ? /\\begin\s*\{document\}[^\n]*\n/.exec(text.replace(/\r\n/g, '\n')) : null
     return EditorState.create({
       doc: text,
+      selection: body ? { anchor: body.index + body[0].length } : undefined,
       extensions: [
         // Keep the file's own line endings: CodeMirror otherwise joins lines
         // with \n, and saving would rewrite every line of a CRLF file.
@@ -90,6 +116,7 @@
         preview,
         images,
         editing,
+        live,
         EditorView.lineWrapping,
         Prec.highest(
           keymap.of([
@@ -102,6 +129,14 @@
           if (u.docChanged && current) ondirtychange(current, u.state.sliceDoc() !== saved.get(current))
           if (u.docChanged) publishOutline(300)
           if (u.docChanged || u.selectionSet) oncursorline(u.state.doc.lineAt(u.state.selection.main.head).number)
+          if (isLive(u.state) !== isLive(u.startState)) {
+            try {
+              localStorage.setItem(LIVE_KEY, String(isLive(u.state)))
+            } catch {
+              // not remembered; fine
+            }
+            onlivechange(isLive(u.state))
+          }
         }),
       ],
     })
@@ -112,6 +147,7 @@
     if (rel === current) return
     if (current) states.set(current, view.state)
     let state = states.get(rel)
+    const fresh = !state
     if (!state) {
       const text = await window.api.readFile(rel)
       saved.set(rel, text)
@@ -119,6 +155,9 @@
     }
     current = rel
     view.setState(state)
+    // A newly opened file starts at its cursor, not wherever the last file was scrolled.
+    if (fresh) view.dispatch({ effects: EditorView.scrollIntoView(state.selection.main.head, { y: 'start', yMargin: 60 }) })
+    onlivechange(isLive(state))
     publishOutline(0)
     oncursorline(cursorLine())
     showDiagnostics()
@@ -182,6 +221,18 @@
     }
     view.dispatch({ changes, scrollIntoView: true })
     return true
+  }
+
+  /** Turns live mode on or off for the open file (Ctrl+Shift+L). */
+  export function setLiveMode(on: boolean): void {
+    view.dispatch({ effects: setLive.of(on) })
+    view.focus()
+  }
+
+  /** Flips live mode for the open file. */
+  export function toggleLiveMode(): void {
+    toggleLive(view)
+    view.focus()
   }
 
   /** Gives the editor keyboard focus (e.g. after a dialog closes). */

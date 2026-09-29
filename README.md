@@ -59,9 +59,25 @@ Regenerates `fixtures/errors/logs/`. Run it after adding or changing a broken do
 
 ## Editing
 
+### Live view
+
+Files open in the **live view**, which shows the document as it reads. The source doesn't change. Ctrl+Shift+L, or the **Live / Source** button, switches the open file to plain source and back. The choice becomes the default for files opened afterwards.
+
+- Sections are headings with their numbers. The preamble folds into one line.
+- List items show their numbers and bullets: `1.`, `(a)`, `•`. Exam questions keep counting across `questions` environments, as in `handout.cls`, until `\resetquestions`. Faint tags mark where each list environment begins and ends.
+- Math, `\SI`/`\qty`, figures (with their images), tables and `\includegraphics` render in place. Equations get the numbers LaTeX would give them.
+- `\label` shows as a tag chip. `\ref`, `\eqref` and `\cref` show as chips with the number they refer to, or in red if the label doesn't exist. Ctrl+click a ref to jump to its label.
+- `\textbf`, `\emph` and similar show their formatting. `--`, `---`, ` `` '' `, `~` and `\%` show as the characters they produce. Every space has a faint dot.
+- Whatever the cursor is in shows as source again. That is the line for headings and list markers, and the whole construct for math, figures and tables. Click anything rendered to edit it.
+
+While you type math, its preview keeps the last version that rendered, faded, instead of flashing errors for half-typed commands like `\hat{`. Errors appear once you pause.
+
+### Keys
+
 | Key | Does |
 |---|---|
 | Ctrl+B / Ctrl+I / Ctrl+E | Toggle `\textbf`, `\textit`, `\emph` around the selection. With no selection, they insert one or remove the one the cursor is in. In math, bold and italic use `\mathbf` and `\mathit`. |
+| Ctrl+Shift+L | Switch between the live view and plain source |
 | Ctrl+M | Toggle `$…$` |
 | Ctrl+Shift+M | Put the selection in display math, `\[ … \]` |
 | Ctrl+Shift+A / Ctrl+Alt+A | Put the selection in `align` / `align*` |

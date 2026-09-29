@@ -331,7 +331,7 @@ function openingBrace(text: string, pos: number): number {
 }
 
 /** The } matching the { at `open`; -1 if unclosed. */
-function closingBrace(text: string, open: number): number {
+export function closingBrace(text: string, open: number): number {
   let depth = 0
   for (let i = open; i < text.length; i++) {
     const c = text[i]
@@ -370,7 +370,12 @@ export function outline(text: string): OutlineItem[] {
     for (let k = src.indexOf('\n'); k >= 0 && k < i; k = src.indexOf('\n', k + 1)) n++
     return n
   }
-  for (const m of src.matchAll(/\\(chapter|section|subsection|subsubsection|question)(\*?)(?![A-Za-z@])/g)) {
+  for (const m of src.matchAll(/\\(chapter|section|subsection|subsubsection|question|resetquestions)(\*?)(?![A-Za-z@])/g)) {
+    // handout.cls's \resetquestions starts the numbering over.
+    if (m[1] === 'resetquestions') {
+      q = 0
+      continue
+    }
     const kind = m[1] as OutlineItem['kind']
     let i = m.index! + m[0].length
     const opt = /^\s*\[[^\]]*\]/.exec(src.slice(i))

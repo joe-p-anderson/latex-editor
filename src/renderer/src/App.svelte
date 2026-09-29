@@ -94,6 +94,8 @@
   // The open file's outline, and where the cursor is in it.
   let outlineItems = $state<OutlineItem[]>([])
   let cursorLine = $state(1)
+  // Whether the open file is in live mode (rendered) or plain source.
+  let live = $state(true)
 
   function pickImage(rel: string): void {
     picker = null
@@ -281,6 +283,14 @@
       <span class="file">{active ?? ''}</span>
       <span class="spacer"></span>
       {#if note}<span class="note">{note}</span>{/if}
+      <button
+        class="toggle"
+        class:on={live}
+        disabled={!active}
+        onclick={() => editor?.toggleLiveMode()}
+        title={live ? 'Live view: showing the document rendered. Click for plain source (Ctrl+Shift+L)' : 'Plain source. Click for the live view (Ctrl+Shift+L)'}
+        >{live ? 'Live' : 'Source'}</button
+      >
       <button disabled={!active?.endsWith('.tex')} onclick={() => (picker = { mode: 'insert', initial: '' })} title="Insert an image from the vault (or type ![[ in the editor)">Insert image</button>
       <button disabled={!pdf || !active} onclick={syncForward} title="Show the cursor's line in the PDF (Ctrl+J)">Show in PDF →</button>
       {#if compiling}
@@ -330,6 +340,7 @@
             {editingHooks}
             onoutline={(items) => (outlineItems = items)}
             oncursorline={(line) => (cursorLine = line)}
+            onlivechange={(on) => (live = on)}
           />
         </div>
         {#if !active}<p class="hint">Pick a file on the left.</p>{/if}
@@ -401,6 +412,14 @@
     background: #fff8c5;
     border-radius: 4px;
     padding: 2px 8px;
+  }
+  .toggle {
+    min-width: 64px;
+  }
+  .toggle.on {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-soft);
   }
   .status.ok {
     color: var(--ok);
