@@ -1,0 +1,126 @@
+// The compile pipeline proven in spikes/compile.ps1:
+//   - pdflatex runs from the vault root, so Images/... resolves as before;
+//   - classes come from the shared template library via TEXINPUTS;
+//   - aux, log, synctex and the working PDF live in .texcache/<reldir>/<name>/;
+//   - a successful PDF is copied to pdf/<reldir>/<name>.pdf.
+import { spawn, type ChildProcess } from 'node:child_process'
+import { copyFile, mkdir, readFile, stat } from 'node:fs/promises'
+import { join, posix, resolve } from 'node:path'
+import type { CompileResult, LogMessage } from '../shared/api'
+import type { Vault } from './vault'
+
+const MAX_PASSES = 4
+const PASS_TIMEOUT_MS = 120_000
+const RERUN = /Rerun to get|Label\(s\) may have changed|Rerun LaTeX/
+
+let running: ChildProcess | null = null
+/** Bumped by every compile; an older compile stops once it sees a newer one. */
+let generation = 0
+let lastRoot: string | null = null
+
+/**
+ * Which document to compile when `rel` is saved. In order: a `% !TEX root`
+ * magic comment, the file itself if it has a \documentclass, otherwise the
+ * last document compiled (so saving an \input'ed piece rebuilds its parent).
+ */
+export async function resolveRoot(vault: Vault, rel: string): Promise<string | null> {
+  if (!rel.endsWith('.tex')) return lastRoot
+  const text = await readFile(vault.abs(rel), 'utf8')
+  const magic = /^%\s*!TEX root\s*=\s*(.+?)\s*$/im.exec(text)
+  if (magic) return posix.normalize(posix.join(posix.dirname(rel), magic[1].replace(/\\/g, '/')))
+  if (/^[^%\n]*\\documentclass/m.test(text)) return rel
+  return lastRoot
+}
+
+export async function compile(vault: Vault, rel: string): Promise<CompileResult> {
+  const started = Date.now()
+  const root = await resolveRoot(vault, rel)
+  if (!root) {
+    return {
+      ok: false, root: rel, passes: 0, pdf: null, durationMs: 0,
+      errors: [{ file: rel, line: null, message: 'Not a document (no \\documentclass), and nothing compiled yet to rebuild instead.' }],
+    }
+  }
+  lastRoot = root
+  const gen = ++generation
+
+  const relDir = posix.dirname(root) === '.' ? '' : posix.dirname(root)
+  const name = posix.basename(root, '.tex')
+  const cacheDir = join(vault.root, '.texcache', relDir, name)
+  const pdfDir = join(vault.root, 'pdf', relDir)
+  await mkdir(cacheDir, { recursive: true })
+
+  const env = { ...process.env }
+  // '//' searches subfolders; the trailing ';' keeps MiKTeX's default path.
+  if (vault.templates) env.TEXINPUTS = `${vault.templates}//;`
+
+  const args = [
+    '-synctex=1', '-interaction=nonstopmode', '-file-line-error',
+    '-max-print-line=10000', // one message per line, no 79-column wrapping
+    `-aux-directory=${cacheDir}`, `-output-directory=${cacheDir}`, root,
+  ]
+
+  const logPath = join(cacheDir, `${name}.log`)
+  let passes = 0
+  let log = ''
+  let errors: LogMessage[] = []
+  do {
+    passes++
+    await runPdflatex(args, vault.root, env)
+    if (gen !== generation) {
+      return { ok: false, root, passes, pdf: null, errors: [], durationMs: Date.now() - started }
+    }
+    log = await readFile(logPath, 'utf8').catch(() => '')
+    errors = parseErrors(log, vault)
+  } while (errors.length === 0 && RERUN.test(log) && passes < MAX_PASSES)
+
+  const cachePdf = join(cacheDir, `${name}.pdf`)
+  const pdfExists = await stat(cachePdf).then(() => true, () => false)
+  const ok = pdfExists && errors.length === 0
+  if (ok) {
+    await mkdir(pdfDir, { recursive: true })
+    await copyFile(cachePdf, join(pdfDir, `${name}.pdf`))
+  }
+  return { ok, root, passes, pdf: pdfExists ? cachePdf : null, errors, durationMs: Date.now() - started }
+}
+
+/** Runs one pdflatex pass, cancelling any pass still in flight from an earlier save. */
+function runPdflatex(args: string[], cwd: string, env: NodeJS.ProcessEnv): Promise<void> {
+  running?.kill()
+  return new Promise((resolvePass, reject) => {
+    const child = spawn('pdflatex', args, { cwd, env, windowsHide: true })
+    running = child
+    const timer = setTimeout(() => child.kill(), PASS_TIMEOUT_MS)
+    child.stdout.resume() // everything we need is in the .log; just drain the pipe
+    child.stderr.resume()
+    child.on('error', (e) => { clearTimeout(timer); reject(e) })
+    child.on('close', () => {
+      clearTimeout(timer)
+      if (running === child) running = null
+      resolvePass()
+    })
+  })
+}
+
+/**
+ * Minimal error extraction: with -file-line-error every TeX error is written
+ * as `path:line: message`. The full parser with warnings and explanations
+ * comes later; this is enough to list errors and jump to them.
+ */
+function parseErrors(log: string, vault: Vault): LogMessage[] {
+  const seen = new Set<string>()
+  const out: LogMessage[] = []
+  for (const line of log.split(/\r?\n/)) {
+    const m = /^(.+?):(\d+): (.+)$/.exec(line)
+    if (!m) continue
+    const abs = resolve(vault.root, m[1])
+    const msg: LogMessage = { file: vault.rel(abs) ?? abs, line: Number(m[2]), message: m[3] }
+    const key = `${msg.file}:${msg.line}:${msg.message}`
+    if (!seen.has(key)) {
+      seen.add(key)
+      out.push(msg)
+    }
+  }
+  return out
+}
+

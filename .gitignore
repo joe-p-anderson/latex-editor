@@ -1,3 +1,6 @@
 # Compile outputs inside fixture vaults
 .texcache/
 /fixtures/vaults/*/pdf/
+node_modules/
+out/
+*.tsbuildinfo

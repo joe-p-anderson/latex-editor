@@ -1,0 +1,44 @@
+:root {
+  --bg: #ffffff;
+  --panel: #f5f6f8;
+  --border: #d9dce1;
+  --text: #1f2328;
+  --muted: #6a737d;
+  --accent: #2f6fdb;
+  --accent-soft: #e3ecfb;
+  --ok: #1a7f37;
+  --err: #cf222e;
+  --pdf-bg: #525659;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  color: var(--text);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 4px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+button:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
