@@ -9,6 +9,8 @@
   import { lintGutter, setDiagnostics, type Diagnostic } from '@codemirror/lint'
   import type { Problem, TextEdit } from '@shared/api'
   import { locateOnLine } from '@shared/edits'
+  import { createRenderer, type MacroDefs } from '@shared/mathrender'
+  import { mathPreview, refreshMath, type RenderFn } from './mathPreview'
 
   let {
     onsave,
@@ -37,6 +39,11 @@
   // squiggles and gutter markers in whichever file is open.
   let problemsByFile = new Map<string, Problem[]>()
 
+  // The math preview's renderer, rebuilt when the document's macros change.
+  let render: RenderFn = createRenderer()
+  let macrosKey = '{}'
+  const preview = mathPreview(() => render)
+
   function makeState(text: string): EditorState {
     return EditorState.create({
       doc: text,
@@ -47,6 +54,7 @@
         basicSetup,
         latex,
         lintGutter(),
+        preview,
         EditorView.lineWrapping,
         Prec.highest(
           keymap.of([
@@ -76,6 +84,15 @@
     view.setState(state)
     showDiagnostics()
     view.focus()
+  }
+
+  /** Uses the document's own macros (from its preamble and templates) in the math preview. */
+  export function setMacros(macros: MacroDefs): void {
+    const key = JSON.stringify(macros)
+    if (key === macrosKey) return
+    macrosKey = key
+    render = createRenderer(macros)
+    view.dispatch({ effects: refreshMath.of(null) })
   }
 
   /** Replaces the problems shown in the editor (after each compile). */

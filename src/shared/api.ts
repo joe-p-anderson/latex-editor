@@ -1,3 +1,5 @@
+import type { MacroDefs } from './mathrender'
+
 // Types shared by the main process, the preload bridge and the renderer.
 // Paths called `rel` are vault-relative with forward slashes; paths called
 // `abs` are absolute filesystem paths.
@@ -98,5 +100,7 @@ export interface Api {
   syncForward(pdf: string, rel: string, line: number): Promise<SyncTarget | null>
   /** Point on a PDF page → the source line that produced it. */
   syncInverse(pdf: string, page: number, x: number, y: number): Promise<SourceLocation | null>
+  /** Macros (MathJax format) for previewing math in `rel`, and the files they came from. */
+  mathMacros(rel: string): Promise<{ macros: MacroDefs; sources: string[] }>
   onTreeChanged(cb: (tree: TreeNode[]) => void): () => void
 }

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte'
   import type { TreeNode } from '@shared/api'
 
   let {
@@ -14,12 +15,15 @@
   } = $props()
 
   // Folders start collapsed; the active file's ancestors are opened for it.
+  // Only `active` is tracked: reading `expanded` here too would make the
+  // effect re-trigger itself when it writes it.
   let expanded = $state(new Set<string>())
   $effect(() => {
     if (!active) return
     const parts = active.split('/')
-    for (let i = 1; i < parts.length; i++) expanded.add(parts.slice(0, i).join('/'))
-    expanded = new Set(expanded)
+    const next = new Set(untrack(() => expanded))
+    for (let i = 1; i < parts.length; i++) next.add(parts.slice(0, i).join('/'))
+    expanded = next
   })
 
   function toggle(rel: string) {

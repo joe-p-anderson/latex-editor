@@ -12,6 +12,7 @@ const api: Api & { onMenuOpenVault(cb: () => void): () => void } = {
   readPdf: (abs) => ipcRenderer.invoke('pdf:read', abs),
   syncForward: (pdf, rel, line) => ipcRenderer.invoke('synctex:forward', pdf, rel, line),
   syncInverse: (pdf, page, x, y) => ipcRenderer.invoke('synctex:inverse', pdf, page, x, y),
+  mathMacros: (rel) => ipcRenderer.invoke('math:macros', rel),
   onTreeChanged: (cb) => {
     const listener = (_e: unknown, tree: TreeNode[]) => cb(tree)
     ipcRenderer.on('tree-changed', listener)

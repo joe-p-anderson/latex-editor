@@ -1,7 +1,8 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu } from 'electron'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join, resolve, sep } from 'node:path'
-import { compile } from './compile'
+import { compile, resolveRoot } from './compile'
+import { macrosFor } from './mathmacros'
 import { forward, inverse } from './synctex'
 import { Vault } from './vault'
 
@@ -59,6 +60,11 @@ ipcMain.handle('synctex:inverse', async (_e, pdf: string, page: number, x: numbe
   const hit = await inverse(requireCompiledPdf(pdf), page, x, y)
   return hit && { file: requireVault().rel(hit.file) ?? hit.file, line: hit.line }
 })
+// Macros for previewing math in `rel`: those of the document it belongs to.
+ipcMain.handle('math:macros', async (_e, rel: string) => {
+  const v = requireVault()
+  return macrosFor(v, (await resolveRoot(v, rel).catch(() => null)) ?? rel)
+})
 
 function buildMenu(): void {
   Menu.setApplicationMenu(
@@ -87,6 +93,12 @@ async function createWindow(): Promise<void> {
     title: 'LaTeX Editor',
     webPreferences: { preload: join(import.meta.dirname, '../preload/index.cjs'), sandbox: true, contextIsolation: true },
   })
+  // The page never navigates: a link clicked anywhere (e.g. a \href inside
+  // a math preview) must not replace the app or open new windows.
+  win.webContents.on('will-navigate', (e, url) => {
+    if (url !== win?.webContents.getURL()) e.preventDefault()
+  })
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
 
   // A vault given on the command line (--vault=path) wins over the remembered one.
   const arg = process.argv.find((a) => a.startsWith('--vault='))?.slice('--vault='.length)

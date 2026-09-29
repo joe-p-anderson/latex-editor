@@ -37,6 +37,12 @@ export async function resolveRoot(vault: Vault, rel: string): Promise<string | n
   return lastRoot
 }
 
+/** Where a document's aux, log, synctex and working PDF live: .texcache/<reldir>/<name>/ */
+export function cacheDirFor(vault: Vault, root: string): string {
+  const relDir = posix.dirname(root) === '.' ? '' : posix.dirname(root)
+  return join(vault.root, '.texcache', relDir, posix.basename(root, '.tex'))
+}
+
 export async function compile(vault: Vault, rel: string): Promise<CompileResult> {
   const started = Date.now()
   const root = await resolveRoot(vault, rel)
@@ -55,7 +61,7 @@ export async function compile(vault: Vault, rel: string): Promise<CompileResult>
 
   const relDir = posix.dirname(root) === '.' ? '' : posix.dirname(root)
   const name = posix.basename(root, '.tex')
-  const cacheDir = join(vault.root, '.texcache', relDir, name)
+  const cacheDir = cacheDirFor(vault, root)
   const pdfDir = join(vault.root, 'pdf', relDir)
   await mkdir(cacheDir, { recursive: true })
 

@@ -58,6 +58,14 @@
     if (!TEXT_FILE.test(rel)) return // images etc. get a preview later
     await editor?.open(rel)
     active = rel
+    loadMacros(rel)
+  }
+
+  /** Gives the math preview the macros of the document `rel` belongs to. */
+  async function loadMacros(rel: string): Promise<void> {
+    if (!rel.endsWith('.tex')) return
+    const { macros } = await window.api.mathMacros(rel).catch(() => ({ macros: {} }))
+    if (rel === active) editor?.setMacros(macros)
   }
 
   function setDirty(rel: string, isDirty: boolean): void {
@@ -80,6 +88,7 @@
       if (seq !== compileSeq) return // a newer save superseded this compile
       result = r
       editor?.setProblems(r.problems)
+      if (active) loadMacros(active) // the preamble or a template may have changed
       if (r.pdf) {
         pdf = r.pdf
         pdfVersion++
