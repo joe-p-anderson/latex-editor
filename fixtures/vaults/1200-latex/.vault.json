@@ -1,3 +1,13 @@
 {
-  "templates": "../../_templates"
+  "templates": "../../_templates",
+  "lists": {
+    "questions": "question",
+    "parts": "part",
+    "subparts": "subpart",
+    "subsubparts": "subsubpart",
+    "choices": "choice",
+    "oneparchoices": "choice",
+    "checkboxes": "choice",
+    "oneparcheckboxes": "choice"
+  }
 }

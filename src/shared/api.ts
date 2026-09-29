@@ -1,3 +1,4 @@
+import type { CommandSig } from './latexedit'
 import type { MacroDefs } from './mathrender'
 
 // Types shared by the main process, the preload bridge and the renderer.
@@ -18,6 +19,10 @@ export interface VaultInfo {
   templates: string | null
   /** Vault-relative folder where imported and pasted images go. */
   imagesDir: string
+  /** List environment → item command without the backslash, e.g. questions → question. */
+  lists: Record<string, string>
+  /** Vault-relative path of the user's snippet file (which may not exist yet). */
+  snippets: string
   tree: TreeNode[]
 }
 
@@ -91,6 +96,12 @@ export interface SourceLocation {
   line: number
 }
 
+export interface EditorContext {
+  /** From the document's own preamble and the vault's classes and packages it loads. */
+  commands: CommandSig[]
+  environments: string[]
+}
+
 export interface Api {
   openVault(): Promise<VaultInfo | null>
   getVault(): Promise<VaultInfo | null>
@@ -104,6 +115,8 @@ export interface Api {
   syncInverse(pdf: string, page: number, x: number, y: number): Promise<SourceLocation | null>
   /** Macros (MathJax format) for previewing math in `rel`, and the files they came from. */
   mathMacros(rel: string): Promise<{ macros: MacroDefs; sources: string[] }>
+  /** Commands (with argument counts) and environments the document `rel` defines, for completion. */
+  editorContext(rel: string): Promise<EditorContext>
   /** Every image in the vault, vault-relative. */
   listImages(): Promise<string[]>
   /** Copies an image from outside the vault into its image folder (or returns its path if inside). */

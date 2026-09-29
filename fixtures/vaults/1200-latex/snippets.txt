@@ -1,0 +1,30 @@
+Snippets for this vault. In the editor, type a backslash and the snippet's
+name (e.g. \qparts) and pick it from the list.
+
+Each snippet starts with a line "%%% name — description"; its body is
+everything up to the next %%% line. In the body, ${1:text} is a placeholder
+(Tab moves to the next one, in number order) and ${} is an empty stop.
+Indent with four spaces per level. Saving this file reloads it.
+
+%%% qparts — Question with parts
+\question \textbf{${1:Title}}: ${2}
+
+\begin{parts}
+    \part ${3}
+
+    \answerspace{${4:0.5\baselineskip}}
+\end{parts}
+
+%%% qfig — Question text beside a figure
+\noindent\begin{minipage}[t]{0.55\linewidth}
+${1}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.42\linewidth}
+    \vspace{0pt}
+    \includegraphics[width=\linewidth]{${2}}
+\end{minipage}
+
+%%% alignstar — Aligned equations, unnumbered
+\begin{align*}
+    ${1} &= ${2}
+\end{align*}

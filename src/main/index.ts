@@ -4,7 +4,7 @@ import { join, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { compile, resolveRoot } from './compile'
 import { importImage, saveImage } from './images'
-import { macrosFor } from './mathmacros'
+import { editorContextFor, macrosFor } from './mathmacros'
 import { forward, inverse } from './synctex'
 import { Vault } from './vault'
 import { isImage } from '../shared/images'
@@ -70,6 +70,10 @@ ipcMain.handle('images:save', (_e, name: string, bytes: Uint8Array) => saveImage
 ipcMain.handle('math:macros', async (_e, rel: string) => {
   const v = requireVault()
   return macrosFor(v, (await resolveRoot(v, rel).catch(() => null)) ?? rel)
+})
+ipcMain.handle('editor:context', async (_e, rel: string) => {
+  const v = requireVault()
+  return editorContextFor(v, (await resolveRoot(v, rel).catch(() => null)) ?? rel)
 })
 
 function buildMenu(): void {

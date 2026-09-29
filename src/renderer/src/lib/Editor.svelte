@@ -12,12 +12,17 @@
   import { createRenderer, type MacroDefs } from '@shared/mathrender'
   import { mathPreview, refreshMath, type RenderFn } from './mathPreview'
   import { imageSupport, insertAt, type ImageHooks } from './imageSupport'
+  import { latexEditing, type EditingHooks } from './editing'
+  import { outline, type OutlineItem } from '@shared/latexedit'
 
   let {
     onsave,
     ondirtychange,
     onsyncforward,
     imageHooks,
+    editingHooks,
+    onoutline,
+    oncursorline,
   }: {
     onsave: (rel: string, text: string) => void
     ondirtychange: (rel: string, dirty: boolean) => void
@@ -25,6 +30,12 @@
     onsyncforward: () => void
     /** Image picker, autocomplete, hover previews, drop and paste. */
     imageHooks: ImageHooks
+    /** List markers, the document's commands and the vault's snippets. */
+    editingHooks: EditingHooks
+    /** The open file's sections and questions, after each (debounced) change. */
+    onoutline: (items: OutlineItem[]) => void
+    /** 1-based line of the cursor, when it moves. */
+    oncursorline: (line: number) => void
   } = $props()
 
   let host: HTMLDivElement
@@ -53,6 +64,18 @@
     importFiles: (files) => imageHooks.importFiles(files),
     savePasted: (blob) => imageHooks.savePasted(blob),
   })
+  const editing = latexEditing({
+    lists: () => editingHooks.lists(),
+    commands: () => editingHooks.commands(),
+    environments: () => editingHooks.environments(),
+    snippets: () => editingHooks.snippets(),
+  })
+
+  let outlineTimer: ReturnType<typeof setTimeout> | undefined
+  function publishOutline(delay: number): void {
+    clearTimeout(outlineTimer)
+    outlineTimer = setTimeout(() => onoutline(outline(view.state.doc.toString())), delay)
+  }
 
   function makeState(text: string): EditorState {
     return EditorState.create({
@@ -66,6 +89,7 @@
         lintGutter(),
         preview,
         images,
+        editing,
         EditorView.lineWrapping,
         Prec.highest(
           keymap.of([
@@ -76,6 +100,8 @@
         keymap.of([indentWithTab]),
         EditorView.updateListener.of((u) => {
           if (u.docChanged && current) ondirtychange(current, u.state.sliceDoc() !== saved.get(current))
+          if (u.docChanged) publishOutline(300)
+          if (u.docChanged || u.selectionSet) oncursorline(u.state.doc.lineAt(u.state.selection.main.head).number)
         }),
       ],
     })
@@ -93,6 +119,8 @@
     }
     current = rel
     view.setState(state)
+    publishOutline(0)
+    oncursorline(cursorLine())
     showDiagnostics()
     view.focus()
   }
@@ -195,7 +223,7 @@
 
   onMount(() => {
     view = new EditorView({ parent: host, state: EditorState.create({ doc: '' }) })
-    return () => view.destroy()
+    return () => (clearTimeout(outlineTimer), view.destroy())
   })
 </script>
 

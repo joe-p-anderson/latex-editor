@@ -1,11 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import type { CompileResult, Problem, QuickFix, TextEdit, VaultInfo } from '@shared/api'
+  import type { CompileResult, EditorContext, Problem, QuickFix, TextEdit, VaultInfo } from '@shared/api'
   import FileTree from './lib/FileTree.svelte'
   import Editor from './lib/Editor.svelte'
   import PdfViewer from './lib/PdfViewer.svelte'
   import ProblemsPanel from './lib/ProblemsPanel.svelte'
   import ImagePicker from './lib/ImagePicker.svelte'
+  import Outline from './lib/Outline.svelte'
+  import type { EditingHooks } from './lib/editing'
+  import { parseSnippets, type OutlineItem, type Snippet } from '@shared/latexedit'
   import { includegraphics, type ImageHooks } from './lib/imageSupport'
   import { clearThumbnails } from './lib/thumbnails'
   import { isImage } from '@shared/images'
@@ -73,6 +76,25 @@
     },
   }
 
+  // For the editor's list continuation and completion.
+  let context: EditorContext = { commands: [], environments: [] }
+  let snippets: Snippet[] = []
+  const editingHooks: EditingHooks = {
+    lists: () => vault?.lists ?? {},
+    commands: () => context.commands,
+    environments: () => context.environments,
+    snippets: () => snippets,
+  }
+
+  /** Reads the vault's snippet file (none is fine). */
+  async function loadSnippets(): Promise<void> {
+    snippets = vault ? parseSnippets(await window.api.readFile(vault.snippets).catch(() => '')) : []
+  }
+
+  // The open file's outline, and where the cursor is in it.
+  let outlineItems = $state<OutlineItem[]>([])
+  let cursorLine = $state(1)
+
   function pickImage(rel: string): void {
     picker = null
     editor?.insertAtCursor(includegraphics(rel))
@@ -82,6 +104,7 @@
     window.api.getVault().then((v) => {
       vault = v
       loadImages()
+      loadSnippets()
     })
     const offTree = window.api.onTreeChanged((tree) => {
       if (vault) vault.tree = tree
@@ -99,7 +122,9 @@
     dirty = new Set()
     result = null
     pdf = null
+    outlineItems = []
     loadImages()
+    loadSnippets()
   }
 
   async function openFile(rel: string): Promise<void> {
@@ -114,11 +139,19 @@
     loadMacros(rel)
   }
 
-  /** Gives the math preview the macros of the document `rel` belongs to. */
+  /**
+   * Gives the math preview the macros of the document `rel` belongs to, and
+   * completion its commands and environments.
+   */
   async function loadMacros(rel: string): Promise<void> {
     if (!rel.endsWith('.tex')) return
-    const { macros } = await window.api.mathMacros(rel).catch(() => ({ macros: {} }))
-    if (rel === active) editor?.setMacros(macros)
+    const [{ macros }, ctx] = await Promise.all([
+      window.api.mathMacros(rel).catch(() => ({ macros: {} })),
+      window.api.editorContext(rel).catch(() => null),
+    ])
+    if (rel !== active) return
+    editor?.setMacros(macros)
+    if (ctx) context = ctx
   }
 
   function setDirty(rel: string, isDirty: boolean): void {
@@ -130,6 +163,7 @@
 
   async function save(rel: string, text: string): Promise<void> {
     await window.api.writeFile(rel, text)
+    if (rel === vault?.snippets) await loadSnippets()
     if (/\.(tex|cls|sty|cfg)$/i.test(rel)) await compile(rel)
   }
 
@@ -247,12 +281,26 @@
     </header>
 
     <aside>
-      <FileTree nodes={vault.tree} {active} {dirty} onopen={openFile} />
+      <div class="tree"><FileTree nodes={vault.tree} {active} {dirty} onopen={openFile} /></div>
+      {#if active?.endsWith('.tex')}
+        <div class="outline"><Outline items={outlineItems} {cursorLine} onjump={(line) => editor?.gotoLine(line)} /></div>
+      {/if}
     </aside>
 
     <div class="main" bind:this={main} style:grid-template-columns="{split}fr 6px {1 - split}fr">
       <section class="editor-pane">
-        <div class="editor"><Editor bind:this={editor} onsave={save} ondirtychange={setDirty} onsyncforward={syncForward} {imageHooks} /></div>
+        <div class="editor">
+          <Editor
+            bind:this={editor}
+            onsave={save}
+            ondirtychange={setDirty}
+            onsyncforward={syncForward}
+            {imageHooks}
+            {editingHooks}
+            onoutline={(items) => (outlineItems = items)}
+            oncursorline={(line) => (cursorLine = line)}
+          />
+        </div>
         {#if !active}<p class="hint">Pick a file on the left.</p>{/if}
         {#if result}<ProblemsPanel {result} onjump={jumpTo} onfix={applyFix} />{/if}
       </section>
@@ -335,6 +383,17 @@
     border-right: 1px solid var(--border);
     background: var(--panel);
     min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .tree {
+    flex: 1 1 55%;
+    min-height: 0;
+  }
+  .outline {
+    flex: 1 1 45%;
+    min-height: 0;
+    border-top: 1px solid var(--border);
   }
 
   .main {

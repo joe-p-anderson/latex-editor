@@ -2,6 +2,7 @@ import { readdir, readFile, stat } from 'node:fs/promises'
 import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { watch, type FSWatcher } from 'chokidar'
 import type { TreeNode, VaultInfo } from '../shared/api'
+import { DEFAULT_LISTS } from '../shared/latexedit'
 
 /** Optional per-vault settings, read from <vault>/.vault.json. */
 interface VaultSettings {
@@ -9,6 +10,10 @@ interface VaultSettings {
   templates?: string
   /** Folder (vault-relative) where imported and pasted images go. */
   images?: string
+  /** Extra list environments and their item command, e.g. { "questions": "\\question" }. */
+  lists?: Record<string, string>
+  /** The snippet file, vault-relative. */
+  snippets?: string
 }
 
 // Where images go when none is configured: the first of these that exists.
@@ -25,6 +30,10 @@ export class Vault {
   templates: string | null = null
   /** Vault-relative folder for imported and pasted images. */
   imagesDir = 'Images'
+  /** List environment → item command (no backslash), for Enter in the editor. */
+  lists: Record<string, string> = { ...DEFAULT_LISTS }
+  /** Vault-relative snippet file (it need not exist). */
+  snippets = 'snippets.txt'
   private watcher: FSWatcher | null = null
 
   constructor(readonly root: string) {
@@ -40,6 +49,12 @@ export class Vault {
     }
     this.templates = settings.templates ? resolve(this.root, settings.templates) : null
     this.imagesDir = settings.images ?? (await this.firstExistingDir(IMAGE_DIR_CANDIDATES)) ?? 'Images'
+    this.lists = { ...DEFAULT_LISTS }
+    for (const [env, marker] of Object.entries(settings.lists ?? {})) {
+      const name = typeof marker === 'string' ? marker.trim().replace(/^\\/, '') : ''
+      if (name) this.lists[env] = name
+    }
+    this.snippets = settings.snippets ?? 'snippets.txt'
   }
 
   private async firstExistingDir(names: string[]): Promise<string | null> {
@@ -50,7 +65,15 @@ export class Vault {
   }
 
   async info(): Promise<VaultInfo> {
-    return { root: this.root, name: this.name, templates: this.templates, imagesDir: this.imagesDir, tree: await this.tree() }
+    return {
+      root: this.root,
+      name: this.name,
+      templates: this.templates,
+      imagesDir: this.imagesDir,
+      lists: this.lists,
+      snippets: this.snippets,
+      tree: await this.tree(),
+    }
   }
 
   /** Absolute path for a vault-relative one, refusing anything outside the vault. */

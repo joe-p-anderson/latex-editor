@@ -10,10 +10,17 @@ import { readFile } from 'node:fs/promises'
 import { join, posix, resolve, sep } from 'node:path'
 import type { MacroDefs } from '../shared/mathrender'
 import { cacheDirFor } from './compile'
-import { loadedFiles } from './macros'
+import { loadedFiles, scanDefinitions } from './macros'
+import { commandSignatures } from '../shared/latexedit'
+import type { EditorContext } from '../shared/api'
 import type { Vault } from './vault'
 
-export async function macrosFor(vault: Vault, root: string): Promise<{ macros: MacroDefs; sources: string[] }> {
+/**
+ * The files whose definitions a document sees, in load order: the vault and
+ * template-library files in its last compile's log (or a guess before the
+ * first compile), then the document itself, so its preamble wins.
+ */
+export async function documentFiles(vault: Vault, root: string): Promise<string[]> {
   const rootAbs = vault.abs(root)
   const name = posix.basename(root, '.tex')
   const log = await readFile(join(cacheDirFor(vault, root), `${name}.log`), 'utf8').catch(() => null)
@@ -25,9 +32,12 @@ export async function macrosFor(vault: Vault, root: string): Promise<{ macros: M
   } else {
     files = await guessFiles(vault, rootAbs)
   }
-  // The document's preamble comes after its class, so its definitions win.
   files.push(rootAbs)
+  return files
+}
 
+export async function macrosFor(vault: Vault, root: string): Promise<{ macros: MacroDefs; sources: string[] }> {
+  const files = await documentFiles(vault, root)
   const macros: MacroDefs = {}
   const sources: string[] = []
   for (const f of files) {
@@ -38,6 +48,19 @@ export async function macrosFor(vault: Vault, root: string): Promise<{ macros: M
     Object.assign(macros, found)
   }
   return { macros, sources }
+}
+
+/** Commands and environments the document defines, for the editor's completion. */
+export async function editorContextFor(vault: Vault, root: string): Promise<EditorContext> {
+  const commands = new Map<string, EditorContext['commands'][number]>()
+  const environments = new Set<string>()
+  for (const f of await documentFiles(vault, root)) {
+    const text = await readFile(f, 'utf8').catch(() => null)
+    if (text == null) continue
+    for (const c of commandSignatures(text)) commands.set(c.name, c)
+    for (const e of scanDefinitions(text).environments) if (!e.includes('@')) environments.add(e)
+  }
+  return { commands: [...commands.values()], environments: [...environments] }
 }
 
 async function guessFiles(vault: Vault, rootAbs: string): Promise<string[]> {
