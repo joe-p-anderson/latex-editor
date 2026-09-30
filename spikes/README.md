@@ -83,3 +83,27 @@ In the app, six double-clicks on HW3 all landed on the exact line: a section hea
 **Inherent SyncTeX behaviour:** page headers and footers are credited to the source line that triggered the page break, e.g. a `\clearpage`, not to the `.cls` file that defines them. The CLI does the same.
 
 **Testing note:** the dev machine runs at 125% display scaling. Screenshot coordinates are device pixels, while mouse events use CSS pixels, so divide by 1.25.
+
+## Faster compiles (`fastcompile.mjs`)
+
+Question: can a build be faster than a plain pdflatex pass, and can unsaved editor text be built without writing it into the vault? **Yes to both.** Run it like this:
+
+```bash
+node spikes/fastcompile.mjs fixtures/vaults/1200-latex Homework/HW3_vectors.tex
+```
+
+It works on a temporary copy of the vault.
+
+### Preamble format
+
+- `pdflatex -ini -jobname=<name>-preamble -output-directory=<cache> "&pdflatex" mylatexformat.ltx <doc>` dumps the preamble into a `.fmt`.
+- `-fmt=<cache>/<name>-preamble` loads it again. That works with an absolute path, so the format never has to be installed. `-undump=` and `&name` with `TEXFORMATS` also work.
+- **HW3: a pass drops from ~1.8 s to ~1.0 s**, with the same 5 pages and no errors. Building the format takes ~1.4 s. It is built in the background after a clean save.
+- A document in a folder with a space in its name needs its path quoted for mylatexformat (`"Lecture handouts/x.tex"`). Otherwise TeX reads only `Lecture`.
+
+### Preview (shadow) builds
+
+- Unsaved files are written to `.texcache/.shadow/<n>/<vault-relative path>`, and pdflatex runs from there with `TEXINPUTS=<shadow>;<vault>;<templates>//;`.
+- Files that aren't shadowed are still found through the vault root on the path, including images (`\includegraphics{Images/...}`) and `\input`s.
+- MiKTeX records the shadow files by **absolute** path in the log and the `.synctex.gz`. `src/main/shadow.ts` maps them back to the vault's files, so errors and SyncTeX point at the real file.
+- The spike first failed only because the temp folder was a Windows short name (`JANDER~1`): TeX reads `~` as an active character. Real vault paths don't have this, and the spike uses the long path.

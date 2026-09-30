@@ -45,6 +45,13 @@ describe('toggleCommand', () => {
   it('unwraps around the cursor', () => expect(bold('a \\textbf{wo|rd} b')).toBe('a wo|rd b'))
   it('unwraps through nested groups', () => expect(bold('\\textbf{x $\\vec{a|}$ y}')).toBe('x $\\vec{a|}$ y'))
   it('does not unwrap a different command', () => expect(bold('\\emph{wo|rd}')).toBe('\\emph{wo\\textbf{|}rd}'))
+
+  // Ctrl+B in math: \boldsymbol, which also removes an older \mathbf.
+  const mathBold = (s: string) => run(s, (t, f, to) => toggleCommand(t, f, to, 'boldsymbol', ['mathbf', 'bm']))
+  it('wraps with the math command', () => expect(mathBold('$|F^$')).toBe('$\\boldsymbol{|F^}$'))
+  it('unwraps an alternate around the cursor', () => expect(mathBold('$\\mathbf{F|}$')).toBe('$F|$'))
+  it('unwraps a selected alternate', () => expect(mathBold('$\\mathbf{|F^}$')).toBe('$|F^$'))
+  it('unwraps its own command', () => expect(mathBold('$\\boldsymbol{\\omega|}$')).toBe('$\\omega|$'))
 })
 
 describe('toggleInlineMath', () => {

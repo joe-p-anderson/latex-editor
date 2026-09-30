@@ -9,6 +9,7 @@ const api: Api & { onMenuOpenVault(cb: () => void): () => void } = {
   readFile: (rel) => ipcRenderer.invoke('file:read', rel),
   writeFile: (rel, text) => ipcRenderer.invoke('file:write', rel, text),
   compile: (rel) => ipcRenderer.invoke('compile', rel),
+  compileDraft: (rel, buffers) => ipcRenderer.invoke('compile:draft', rel, buffers),
   readPdf: (abs) => ipcRenderer.invoke('pdf:read', abs),
   syncForward: (pdf, rel, line) => ipcRenderer.invoke('synctex:forward', pdf, rel, line),
   syncInverse: (pdf, page, x, y) => ipcRenderer.invoke('synctex:inverse', pdf, page, x, y),
@@ -19,6 +20,24 @@ const api: Api & { onMenuOpenVault(cb: () => void): () => void } = {
   saveImage: (name, bytes) => ipcRenderer.invoke('images:save', name, bytes),
   moveToGlobalTemplates: (rel) => ipcRenderer.invoke('templates:move', rel),
   pathForFile: (file) => webUtils.getPathForFile(file),
+  spellCheck: (words) => ipcRenderer.invoke('spell:check', words),
+  spellSuggest: (word) => ipcRenderer.invoke('spell:suggest', word),
+  addWord: (word) => ipcRenderer.invoke('spell:add', word),
+  reloadWords: () => ipcRenderer.invoke('spell:reload'),
+  setSpellcheckMenu: (on) => ipcRenderer.invoke('menu:set-spellcheck', on),
+  onMenu: (cb) => {
+    const listener = (_e: unknown, name: string, arg?: unknown) => cb(name, arg)
+    ipcRenderer.on('menu', listener)
+    return () => ipcRenderer.removeListener('menu', listener)
+  },
+  search: (query, opts, overrides) => ipcRenderer.invoke('search:run', query, opts, overrides),
+  askAboutUnsaved:(files, action) => ipcRenderer.invoke('dialog:unsaved', files, action),
+  closeWindow: () => ipcRenderer.invoke('window:close'),
+  onCloseRequested: (cb) => {
+    const listener = () => cb()
+    ipcRenderer.on('window:close-requested', listener)
+    return () => ipcRenderer.removeListener('window:close-requested', listener)
+  },
   onTreeChanged: (cb) => {
     const listener = (_e: unknown, tree: TreeNode[]) => cb(tree)
     ipcRenderer.on('tree-changed', listener)

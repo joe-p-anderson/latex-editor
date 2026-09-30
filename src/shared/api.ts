@@ -1,5 +1,6 @@
 import type { CommandSig } from './latexedit'
 import type { MacroDefs } from './mathrender'
+import type { SearchOptions, SearchResult } from './search'
 
 // Types shared by the main process, the preload bridge and the renderer.
 // Paths called `rel` are vault-relative with forward slashes; paths called
@@ -25,6 +26,10 @@ export interface VaultInfo {
   lists: Record<string, string>
   /** Vault-relative path of the user's snippet file (which may not exist yet). */
   snippets: string
+  /** Vault-relative path of the math shortcut file (which may not exist yet). */
+  mathSnippets: string
+  /** Vault-relative path of the spelling word list (which may not exist yet). */
+  words: string
   tree: TreeNode[]
 }
 
@@ -77,6 +82,10 @@ export interface CompileResult {
   /** The full log of the last pass, for the raw view. */
   log: string
   durationMs: number
+  /** A preview of unsaved buffers: nothing was published to pdf/. */
+  draft: boolean
+  /** The build started from the cached preamble format. */
+  preloaded?: boolean
 }
 
 /** A rectangle on a PDF page, in PDF points from the page's top-left corner. */
@@ -110,6 +119,8 @@ export interface Api {
   readFile(rel: string): Promise<string>
   writeFile(rel: string, text: string): Promise<void>
   compile(rel: string): Promise<CompileResult>
+  /** A preview build of `rel` with unsaved `buffers` in place of the files on disk; null if it isn't part of a document. */
+  compileDraft(rel: string, buffers: Record<string, string>): Promise<CompileResult | null>
   readPdf(abs: string): Promise<Uint8Array>
   /** Source line → where it appears in `pdf`. */
   syncForward(pdf: string, rel: string, line: number): Promise<SyncTarget | null>
@@ -129,6 +140,26 @@ export interface Api {
   moveToGlobalTemplates(rel: string): Promise<string | null>
   /** Filesystem path of a dropped File, or '' if it has none. */
   pathForFile(file: File): string
+  /** The words (of `words`) that are misspelled, by the en-US dictionary plus the vault's word list. */
+  spellCheck(words: string[]): Promise<string[]>
+  /** Up to six suggested spellings. */
+  spellSuggest(word: string): Promise<string[]>
+  /** Adds a word to the vault's word list. */
+  addWord(word: string): Promise<void>
+  /** Re-reads the vault's word list (after it was edited). */
+  reloadWords(): Promise<void>
+  /** Keeps the View → Check Spelling tick in step. */
+  setSpellcheckMenu(on: boolean): Promise<void>
+  /** A menu item for the renderer: 'math-shortcuts', or 'spellcheck' with whether it's now on. */
+  onMenu(cb: (name: string, arg?: unknown) => void): () => void
+  /** Searches the vault's text files; `overrides` (unsaved buffers) are searched instead of the disk copies. */
+  search(query: string, opts: SearchOptions, overrides: Record<string, string>): Promise<SearchResult>
+  /** Asks whether to save the unsaved `files` before `action` (e.g. "closing"). */
+  askAboutUnsaved(files: string[], action: string): Promise<'save' | 'discard' | 'cancel'>
+  /** Closes the window for real (after unsaved files were dealt with). */
+  closeWindow(): Promise<void>
+  /** The user asked to close the window; the renderer decides, then calls closeWindow. */
+  onCloseRequested(cb: () => void): () => void
   onTreeChanged(cb: (tree: TreeNode[]) => void): () => void
   /** The vault's settings changed (e.g. a new global template folder). */
   onVaultChanged(cb: (vault: VaultInfo) => void): () => void

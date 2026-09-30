@@ -30,6 +30,14 @@ describe('findMathRegions', () => {
     const [r] = findMathRegions('The force $F = ma is\n\nnext')
     expect(r).toMatchObject({ tex: 'F = ma is', closed: false })
   })
+
+  it('stops an unclosed $$ at the paragraph end too', () => {
+    const regions = findMathRegions('A stray $$\n\nlater $x$ text')
+    expect(regions.map((r) => [r.tex, r.closed])).toEqual([
+      ['', false],
+      ['x', true],
+    ])
+  })
   it('regionAt finds the region around an offset, delimiters included', () => {
     const regions = findMathRegions('ab $cd$ ef')
     expect(regionAt(regions, 3)?.tex).toBe('cd')

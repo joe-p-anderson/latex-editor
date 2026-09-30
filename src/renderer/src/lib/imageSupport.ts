@@ -79,7 +79,8 @@ export function imageSupport(hooks: ImageHooks): Extension {
 /** Inserts text at `pos` as its own change, leaving the cursor after it. */
 export function insertAt(view: EditorView, pos: number, text: string): void {
   const insert = text.replace(/\n/g, view.state.lineBreak)
-  view.dispatch({ changes: { from: pos, insert }, selection: { anchor: pos + insert.length }, scrollIntoView: true })
+  // The editor counts a line break as one character, whatever the file uses.
+  view.dispatch({ changes: { from: pos, insert }, selection: { anchor: pos + text.length }, scrollIntoView: true })
   view.focus()
 }
 

@@ -3,13 +3,19 @@
 //   - classes come from the template libraries (the vault's, then the global one) via TEXINPUTS;
 //   - aux, log, synctex and the working PDF live in .texcache/<reldir>/<name>/;
 //   - a successful PDF is copied to pdf/<reldir>/<name>.pdf.
+// Two speed-ups, proven in spikes/fastcompile.mjs:
+//   - the preamble is compiled once into a format (preamble.ts);
+//   - a preview build compiles unsaved buffers from a shadow folder
+//     (shadow.ts), without touching the vault or pdf/.
 import { spawn, type ChildProcess } from 'node:child_process'
-import { copyFile, mkdir, readFile, stat } from 'node:fs/promises'
-import { delimiter, isAbsolute, join, posix } from 'node:path'
+import { copyFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises'
+import { delimiter, isAbsolute, join, posix, resolve } from 'node:path'
 import type { CompileResult } from '../shared/api'
 import { diagnose, type DiagnoseContext } from './diagnose'
 import { parseLog } from './logparser'
 import { definitionsFor } from './macros'
+import { buildFormat, dropFormat, preambleHash, preambleOf, usableFormat } from './preamble'
+import { unshadow, writeShadow } from './shadow'
 import type { Vault } from './vault'
 
 const MAX_PASSES = 4
@@ -17,20 +23,27 @@ const PASS_TIMEOUT_MS = 120_000
 const RERUN = /Rerun to get|Label\(s\) may have changed|Rerun LaTeX/
 // Any error line, in -file-line-error form (`path:12: ...`) or TeX's own (`! ...`).
 const HAS_ERROR = /^(?:.+?\.[A-Za-z]{1,8}:\d+: |! )/m
+const ERROR_LINES = /^(?:.+?\.[A-Za-z]{1,8}:\d+: |! )/gm
 
 let running: ChildProcess | null = null
 /** Bumped by every compile; an older compile stops once it sees a newer one. */
 let generation = 0
 let lastRoot: string | null = null
 
+// Formats checked against a plain build after producing errors (see build),
+// and formats found to change the result, by cache folder + preamble hash.
+const checkedFormats = new Set<string>()
+const badFormats = new Set<string>()
+
 /**
  * Which document to compile when `rel` is saved. In order: a `% !TEX root`
  * magic comment, the file itself if it has a \documentclass, otherwise the
  * last document compiled (so saving an \input'ed piece rebuilds its parent).
+ * `text` is the file's unsaved text, when there is some.
  */
-export async function resolveRoot(vault: Vault, rel: string): Promise<string | null> {
+export async function resolveRoot(vault: Vault, rel: string, text?: string): Promise<string | null> {
   if (!rel.endsWith('.tex')) return lastRoot
-  const text = await readFile(vault.abs(rel), 'utf8')
+  text ??= await readFile(vault.abs(rel), 'utf8')
   const magic = /^%\s*!TEX root\s*=\s*(.+?)\s*$/im.exec(text)
   if (magic) return posix.normalize(posix.join(posix.dirname(rel), magic[1].replace(/\\/g, '/')))
   if (/^[^%\n]*\\documentclass/m.test(text)) return rel
@@ -43,12 +56,29 @@ export function cacheDirFor(vault: Vault, root: string): string {
   return join(vault.root, '.texcache', relDir, posix.basename(root, '.tex'))
 }
 
-export async function compile(vault: Vault, rel: string): Promise<CompileResult> {
+/** Compiles the saved files and, if the build is clean, publishes the PDF to pdf/. */
+export function compile(vault: Vault, rel: string): Promise<CompileResult> {
+  return build(vault, rel, null)
+}
+
+/**
+ * A preview build: compiles `buffers` (unsaved text by vault-relative path)
+ * in place of the files on disk, which aren't touched. Nothing is copied
+ * to pdf/. Null when `rel` doesn't lead to a document.
+ */
+export async function compileDraft(vault: Vault, rel: string, buffers: Record<string, string>): Promise<CompileResult | null> {
+  const root = await resolveRoot(vault, rel, buffers[rel]).catch(() => null)
+  if (!root) return null
+  return build(vault, rel, buffers)
+}
+
+async function build(vault: Vault, rel: string, buffers: Record<string, string> | null): Promise<CompileResult> {
   const started = Date.now()
-  const root = await resolveRoot(vault, rel)
+  const draft = !!buffers
+  const root = await resolveRoot(vault, rel, buffers?.[rel])
   if (!root) {
     return {
-      ok: false, root: rel, passes: 0, pdf: null, durationMs: 0, log: '',
+      ok: false, root: rel, passes: 0, pdf: null, durationMs: 0, log: '', draft,
       problems: [{
         rule: 'not-a-document', severity: 'error', file: rel, line: null, fixes: [], tex: '',
         title: 'Nothing to compile',
@@ -58,6 +88,7 @@ export async function compile(vault: Vault, rel: string): Promise<CompileResult>
   }
   lastRoot = root
   const gen = ++generation
+  const stale = (): CompileResult => ({ ok: false, root, passes: 0, pdf: null, problems: [], log: '', durationMs: Date.now() - started, draft })
 
   const relDir = posix.dirname(root) === '.' ? '' : posix.dirname(root)
   const name = posix.basename(root, '.tex')
@@ -65,43 +96,100 @@ export async function compile(vault: Vault, rel: string): Promise<CompileResult>
   const pdfDir = join(vault.root, 'pdf', relDir)
   await mkdir(cacheDir, { recursive: true })
 
+  // A preview runs from a shadow folder holding the unsaved files; the
+  // vault root comes next on the search path for everything else.
+  const shadow = buffers && Object.keys(buffers).length ? await writeShadow(vault.root, buffers) : null
+  if (gen !== generation) return stale()
+  const cwd = shadow ?? vault.root
   const env = { ...process.env }
   // '//' searches subfolders; the trailing separator keeps MiKTeX's default path.
-  const dirs = vault.templateDirs
-  if (dirs.length) env.TEXINPUTS = dirs.map((d) => `${d}//${delimiter}`).join('')
+  const dirs = [...(shadow ? [shadow, vault.root] : []), ...vault.templateDirs.map((d) => `${d}//`)]
+  if (dirs.length) env.TEXINPUTS = dirs.map((d) => `${d}${delimiter}`).join('')
 
-  const args = [
+  // The preamble format, when there is a current one. A preview whose
+  // unsaved files include something the format was built from can't use it.
+  const rootText = buffers?.[root] ?? (await readFile(vault.abs(root), 'utf8').catch(() => ''))
+  const preamble = vault.fastCompile ? preambleOf(rootText) : null
+  const formatKey = preamble && `${cacheDir}|${preambleHash(preamble)}`
+  let format = preamble && !badFormats.has(formatKey!) ? await usableFormat(root, cacheDir, name, preamble, vault.root, [vault.root, ...vault.templateDirs]) : null
+  if (format && buffers) {
+    const dirty = new Set(Object.keys(buffers).map((r) => vault.abs(r).toLowerCase()))
+    if (format.deps.some((d) => dirty.has(d.toLowerCase()))) format = null
+  }
+
+  const baseArgs = [
     '-synctex=1', '-interaction=nonstopmode', '-file-line-error',
     '-max-print-line=10000', // one message per line, no 79-column wrapping
-    `-aux-directory=${cacheDir}`, `-output-directory=${cacheDir}`, root,
+    `-aux-directory=${cacheDir}`, `-output-directory=${cacheDir}`,
   ]
-
   const logPath = join(cacheDir, `${name}.log`)
-  let passes = 0
-  let log = ''
-  do {
-    passes++
-    await runPdflatex(args, vault.root, env)
-    if (gen !== generation) {
-      return { ok: false, root, passes, pdf: null, problems: [], log: '', durationMs: Date.now() - started }
-    }
-    log = await readFile(logPath, 'utf8').catch(() => '')
-    // Rerunning can't fix an error, so only rerun a clean pass that asks for it.
-  } while (!HAS_ERROR.test(log) && RERUN.test(log) && passes < MAX_PASSES)
+  const runPasses = async (fmt: string | null) => {
+    const args = [...baseArgs, ...(fmt ? [`-fmt=${fmt}`] : []), root]
+    let passes = 0
+    let log = ''
+    do {
+      passes++
+      await runPdflatex(args, cwd, env)
+      if (gen !== generation) return null
+      log = await readFile(logPath, 'utf8').catch(() => '')
+      // Rerunning can't fix an error, so only rerun a clean pass that asks for it.
+    } while (!HAS_ERROR.test(log) && RERUN.test(log) && passes < MAX_PASSES)
+    return { passes, log }
+  }
 
-  const problems = await diagnose(parseLog(log), diagnoseContext(vault, root, log, join(cacheDir, `${name}.aux`)))
+  let run = await runPasses(format?.fmt ?? null)
+  if (!run) return stale()
+  // A format that leads to errors is checked once against a plain build.
+  // If that build is cleaner, the format is at fault (some packages can't
+  // be preloaded): it's dropped and never used for this preamble again.
+  if (format && formatKey && HAS_ERROR.test(run.log) && !checkedFormats.has(formatKey)) {
+    checkedFormats.add(formatKey)
+    const plain = await runPasses(null)
+    if (!plain) return stale()
+    if (errorCount(plain.log) < errorCount(run.log)) {
+      badFormats.add(formatKey)
+      await dropFormat(cacheDir, name)
+      run = { passes: run.passes + plain.passes, log: plain.log }
+      format = null
+    } else run = { passes: run.passes + plain.passes, log: plain.log }
+  }
+
+  let log = run.log
+  if (shadow) {
+    // Report the vault's files, not the shadow copies; and rewrite the log
+    // on disk too, since the math preview reads it.
+    log = unshadow(log)
+    await writeFile(logPath, log).catch(() => {})
+  }
+
+  const overrides = buffers ? new Map(Object.entries(buffers).map(([r, t]) => [resolve(vault.abs(r)).toLowerCase(), t])) : undefined
+  const problems = await diagnose(parseLog(log), diagnoseContext(vault, root, log, join(cacheDir, `${name}.aux`), overrides))
   const cachePdf = join(cacheDir, `${name}.pdf`)
   const pdfExists = await stat(cachePdf).then(() => true, () => false)
   const ok = pdfExists && !problems.some((p) => p.severity === 'error' && !p.hidden)
-  if (ok) {
+  if (ok && !draft) {
     await mkdir(pdfDir, { recursive: true })
     await copyFile(cachePdf, join(pdfDir, `${name}.pdf`))
   }
-  return { ok, root, passes, pdf: pdfExists ? cachePdf : null, problems, log, durationMs: Date.now() - started }
+
+  // No format yet (or it's out of date): build one from the saved file in
+  // the background, for the next compile. Only a clean saved build does
+  // this, so a broken preamble isn't dumped.
+  if (!format && !draft && ok && preamble && !badFormats.has(formatKey!)) {
+    buildFormat(root, cacheDir, name, preamble, vault.root, env).catch(() => {})
+  }
+
+  return { ok, root, passes: run.passes, pdf: pdfExists ? cachePdf : null, problems, log, durationMs: Date.now() - started, draft, preloaded: !!format }
 }
 
-/** What the diagnosis rules may look at, read lazily and at most once. */
-export function diagnoseContext(vault: Vault, doc: string, log: string, auxPath: string): DiagnoseContext {
+const errorCount = (log: string) => (log.match(ERROR_LINES) ?? []).length
+
+/**
+ * What the diagnosis rules may look at, read lazily and at most once.
+ * `overrides` (absolute lower-cased path → text) are unsaved buffers,
+ * read instead of the files on disk.
+ */
+export function diagnoseContext(vault: Vault, doc: string, log: string, auxPath: string, overrides?: Map<string, string>): DiagnoseContext {
   const once = <T>(f: () => Promise<T>) => {
     let p: Promise<T> | null = null
     return () => (p ??= f())
@@ -109,6 +197,8 @@ export function diagnoseContext(vault: Vault, doc: string, log: string, auxPath:
   const texts = new Map<string, Promise<string | null>>()
   const read = (file: string) => {
     const abs = isAbsolute(file) ? file : vault.abs(file)
+    const unsaved = overrides?.get(resolve(abs).toLowerCase())
+    if (unsaved !== undefined) return Promise.resolve(unsaved)
     if (!texts.has(abs)) texts.set(abs, readFile(abs, 'utf8').catch(() => null))
     return texts.get(abs)!
   }

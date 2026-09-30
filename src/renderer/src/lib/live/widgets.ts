@@ -195,7 +195,7 @@ export class SymbolWidget extends WidgetType {
 }
 
 /** Caption or cell text: plain text, bold/italic, and inline math. */
-function richText(tex: string, render: RenderFn): HTMLElement {
+export function richText(tex: string, render: RenderFn): HTMLElement {
   const dom = el('span', 'cm-live-rich')
   for (const part of inlineParts(tex)) {
     if (part.math) {
@@ -266,6 +266,9 @@ export class FigureWidget extends WidgetType {
   }
 }
 
+/** Fired on the editor's DOM by a table's "Edit table" button; `detail` is the table's position. */
+export const EDIT_TABLE_EVENT = 'latex-edit-table'
+
 export class TableWidget extends WidgetType {
   constructor(
     readonly tabular: Tabular | null,
@@ -309,6 +312,13 @@ export class TableWidget extends WidgetType {
       dom.append(table)
     } else dom.append(el('pre', 'cm-live-table-src', this.source))
     for (const key of this.labels) dom.append(new LabelWidget(key).toDOM(view))
+    // Opens the table editor (Editor.svelte listens for the event). Its own
+    // mousedown mustn't reach the table's, which would reveal the source.
+    const edit = el('button', 'cm-live-table-edit', 'Edit table')
+    edit.title = 'Edit this table in a grid (Ctrl+Alt+T with the cursor in it)'
+    edit.addEventListener('mousedown', (e) => (e.preventDefault(), e.stopPropagation()))
+    edit.addEventListener('click', () => view.dom.dispatchEvent(new CustomEvent(EDIT_TABLE_EVENT, { bubbles: true, detail: view.posAtDOM(dom) })))
+    dom.append(edit)
     revealOnClick(dom, view)
     return dom
   }

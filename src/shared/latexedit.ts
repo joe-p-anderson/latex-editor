@@ -205,46 +205,53 @@ export function mirrorEnvRename(text: string, from: number, to: number, insert: 
  * Ctrl+B and friends. With a selection: wraps it in \cmd{...}, or unwraps it
  * if it already is (the selection being the inside or the whole thing).
  * Without one: unwraps the \cmd{...} the cursor is in, or inserts \cmd{}
- * with the cursor inside.
+ * with the cursor inside. `alternates` are other commands the key also
+ * removes instead of nesting (Ctrl+B in math removes \mathbf as well as
+ * \boldsymbol).
  */
-export function toggleCommand(text: string, from: number, to: number, cmd: string): Edit {
+export function toggleCommand(text: string, from: number, to: number, cmd: string, alternates: string[] = []): Edit {
+  const names = [cmd, ...alternates]
   const open = `\\${cmd}{`
   if (from !== to) {
     const sel = text.slice(from, to)
-    if (text.slice(from - open.length, from) === open && text[to] === '}' && balanced(sel)) {
-      return {
-        changes: [
-          { from: from - open.length, to: from, insert: '' },
-          { from: to, to: to + 1, insert: '' },
-        ],
-        anchor: from - open.length,
-        head: to - open.length,
+    for (const name of names) {
+      const o = `\\${name}{`
+      if (text.slice(from - o.length, from) === o && text[to] === '}' && balanced(sel)) {
+        return {
+          changes: [
+            { from: from - o.length, to: from, insert: '' },
+            { from: to, to: to + 1, insert: '' },
+          ],
+          anchor: from - o.length,
+          head: to - o.length,
+        }
       }
-    }
-    if (sel.startsWith(open) && sel.endsWith('}') && closingBrace(text, from + open.length - 1) === to - 1) {
-      return {
-        changes: [{ from, to, insert: sel.slice(open.length, -1) }],
-        anchor: from,
-        head: to - open.length - 1,
+      if (sel.startsWith(o) && sel.endsWith('}') && closingBrace(text, from + o.length - 1) === to - 1) {
+        return {
+          changes: [{ from, to, insert: sel.slice(o.length, -1) }],
+          anchor: from,
+          head: to - o.length - 1,
+        }
       }
     }
     return { changes: [{ from, to, insert: `${open}${sel}}` }], anchor: from + open.length, head: to + open.length }
   }
-  // Walk out through the groups around the cursor, looking for \cmd{.
+  // Walk out through the groups around the cursor, looking for \cmd{ (or an alternate).
   let i = from
   for (let steps = 0; steps < 20; steps++) {
     const brace = openingBrace(text, i)
     if (brace < 0) break
     const close = closingBrace(text, brace)
     if (close < 0) break
-    if (text.slice(brace - cmd.length - 1, brace + 1) === open) {
-      const start = brace - cmd.length - 1
+    const name = names.find((n) => text.slice(brace - n.length - 1, brace + 1) === `\\${n}{`)
+    if (name) {
+      const start = brace - name.length - 1
       return {
         changes: [
           { from: start, to: brace + 1, insert: '' },
           { from: close, to: close + 1, insert: '' },
         ],
-        anchor: from - open.length,
+        anchor: from - name.length - 2,
       }
     }
     i = brace

@@ -26,7 +26,7 @@ export interface DiagnoseContext {
 // Commands and environments that come from a package, for "add \usepackage".
 const COMMAND_PACKAGE: Record<string, string> = {
   includegraphics: 'graphicx', graphicspath: 'graphicx', rotatebox: 'graphicx', scalebox: 'graphicx',
-  text: 'amsmath', eqref: 'amsmath', dfrac: 'amsmath', tfrac: 'amsmath', binom: 'amsmath', intertext: 'amsmath',
+  text: 'amsmath', eqref: 'amsmath', boldsymbol: 'amsmath', dfrac: 'amsmath', tfrac: 'amsmath', binom: 'amsmath', intertext: 'amsmath',
   mathbb: 'amssymb', mathfrak: 'amssymb', therefore: 'amssymb', because: 'amssymb',
   SI: 'siunitx', si: 'siunitx', qty: 'siunitx', unit: 'siunitx', num: 'siunitx', ang: 'siunitx',
   href: 'hyperref', url: 'hyperref', hyperref: 'hyperref', autoref: 'hyperref',

@@ -1,0 +1,11 @@
+# Math shortcuts for this vault, on top of the built-in ones (Edit → Math Shortcuts…
+# lists them all). They expand as you type, inside math only.
+#
+#   trigger => replacement     $1, $2 … Tab stops; $0 where the cursor ends
+#   /regex/ => …[[0]]…         use the regex's groups in the replacement
+#   !trigger                   turn a built-in off
+
+# Course notation
+vv => \vec{$1}$0
+uv => \hat{$1}$0
+Fnet => \vec{F}_\text{net}

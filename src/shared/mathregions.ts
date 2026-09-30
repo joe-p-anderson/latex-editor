@@ -66,7 +66,8 @@ export function findMathRegions(text: string): MathRegion[] {
     if (ch === '$') {
       const display = text[i + 1] === '$'
       const open = display ? 2 : 1
-      const end = findClose(text, i + open, display ? '$$' : '$', display ? n : paragraphEnd(i))
+      // TeX allows no blank line inside math, so an unclosed $ or $$ stops at the paragraph end.
+      const end = findClose(text, i + open, display ? '$$' : '$', paragraphEnd(i))
       regions.push(region(i, end, i + open, open, display))
       i = end.closed ? end.at + open : end.at
       continue
@@ -108,6 +109,20 @@ function findClose(text: string, start: number, close: string, limit: number): {
   let at = Math.min(limit, text.length)
   while (at > start && /\s/.test(text[at - 1])) at--
   return { at, closed: false }
+}
+
+/**
+ * The math the cursor at `pos` is typing in: inside a region's delimiters,
+ * or anywhere in the rest of the paragraph after one left open (the math
+ * being typed). Null in text.
+ */
+export function mathAtCursor(text: string, regions: MathRegion[], pos: number): MathRegion | null {
+  for (const r of regions) {
+    if (r.from >= pos) break
+    if (pos < r.to) return r
+    if (!r.closed && !/\n[ \t]*\n/.test(text.slice(r.to, pos))) return r
+  }
+  return null
 }
 
 /** The region containing offset `pos` (delimiters count as inside), if any. */

@@ -1,0 +1,22 @@
+# Words the spellchecker should accept in this vault, one per line.
+# Right-click an underlined word and choose "Add to words.txt" to add more.
+au
+blackbody
+Brightspace
+crosshairs
+Desmos
+frictionless
+Gerlach
+kitesurfer
+Minkowski
+nichrome
+PhET
+picometers
+polarizer
+potentiometer
+prefactor
+raytable
+terameters
+trendline
+trendlines
+unpolarized

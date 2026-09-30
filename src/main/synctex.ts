@@ -17,6 +17,7 @@
 import { readFile, stat } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { gunzipSync } from 'node:zlib'
+import { unshadow } from './shadow'
 
 const SP_PER_BP = 65781.76
 
@@ -115,7 +116,8 @@ export function parse(text: string): SyncData {
     if (line.startsWith('Input:')) {
       const sep = line.indexOf(':', 6)
       const tag = Number(line.slice(6, sep))
-      const path = line.slice(sep + 1).trimEnd()
+      // A preview build read the unsaved files from a shadow folder; report the vault's own.
+      const path = unshadow(line.slice(sep + 1).trimEnd())
       inputs.set(tag, path)
       keys.set(tag, normPath(path))
     } else if (line.startsWith('Unit:')) unit = Number(line.slice(5))

@@ -12,7 +12,9 @@
 //  - typing $ pairs it;
 //  - completion for commands (with argument placeholders), environments,
 //    \ref labels, and the vault's snippet file;
-//  - folding of environments, sections and questions.
+//  - folding of environments, sections and questions;
+//  - F2 on a \label or \ref key renames it across the vault;
+//  - Ctrl+Alt+T, or pasting spreadsheet cells, opens the table editor.
 // The text logic lives in @shared/latexedit; this file wires it to the editor.
 import { snippet, startCompletion, type Completion, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete'
 import { insertNewlineAndIndent } from '@codemirror/commands'
@@ -38,6 +40,11 @@ import {
   type Snippet,
 } from '@shared/latexedit'
 import { findMathRegions } from '@shared/mathregions'
+import { keyAt } from '@shared/search'
+import { clipboardGrid, tableRangeAt } from '@shared/tablemodel'
+import { latexPairs } from './pairs'
+import { mathShortcuts } from './mathShortcuts'
+import type { MathSnippet } from '@shared/mathsnippets'
 
 export interface EditingHooks {
   /** List environment → item command, without the backslash. */
@@ -47,6 +54,15 @@ export interface EditingHooks {
   environments(): string[]
   /** The vault's snippets. */
   snippets(): Snippet[]
+  /** Math shortcuts: the built-ins with the vault's own file applied. */
+  mathSnippets(): MathSnippet[]
+  /** F2 on a \label or \ref key: rename it everywhere. */
+  renameLabel(key: string): void
+  /**
+   * Open the table editor: on the table at `range` (null for a new one at
+   * the cursor), with `grid` pasted in at the cursor's row when given.
+   */
+  editTable(range: { from: number; to: number } | null, grid: string[][] | null): void
 }
 
 export function latexEditing(hooks: EditingHooks): Extension {
@@ -57,8 +73,10 @@ export function latexEditing(hooks: EditingHooks): Extension {
     EditorState.languageData.of(() => languageData),
     Prec.highest(
       keymap.of([
-        { key: 'Mod-b', preventDefault: true, run: (v) => format(v, 'textbf', 'mathbf') },
-        { key: 'Mod-i', preventDefault: true, run: (v) => format(v, 'textit', 'mathit') },
+        // In math, bold is \boldsymbol (bold Greek too) and "italic" is upright \mathrm,
+        // math being italic already. Each also removes the older forms instead of nesting.
+        { key: 'Mod-b', preventDefault: true, run: (v) => format(v, 'textbf', 'boldsymbol', ['mathbf', 'bm']) },
+        { key: 'Mod-i', preventDefault: true, run: (v) => format(v, 'textit', 'mathrm', ['mathit', 'textrm']) },
         { key: 'Mod-e', preventDefault: true, run: (v) => format(v, 'emph', 'mathit') },
         { key: 'Mod-m', preventDefault: true, run: inlineMath },
         { key: 'Mod-Shift-m', preventDefault: true, run: (v) => block(v, '\\[', '\\]') },
@@ -68,8 +86,13 @@ export function latexEditing(hooks: EditingHooks): Extension {
         { key: 'Mod-Alt-e', preventDefault: true, run: (v) => environment(v, 'equation*') },
         { key: 'Mod-Shift-f', preventDefault: true, run: (v) => figure(v, 'figure') },
         { key: 'Mod-Alt-f', preventDefault: true, run: (v) => figure(v, 'figure*') },
+        { key: 'F2', run: (v) => renameKey(v, hooks) },
+        { key: 'Mod-Alt-t', preventDefault: true, run: (v) => (hooks.editTable(tableRangeAt(v.state.doc.toString(), v.state.selection.main.head), null), true) },
       ]),
     ),
+    tablePaste(hooks),
+    mathShortcuts(() => hooks.mathSnippets()),
+    latexPairs(),
     // Below the completion popup's own Enter (which is highest).
     Prec.high(
       keymap.of([
@@ -82,6 +105,41 @@ export function latexEditing(hooks: EditingHooks): Extension {
     structure,
     folding,
   ]
+}
+
+/**
+ * Pasting spreadsheet cells (Excel, Sheets, a web page's table) opens the
+ * table editor with them, instead of dumping tab-separated text. Inside a
+ * table they go in at the cursor's row; elsewhere they make a new table.
+ * Ctrl+Shift+V pastes the plain text as usual.
+ */
+function tablePaste(hooks: EditingHooks): Extension {
+  let plain = false
+  return EditorView.domEventHandlers({
+    keydown(e) {
+      plain = e.shiftKey && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v'
+      return false
+    },
+    paste(event, view) {
+      const asPlain = plain
+      plain = false
+      const data = event.clipboardData
+      if (asPlain || !data || [...data.items].some((i) => i.type.startsWith('image/'))) return false
+      const grid = clipboardGrid(data.getData('text/plain'), data.getData('text/html'))
+      if (!grid) return false
+      event.preventDefault()
+      hooks.editTable(tableRangeAt(view.state.doc.toString(), view.state.selection.main.head), grid)
+      return true
+    },
+  })
+}
+
+/** F2: rename the label key under the cursor, if there is one. */
+function renameKey(view: EditorView, hooks: EditingHooks): boolean {
+  const key = keyAt(view.state.doc.toString(), view.state.selection.main.head)
+  if (!key) return false
+  hooks.renameLabel(key)
+  return true
 }
 
 /** Applies an Edit from @shared/latexedit, whose inserts use \n. */
@@ -97,11 +155,11 @@ function apply(view: EditorView, edit: Edit, userEvent: string): void {
 
 const mathRegionAt = (text: string, pos: number) => findMathRegions(text).find((r) => r.from < pos && pos < r.to) ?? null
 
-function format(view: EditorView, textCmd: string, mathCmd: string): boolean {
+function format(view: EditorView, textCmd: string, mathCmd: string, mathAlternates: string[] = []): boolean {
   const { from, to } = view.state.selection.main
   const text = view.state.doc.toString()
-  const cmd = mathRegionAt(text, from) ? mathCmd : textCmd
-  apply(view, toggleCommand(text, from, to, cmd), 'input.format')
+  const math = !!mathRegionAt(text, from)
+  apply(view, toggleCommand(text, from, to, math ? mathCmd : textCmd, math ? mathAlternates : []), 'input.format')
   return true
 }
 

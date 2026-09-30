@@ -46,7 +46,9 @@ Regenerates `fixtures/errors/logs/`. Run it after adding or changing a broken do
   .texcache/Homework/HW3/   aux, log, synctex, working PDF (hidden)
 ```
 
-- **Ctrl+S** saves the file and compiles it.
+- **Ctrl+S** saves the file and compiles it. A clean build is copied to `pdf/`.
+- **Preview:** a pause in typing (about 1.2 s) builds your unsaved text without saving it. The PDF keeps up, and errors show as usual. The header marks this build **preview**. Nothing is written into the vault or `pdf/` until you save. The unsaved files are built from a copy in `.texcache/.shadow/`.
+- **Preamble cache:** after a clean save, the document's preamble (class, packages, macros) is compiled once into a format in its cache folder. Later builds start from it, which cuts HW3 from ~1.8 s to ~1.0 s per pass. It is rebuilt when the preamble, or a class or package in the vault or a template folder, changes. If a format ever gives a different result from a plain build, it's dropped. Hover over the build status to see whether the preamble was preloaded. Turn it off with `"fastCompile": false` in `.vault.json`.
 - What gets compiled:
   - a `% !TEX root = ../main.tex` comment names the document to build;
   - otherwise the file itself, if it has a `\documentclass`;
@@ -76,7 +78,7 @@ While you type math, its preview keeps the last version that rendered, faded, in
 
 | Key | Does |
 |---|---|
-| Ctrl+B / Ctrl+I / Ctrl+E | Toggle `\textbf`, `\textit`, `\emph` around the selection. With no selection, they insert one or remove the one the cursor is in. In math, bold and italic use `\mathbf` and `\mathit`. |
+| Ctrl+B / Ctrl+I / Ctrl+E | Toggle `\textbf`, `\textit`, `\emph` around the selection. With no selection, they insert one or remove the one the cursor is in. In math, Ctrl+B uses `\boldsymbol` (which also works for Greek) and Ctrl+I gives upright `\mathrm`. They also remove an existing `\mathbf` or `\mathit` instead of nesting. Ctrl+E in math uses `\mathit`. |
 | Ctrl+Shift+L | Switch between the live view and plain source |
 | Ctrl+M | Toggle `$…$` |
 | Ctrl+Shift+M | Put the selection in display math, `\[ … \]` |
@@ -85,6 +87,90 @@ While you type math, its preview keeps the last version that rendered, faded, in
 | Ctrl+Shift+F / Ctrl+Alt+F | Insert a `figure` / `figure*` with `\centering`, `\includegraphics`, `\caption` and `\label`. The image list opens for the path, and Tab moves on to the width, caption and label. |
 | Enter | In a list, starts the next `\item` (or `\question`, `\part`, …). On an empty last item, it leaves the list, and a nested list continues in its parent. After an unclosed `\begin{…}`, it adds the `\end{…}`. |
 | Shift+Enter | A plain new line, with no item marker |
+| Ctrl+P | Open a file by name (fuzzy; sources are listed before images) |
+| Ctrl+W | Close the tab, offering to save it first |
+| Ctrl+Tab / Ctrl+Shift+Tab | The most recently used tabs, while Ctrl is held |
+| Ctrl+PageDown / Ctrl+PageUp | The next / previous tab |
+| Ctrl+Alt+S | Save every unsaved file, then compile once |
+| Ctrl+Shift+H | Search the vault, starting from the selected text |
+| F2 | On a `\label` or `\ref` key, rename the label and every reference to it across the vault |
+| Ctrl+Alt+T | Edit the table the cursor is in, or insert a new one |
+| Ctrl+Shift+\\ | Jump between a `\begin{…}` and its `\end{…}`, or a `\left` and its `\right`, or matching brackets |
+| Ctrl+. | Spelling suggestions for the underlined word at the cursor (right-click works too) |
+
+### Brackets and quotes
+
+- `\left(` adds `\right)`. The same goes for `\left[`, `\left|`, `\left.`, `\left\{`, `\left\langle`, `\left\lvert`, `\left\lVert`, `\left\lfloor` and `\left\lceil`. Typing `)` or `]` just before the added `\right)` steps over it.
+- `\{` adds `\}`. In text, `\(` adds `\)` and `\[` adds `\]`. In math, `\langle`, `\lvert`, `\lVert`, `\lfloor` and `\lceil` add their closers.
+- In text, ``` `` ``` adds `''`, and typing `''` just before it steps over it.
+- **Smart quotes:** `"` in text becomes ``` `` ``` or `''` depending on where it is. Math, comments, the preamble, verbatim, `\"o` accents and arguments like `\url{…}` and `\label{…}` are left alone.
+- Backspace inside an empty pair (`\left(|\right)`, `\{|\}`, ``` ``|'' ```) removes both halves.
+- With the cursor on `\begin{x}` or `\end{x}`, both are highlighted. The same goes for `\left(` and its `\right)`.
+
+### Math shortcuts
+
+Inside math, some character sequences expand as you type them. Backspace straight after an expansion puts back what you typed. Nothing expands in text, or inside `\text{…}`, `\label{…}` or siunitx arguments within math. A shortcut made of letters fires only at the start of a word, so typing `\sqrt` or `\cdot` is never interrupted.
+
+| Type | Get |
+|---|---|
+| `@a` `@b` `@g` `@d` `@e` `@q` `@l` `@m` `@p` `@r` `@s` `@t` `@f` `@y` `@w` … | `\alpha` `\beta` `\gamma` `\delta` `\epsilon` `\theta` `\lambda` `\mu` `\pi` `\rho` `\sigma` `\tau` `\phi` `\psi` `\omega`. A capital gives the capital letter (`@D` → `\Delta`, `@W` → `\Omega`). `@ve`, `@vq` and `@vf` give `\varepsilon`, `\vartheta` and `\varphi`. The letters follow vim-latex. |
+| `x1`, then `x_12` | `x_1`, then `x_{12}` |
+| `//` | `\frac{}{}` (Tab moves to the denominator) |
+| `sq` `sr` `cb` `td` `invs` `deg` | `\sqrt{}` `^{2}` `^{3}` `^{}` `^{-1}` `^\circ` |
+| `xhat` `xbar` `xvec` `xdot` `xddot` `xtilde` | `\hat{x}` and so on. On its own, `hat` gives `\hat{}`. |
+| `->` `=>` `<=` `>=` `!=` `~~` `==` | `\to` `\implies` `\leq` `\geq` `\neq` `\approx` `&=` |
+| `**` `xx` `+-` `-+` `...` `ooo` | `\cdot` `\times` `\pm` `\mp` `\dots` `\infty` |
+| `prop` `par` `del` | `\propto` `\partial` `\nabla` |
+| `sum` `int` `lim` `ddt` `ddx` `txt` | `\sum_{}^{}`, `\int_{}^{} \,d`, `\lim_{ \to }`, `\frac{d}{dt}`, `\frac{d}{dx}`, `\text{}` |
+
+A letter typed right after a shortcut that ends in a command gets a space first, so `->` then `b` gives `\to b`, not `\tob`.
+
+**Edit → Math Shortcuts…** opens the vault's `math-snippets.txt`. If the file doesn't exist it is created, with every built-in listed for reference. Put one shortcut per line, as `trigger => replacement`:
+
+- `$1`, `$2` and so on are Tab stops, and `$0` is where the cursor ends up.
+- A `/regex/` trigger can use its groups in the replacement as `[[0]]`, `[[1]]` and so on.
+- `!trigger` turns a built-in off, and a line with a built-in's trigger replaces it.
+- Saving the file applies it.
+
+### Spelling
+
+Prose is spellchecked against a US English dictionary, and misspelled words get a red wavy underline. Only `.tex` files are checked. The checker skips:
+
+- math, comments, the preamble (apart from `\title`, `\author` and `\date`), verbatim and TikZ;
+- command names and optional `[…]` arguments;
+- the arguments of commands that aren't prose, such as `\label`, `\ref`, `\cite`, `\includegraphics`, `\url`, `\begin`, lengths and siunitx units;
+- single letters, acronyms of up to five capitals, and words next to digits.
+
+Right-click an underlined word, or press Ctrl+. in it, for suggestions, **Add to words.txt** or **Ignore** (for this session). The vault's `words.txt` holds its own words, one per line, and `#` starts a comment. You can edit it directly; saving reloads it. **View → Check Spelling** turns spelling on and off.
+
+### Tabs
+
+Each opened file gets a tab, placed after the current one. A dot marks unsaved changes. Close a tab with × or a middle click, and drag tabs to reorder them. Each tab keeps its own cursor, scroll position and undo history. Quitting, or opening another vault, with unsaved files asks whether to save them.
+
+### Search
+
+**Search** in the sidebar (Ctrl+Shift+H) looks through every text file in the vault, using your unsaved changes where there are some. Its toggles are match case (`Aa`), whole word (`ab`), regular expression (`.*`) and include `%` comments. Comments are skipped by default. Results are grouped by file; click one to open the file with the match selected.
+
+Open the replace field with ▸. You can replace one match, one file (↺), or **All** (Ctrl+Alt+Enter). A regex replacement can use `$1` and so on. Changed files open as unsaved tabs, so each file's change can be undone with Ctrl+Z. Ctrl+Alt+S saves them all.
+
+### Tables
+
+The table editor is a dialog with a grid of cells, each cell holding its LaTeX. Open it in any of these ways:
+
+- **Edit table** on a table in the live view;
+- Ctrl+Alt+T with the cursor in a table, or anywhere else for a new one;
+- **pasting** cells from Excel, Google Sheets or a web page. Inside a table, the rows go in after the cursor's row; anywhere else, they make a new table. Ctrl+Shift+V pastes the plain text instead.
+
+In the grid:
+
+- Tab, Enter and the arrow keys move between cells. Tab from the last cell adds a row. Alt+↑/↓ moves a row. Shift-click selects cells to merge.
+- The toolbar adds, moves and deletes rows and columns. It also sets vertical lines and the rule above each row, merges and splits cells (`\multicolumn`), and makes the header row bold.
+- Each column's alignment is left, centre, right, wrap (`p{width}`), or decimal (siunitx `S`). Columns of numbers get a suggestion to align on the decimal point.
+- Style presets are booktabs (the default for new tables), grid and plain.
+- The table can sit in a `table` float with a caption, a label (suggested from the caption), a placement, and centring.
+- Pasted text is escaped (`%` becomes `\%` and so on) unless **Paste LaTeX as is** is ticked.
+
+**Apply** (Ctrl+Enter) writes the table back with its `&` columns lined up, as one undoable change. If the table needs booktabs, siunitx or array and the document doesn't load it, a `\usepackage` line is added to the preamble. Tables with `%` comments inside, or more than one tabular in a float, stay in the source view.
 
 - Renaming either end of `\begin{x}` or `\end{x}` renames the other.
 - Typing `$` adds the closing `$`.
@@ -101,9 +187,13 @@ Per vault, in `.vault.json`:
 ```json
 {
   "lists": { "questions": "question", "parts": "part", "choices": "choice" },
-  "snippets": "snippets.txt"
+  "snippets": "snippets.txt",
+  "mathSnippets": "math-snippets.txt",
+  "words": "words.txt"
 }
 ```
+
+- `mathSnippets` and `words` name the math shortcut file and the spelling word list. The defaults are shown above.
 
 - `lists` maps each list environment to its item command, and is added to `itemize`, `enumerate` and `description`.
 - `snippets` names the snippet file. It defaults to `snippets.txt` at the vault root. Each snippet starts with a line `%%% name — description`, and its body runs to the next `%%%` line. The body can use `${1:placeholder}` fields. Type `\name` to insert a snippet. Saving the file reloads it.
@@ -113,10 +203,20 @@ Per vault, in `.vault.json`:
 
 - `src/main/`: the Electron main process (Node).
   - `vault.ts`: file tree and file watching.
-  - `compile.ts`: runs pdflatex and extracts errors.
+  - `compile.ts`: runs pdflatex, both saved builds and previews, and extracts errors.
+  - `preamble.ts`: the preamble format cache.
+  - `shadow.ts`: the shadow folder that previews build from, and the mapping back to vault paths.
+  - `search.ts`: vault-wide search.
+  - `spell.ts`: the spellchecker (nspell with dictionary-en) and the vault's word list.
   - `index.ts`: the window and the IPC handlers.
 - `src/preload/`: the bridge that exposes `window.api` to the UI.
-- `src/renderer/`: the UI in Svelte, with a CodeMirror editor and a PDF.js viewer. `lib/editing.ts` wires the LaTeX editing helpers into the editor.
+- `src/renderer/`: the UI in Svelte, with a CodeMirror editor and a PDF.js viewer.
+  - `lib/editing.ts` wires the LaTeX editing helpers into the editor. `lib/pairs.ts`, `lib/mathShortcuts.ts` and `lib/spellcheck.ts` add brackets and quotes, math shortcuts and spelling.
+  - `TabBar`, `QuickOpen`, `SearchPanel` and `TableEditor` are the components for tabs, quick open, search and the table editor.
 - `src/shared/latexedit.ts`: the text logic behind those helpers (lists, environments, formatting, outline, snippets), unit tested.
+- `src/shared/search.ts`: search, replace and label rename, as pure text logic.
+- `src/shared/tablemodel.ts`: parses and writes tables, the grid operations, and reading clipboard data.
+- `src/shared/pairs.ts`, `mathsnippets.ts` and `spellwords.ts`: the text logic for brackets and quotes, math shortcuts (including the built-in list), and finding the prose words to spellcheck.
+- `docs/IDEAS.md`: the backlog of feature ideas.
 - `src/shared/api.ts`: the types every layer shares.
 - `fixtures/`: sample vaults, the shared template library and real log files for testing.

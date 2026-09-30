@@ -14,6 +14,12 @@ interface VaultSettings {
   lists?: Record<string, string>
   /** The snippet file, vault-relative. */
   snippets?: string
+  /** Preload the preamble from a cached format (default true). */
+  fastCompile?: boolean
+  /** The math shortcut file, vault-relative. */
+  mathSnippets?: string
+  /** The spelling word list, vault-relative. */
+  words?: string
 }
 
 // Where images go when none is configured: the first of these that exists.
@@ -35,6 +41,12 @@ export class Vault {
   lists: Record<string, string> = { ...DEFAULT_LISTS }
   /** Vault-relative snippet file (it need not exist). */
   snippets = 'snippets.txt'
+  /** Whether builds may start from a cached preamble format. */
+  fastCompile = true
+  /** Vault-relative math shortcut file (it need not exist). */
+  mathSnippets = 'math-snippets.txt'
+  /** Vault-relative spelling word list (it need not exist). */
+  words = 'words.txt'
   private watcher: FSWatcher | null = null
 
   /** `globalTemplates` is the per-install template library shared by every vault. */
@@ -66,6 +78,9 @@ export class Vault {
       if (name) this.lists[env] = name
     }
     this.snippets = settings.snippets ?? 'snippets.txt'
+    this.fastCompile = settings.fastCompile !== false
+    this.mathSnippets = settings.mathSnippets ?? 'math-snippets.txt'
+    this.words = settings.words ?? 'words.txt'
   }
 
   private async firstExistingDir(names: string[]): Promise<string | null> {
@@ -84,6 +99,8 @@ export class Vault {
       imagesDir: this.imagesDir,
       lists: this.lists,
       snippets: this.snippets,
+      mathSnippets: this.mathSnippets,
+      words: this.words,
       tree: await this.tree(),
     }
   }

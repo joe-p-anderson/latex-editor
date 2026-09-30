@@ -13,8 +13,11 @@
   import { mathPreview, refreshMath, type RenderFn } from './mathPreview'
   import { imageSupport, insertAt, type ImageHooks } from './imageSupport'
   import { latexEditing, type EditingHooks } from './editing'
+  import { refreshSpelling, spellcheck, type SpellHooks } from './spellcheck'
   import { outline, type OutlineItem } from '@shared/latexedit'
   import { liveMode, isLive, setLive, toggleLive } from './live/live'
+  import { EDIT_TABLE_EVENT } from './live/widgets'
+  import { tableRangeAt } from '@shared/tablemodel'
 
   let {
     onsave,
@@ -22,9 +25,11 @@
     onsyncforward,
     imageHooks,
     editingHooks,
+    spellHooks,
     onoutline,
     oncursorline,
     onlivechange,
+    onedit,
   }: {
     onsave: (rel: string, text: string) => void
     ondirtychange: (rel: string, dirty: boolean) => void
@@ -34,12 +39,16 @@
     imageHooks: ImageHooks
     /** List markers, the document's commands and the vault's snippets. */
     editingHooks: EditingHooks
+    /** Spelling: whether it's on, and the checker in the main process. */
+    spellHooks: SpellHooks
     /** The open file's sections and questions, after each (debounced) change. */
     onoutline: (items: OutlineItem[]) => void
     /** 1-based line of the cursor, when it moves. */
     oncursorline: (line: number) => void
     /** Live mode was turned on or off (or a file with the other setting was opened). */
     onlivechange: (live: boolean) => void
+    /** The open file's text changed (typing, undo, a quick fix). */
+    onedit: (rel: string) => void
   } = $props()
 
   let host: HTMLDivElement
@@ -73,6 +82,16 @@
     commands: () => editingHooks.commands(),
     environments: () => editingHooks.environments(),
     snippets: () => editingHooks.snippets(),
+    mathSnippets: () => editingHooks.mathSnippets(),
+    renameLabel: (key) => editingHooks.renameLabel(key),
+    editTable: (range, grid) => editingHooks.editTable(range, grid),
+  })
+  const spelling = spellcheck({
+    // Documents only: not classes, packages or the vault's settings files.
+    enabled: () => spellHooks.enabled() && !!current?.toLowerCase().endsWith('.tex'),
+    check: (words) => spellHooks.check(words),
+    suggest: (word) => spellHooks.suggest(word),
+    add: (word) => spellHooks.add(word),
   })
 
   // Live mode: on by default; toggling it sets the default for files opened later.
@@ -116,6 +135,7 @@
         preview,
         images,
         editing,
+        spelling,
         live,
         EditorView.lineWrapping,
         Prec.highest(
@@ -128,6 +148,7 @@
         EditorView.updateListener.of((u) => {
           if (u.docChanged && current) ondirtychange(current, u.state.sliceDoc() !== saved.get(current))
           if (u.docChanged) publishOutline(300)
+          if (u.docChanged && current) onedit(current)
           if (u.docChanged || u.selectionSet) oncursorline(u.state.doc.lineAt(u.state.selection.main.head).number)
           if (isLive(u.state) !== isLive(u.startState)) {
             try {
@@ -142,17 +163,25 @@
     })
   }
 
-  /** Shows `rel` in the editor, loading it from disk the first time. */
-  export async function open(rel: string): Promise<void> {
-    if (rel === current) return
-    if (current) states.set(current, view.state)
+  /** The state of `rel`, loading it from disk if it isn't open yet (without showing it). */
+  async function load(rel: string): Promise<EditorState> {
+    if (rel === current) return view.state
     let state = states.get(rel)
-    const fresh = !state
     if (!state) {
       const text = await window.api.readFile(rel)
       saved.set(rel, text)
       state = makeState(text)
+      states.set(rel, state)
     }
+    return state
+  }
+
+  /** Shows `rel` in the editor, loading it from disk the first time. */
+  export async function open(rel: string): Promise<void> {
+    if (rel === current) return
+    const fresh = !states.has(rel)
+    const state = await load(rel)
+    if (current) states.set(current, view.state)
     current = rel
     view.setState(state)
     // A newly opened file starts at its cursor, not wherever the last file was scrolled.
@@ -236,6 +265,11 @@
   }
 
   /** Gives the editor keyboard focus (e.g. after a dialog closes). */
+  /** Checks the spelling of the open file again (switched on or off, word list changed). */
+  export function refreshSpellcheck(): void {
+    view.dispatch({ effects: refreshSpelling.of(null) })
+  }
+
   export function focus(): void {
     view.focus()
   }
@@ -250,6 +284,63 @@
   /** The open file's current text, saved or not. */
   export function currentText(): string {
     return view.state.sliceDoc()
+  }
+
+  /** The text of every open file with unsaved changes. */
+  export function dirtyTexts(): Map<string, string> {
+    const out = new Map<string, string>()
+    const all = new Map(states)
+    if (current) all.set(current, view.state)
+    for (const [rel, state] of all) {
+      const text = state.sliceDoc()
+      if (text !== saved.get(rel)) out.set(rel, text)
+    }
+    return out
+  }
+
+  /** The current text of `rel` if it's open, saved or not; otherwise null. */
+  export function textOf(rel: string): string | null {
+    if (rel === current) return view.state.sliceDoc()
+    return states.get(rel)?.sliceDoc() ?? null
+  }
+
+  /** Records that `text` is what's now on disk for `rel` (after the caller wrote it). */
+  export function markSaved(rel: string, text: string): void {
+    saved.set(rel, text)
+    ondirtychange(rel, textOf(rel) !== text)
+  }
+
+  /**
+   * Applies `changes` (offsets into the file's current text, inserts using
+   * \n) to `rel` as one undoable change, opening it in the background if
+   * needed. The file is left unsaved.
+   */
+  export async function applyChangesTo(rel: string, changes: { from: number; to: number; insert: string }[]): Promise<void> {
+    if (!changes.length) return
+    const state = await load(rel)
+    const spec = { changes: changes.map((c) => ({ ...c, insert: c.insert.replace(/\r?\n/g, state.lineBreak) })), userEvent: 'input.replace' }
+    if (rel === current) view.dispatch(spec)
+    else {
+      const next = state.update(spec).state
+      states.set(rel, next)
+      ondirtychange(rel, next.sliceDoc() !== saved.get(rel))
+    }
+  }
+
+  /** Selects `from`–`to` in the open file and scrolls it into view. */
+  export function select(from: number, to: number): void {
+    const len = view.state.doc.length
+    view.dispatch({
+      selection: { anchor: Math.min(from, len), head: Math.min(to, len) },
+      effects: EditorView.scrollIntoView(Math.min(from, len), { y: 'center' }),
+    })
+    view.focus()
+  }
+
+  /** The selected text in the open file ('' when nothing is selected). */
+  export function selectedText(): string {
+    const { from, to } = view.state.selection.main
+    return view.state.sliceDoc(from, to)
   }
 
   /** Forgets `rel` (e.g. it was moved out of the vault), leaving the editor empty if it was open. */
@@ -287,9 +378,50 @@
     onsave(current, text)
   }
 
+  /** The open file's text with \n line breaks (offsets match the editor's). */
+  export function docText(): string {
+    return view.state.doc.toString()
+  }
+
+  /** The math renderer, with the open document's macros. */
+  export function mathRenderer(): RenderFn {
+    return render
+  }
+
+  /** The cursor's offset in the open file. */
+  export function cursorPos(): number {
+    return view.state.selection.main.head
+  }
+
+  /** Replaces `from`–`to` (\n offsets) with `text`, as one undoable change, cursor after it. */
+  export function replaceRange(from: number, to: number, text: string): void {
+    const insert = text.replace(/\r?\n/g, view.state.lineBreak)
+    // The editor counts a line break as one character, whatever the file uses.
+    const end = from + text.replace(/\r\n/g, '\n').length
+    view.dispatch({ changes: { from, to, insert }, selection: { anchor: end }, scrollIntoView: true, userEvent: 'input' })
+    view.focus()
+  }
+
+  /** Puts `text` at the cursor on lines of its own. */
+  export function insertBlock(text: string): void {
+    const pos = view.state.selection.main.head
+    const line = view.state.doc.lineAt(pos)
+    const head = line.text.slice(0, pos - line.from)
+    const after = line.text.slice(pos - line.from).trim() ? '\n' : ''
+    // Only indentation before the cursor: the block's own indentation replaces it.
+    if (!head.trim()) replaceRange(line.from, pos, text + after)
+    else replaceRange(pos, pos, '\n' + text + after)
+  }
+
   onMount(() => {
     view = new EditorView({ parent: host, state: EditorState.create({ doc: '' }) })
-    return () => (clearTimeout(outlineTimer), view.destroy())
+    // A table's "Edit table" button in the live view.
+    const onEditTable = (e: Event) => {
+      const pos = (e as CustomEvent<number>).detail
+      editingHooks.editTable(tableRangeAt(view.state.doc.toString(), Math.min(pos + 1, view.state.doc.length)), null)
+    }
+    view.dom.addEventListener(EDIT_TABLE_EVENT, onEditTable)
+    return () => (clearTimeout(outlineTimer), view.dom.removeEventListener(EDIT_TABLE_EVENT, onEditTable), view.destroy())
   })
 </script>
 

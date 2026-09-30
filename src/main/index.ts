@@ -2,16 +2,21 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, net, protocol, shell } from 
 import { copyFile, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises'
 import { basename, join, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { compile, resolveRoot } from './compile'
+import { compile, compileDraft, resolveRoot } from './compile'
 import { importImage, saveImage } from './images'
 import { editorContextFor, macrosFor } from './mathmacros'
 import { globalTemplatesDir, loadSettings, saveSettings } from './settings'
+import { searchVault } from './search'
+import { addWord, misspelled, reloadWords, suggestions } from './spell'
 import { forward, inverse } from './synctex'
 import { Vault } from './vault'
 import { isImage } from '../shared/images'
+import type { SearchOptions } from '../shared/search'
 
 let win: BrowserWindow | null = null
 let vault: Vault | null = null
+// Set once the renderer has dealt with unsaved files, so the next close goes through.
+let closeConfirmed = false
 
 async function openVault(root: string): Promise<Vault> {
   await vault?.close()
@@ -68,6 +73,24 @@ async function changeGlobalTemplates(): Promise<void> {
   }
 }
 
+/**
+ * Asks what to do with unsaved files before `action` (closing a tab,
+ * quitting, opening another vault): save them, discard them, or cancel.
+ */
+async function askAboutUnsaved(files: string[], action: string): Promise<'save' | 'discard' | 'cancel'> {
+  const one = files.length === 1
+  const r = await dialog.showMessageBox(win!, {
+    type: 'warning',
+    message: one ? `Save changes to ${files[0].split('/').pop()} before ${action}?` : `Save changes to ${files.length} files before ${action}?`,
+    detail: one ? "Your changes will be lost if you don't save them." : files.join('\n'),
+    buttons: [one ? 'Save' : 'Save all', "Don't save", 'Cancel'],
+    defaultId: 0,
+    cancelId: 2,
+    noLink: true,
+  })
+  return (['save', 'discard', 'cancel'] as const)[r.response]
+}
+
 function requireVault(): Vault {
   if (!vault) throw new Error('No vault open')
   return vault
@@ -82,6 +105,7 @@ ipcMain.handle('vault:get', async () => vault?.info() ?? null)
 ipcMain.handle('file:read', (_e, rel: string) => readFile(requireVault().abs(rel), 'utf8'))
 ipcMain.handle('file:write', (_e, rel: string, text: string) => writeFile(requireVault().abs(rel), text, 'utf8'))
 ipcMain.handle('compile', (_e, rel: string) => compile(requireVault(), rel))
+ipcMain.handle('compile:draft', (_e, rel: string, buffers: Record<string, string>) => compileDraft(requireVault(), rel, buffers))
 /** Only PDFs the compiler produced (in .texcache), never arbitrary files. */
 function requireCompiledPdf(abs: string): string {
   const cache = join(requireVault().root, '.texcache') + sep
@@ -102,6 +126,23 @@ ipcMain.handle('images:list', async () => (await requireVault().files()).filter(
 ipcMain.handle('images:import', (_e, source: string) => importImage(requireVault(), source))
 ipcMain.handle('images:save', (_e, name: string, bytes: Uint8Array) => saveImage(requireVault(), name, bytes))
 ipcMain.handle('templates:move', (_e, rel: string) => moveToGlobalTemplates(rel))
+ipcMain.handle('spell:check', (_e, words: string[]) => misspelled(requireVault(), words))
+ipcMain.handle('spell:suggest', (_e, word: string) => suggestions(requireVault(), word))
+ipcMain.handle('spell:add', (_e, word: string) => addWord(requireVault(), word))
+ipcMain.handle('spell:reload', () => reloadWords(requireVault()))
+// The renderer remembers whether spelling is on; the menu's tick follows it.
+ipcMain.handle('menu:set-spellcheck', (_e, on: boolean) => {
+  const item = Menu.getApplicationMenu()?.getMenuItemById('spellcheck')
+  if (item) item.checked = on
+})
+ipcMain.handle('search:run', (_e, query: string, opts: SearchOptions, overrides: Record<string, string>) =>
+  searchVault(requireVault(), query, opts, overrides),
+)
+ipcMain.handle('dialog:unsaved', (_e, files: string[], action: string) => askAboutUnsaved(files, action))
+ipcMain.handle('window:close', () => {
+  closeConfirmed = true
+  win?.close()
+})
 ipcMain.handle('math:macros',async (_e, rel: string) => {
   const v = requireVault()
   return macrosFor(v, (await resolveRoot(v, rel).catch(() => null)) ?? rel)
@@ -129,10 +170,38 @@ function buildMenu(): void {
           { role: 'quit' },
         ],
       },
-      { role: 'editMenu' },
+      {
+        label: 'Edit',
+        submenu: [
+          { role: 'undo' },
+          { role: 'redo' },
+          { type: 'separator' },
+          { role: 'cut' },
+          { role: 'copy' },
+          { role: 'paste' },
+          { role: 'selectAll' },
+          { type: 'separator' },
+          { label: 'Math Shortcuts…', click: () => win?.webContents.send('menu', 'math-shortcuts') },
+        ],
+      },
       {
         label: 'View',
-        submenu: [{ role: 'reload' }, { role: 'toggleDevTools' }, { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }],
+        submenu: [
+          {
+            label: 'Check Spelling',
+            type: 'checkbox',
+            id: 'spellcheck',
+            checked: true,
+            click: (item) => win?.webContents.send('menu', 'spellcheck', item.checked),
+          },
+          { type: 'separator' },
+          { role: 'reload' },
+          { role: 'toggleDevTools' },
+          { type: 'separator' },
+          { role: 'resetZoom' },
+          { role: 'zoomIn' },
+          { role: 'zoomOut' },
+        ],
       },
     ]),
   )
@@ -151,6 +220,13 @@ async function createWindow(): Promise<void> {
     if (url !== win?.webContents.getURL()) e.preventDefault()
   })
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  // Closing asks the renderer first, which offers to save unsaved files and
+  // then calls window:close. A crashed renderer can't answer, so it doesn't block.
+  win.on('close', (e) => {
+    if (closeConfirmed || !win || win.webContents.isCrashed()) return
+    e.preventDefault()
+    win.webContents.send('window:close-requested')
+  })
 
   // A vault given on the command line (--vault=path) wins over the remembered one.
   const arg = process.argv.find((a) => a.startsWith('--vault='))?.slice('--vault='.length)
