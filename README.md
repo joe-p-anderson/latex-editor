@@ -147,6 +147,24 @@ Right-click an underlined word, or press Ctrl+. in it, for suggestions, **Add to
 
 Each opened file gets a tab, placed after the current one. A dot marks unsaved changes. Close a tab with × or a middle click, and drag tabs to reorder them. Each tab keeps its own cursor, scroll position and undo history. Quitting, or opening another vault, with unsaved files asks whether to save them.
 
+### Symbols
+
+**Symbols** in the sidebar holds a library of 1,123 LaTeX symbols, and you can also draw one to find it.
+
+- **Draw** a symbol on the pad. The list then shows the best matches, and **Clear** returns to the library. Matches the open document can already use come first. Those that would need another package come after, fainter.
+- **Trace on a trackpad:** click the pad without dragging, then draw on the trackpad as if it were the box on the pad. The mapping stays fixed, so where you touch is where the ink goes. Each touch and lift starts and ends a stroke exactly, and a second stroke lands where your finger comes down. Taps are ignored. The trace finishes by itself 1.5 s after your last stroke, or when you press the trackpad, Enter or Esc.
+  - This reads the trackpad directly, which needs Windows and a Precision Touchpad. A small helper (`src/main/touchpad-helper.cs`) is compiled once with Windows' built-in C# compiler and runs only while you trace.
+  - Elsewhere, tracing follows the cursor instead, and a short pause ends each stroke.
+- **Search** by command name ("approx", "arrow") or package, or pick a package from the list. The symbols you've used recently come first.
+- **Click** a symbol to copy its command. **Double-click** to insert it at the cursor: a math symbol typed in text goes in `$…$`, and a text symbol typed in math goes in `\text{…}`. If the document doesn't load the symbol's package yet, its `\usepackage` is added to the preamble too.
+- **Right-click** a symbol for more:
+  - copy the command, or copy it as `$…$`;
+  - insert it;
+  - add its `\usepackage` (or `\usepackage[T1]{fontenc}`) to the document's preamble, which the menu skips if the document or its class already loads it;
+  - copy the `\usepackage` line.
+
+Recognition runs offline in a background worker, in about 10 ms a drawing. The symbol list, the symbol images, the handwriting samples and the recognition method come from [Detexify](https://detexify.kirelabs.org) by Daniel Kirsch, through [Detexify Next](https://github.com/kirel/detexify-next). Hover over **ⓘ Detexify** on the pad for the credit and links. The code is MIT-licensed, and the training data is under the Open Database License; see `src/renderer/src/assets/detexify/NOTICE.md`. `node scripts/import-detexify.mjs [commit]` refreshes the data.
+
 ### Search
 
 **Search** in the sidebar (Ctrl+Shift+H) looks through every text file in the vault, using your unsaved changes where there are some. Its toggles are match case (`Aa`), whole word (`ab`), regular expression (`.*`) and include `%` comments. Comments are skipped by default. Results are grouped by file; click one to open the file with the match selected.
@@ -217,6 +235,7 @@ Per vault, in `.vault.json`:
 - `src/shared/search.ts`: search, replace and label rename, as pure text logic.
 - `src/shared/tablemodel.ts`: parses and writes tables, the grid operations, and reading clipboard data.
 - `src/shared/pairs.ts`, `mathsnippets.ts` and `spellwords.ts`: the text logic for brackets and quotes, math shortcuts (including the built-in list), and finding the prose words to spellcheck.
+- `src/shared/detexify.ts`: handwritten symbol recognition, ported from Detexify. `src/renderer/src/lib/SymbolPanel.svelte` and `detexify.worker.ts` are the panel and its worker, and `src/renderer/src/assets/detexify/` holds the imported library and samples.
 - `docs/IDEAS.md`: the backlog of feature ideas.
 - `src/shared/api.ts`: the types every layer shares.
 - `fixtures/`: sample vaults, the shared template library and real log files for testing.

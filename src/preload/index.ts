@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import type { Api, TreeNode, VaultInfo } from '../shared/api'
+import type { Api, TouchpadEvent, TreeNode, VaultInfo } from '../shared/api'
 
 // The renderer's only door to the filesystem and compiler. Everything goes
 // through named IPC channels handled in src/main/index.ts.
@@ -25,6 +25,14 @@ const api: Api & { onMenuOpenVault(cb: () => void): () => void } = {
   addWord: (word) => ipcRenderer.invoke('spell:add', word),
   reloadWords: () => ipcRenderer.invoke('spell:reload'),
   setSpellcheckMenu: (on) => ipcRenderer.invoke('menu:set-spellcheck', on),
+  openExternal: (url) => ipcRenderer.invoke('open-external', url),
+  touchpadStart: () => ipcRenderer.invoke('touchpad:start'),
+  touchpadStop: () => ipcRenderer.invoke('touchpad:stop'),
+  onTouchpad: (cb) => {
+    const listener = (_e: unknown, ev: TouchpadEvent) => cb(ev)
+    ipcRenderer.on('touchpad:event', listener)
+    return () => ipcRenderer.removeListener('touchpad:event', listener)
+  },
   onMenu: (cb) => {
     const listener = (_e: unknown, name: string, arg?: unknown) => cb(name, arg)
     ipcRenderer.on('menu', listener)

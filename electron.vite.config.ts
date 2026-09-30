@@ -19,6 +19,8 @@ export default defineConfig({
   renderer: {
     resolve: { alias: { '@shared': resolve('src/shared') } },
     plugins: [svelte()],
+    // Detexify's handwriting samples ship gzipped, inlined into the symbol worker.
+    assetsInclude: ['**/*.gz'],
     // MathJax reads its version with eval() unless PACKAGE_VERSION is defined
     // at build time; the page's Content-Security-Policy (rightly) forbids eval.
     define: { PACKAGE_VERSION: JSON.stringify(mathjaxVersion) },

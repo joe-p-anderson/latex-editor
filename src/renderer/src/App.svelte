@@ -10,7 +10,7 @@
   import TabBar from './lib/TabBar.svelte'
   import QuickOpen from './lib/QuickOpen.svelte'
   import type { EditingHooks } from './lib/editing'
-  import { parseSnippets, type OutlineItem, type Snippet } from '@shared/latexedit'
+  import { blankComments, parseSnippets, type OutlineItem, type Snippet } from '@shared/latexedit'
   import { includegraphics, type ImageHooks } from './lib/imageSupport'
   import { clearThumbnails } from './lib/thumbnails'
   import { isImage } from '@shared/images'
@@ -21,6 +21,8 @@
   import { insertRow, newTable, packagesFor, parseTable, pasteGrid, serializeTable, type TableModel } from '@shared/tablemodel'
   import { normalizeEol } from '@shared/search'
   import { clearSpellingCache, type SpellHooks } from './lib/spellcheck'
+  import SymbolPanel, { type LibrarySymbol, type SymbolActions } from './lib/SymbolPanel.svelte'
+  import { findMathRegions, mathAtCursor } from '@shared/mathregions'
   import { BUILTIN_MATH_SNIPPETS, mathSnippetsFileTemplate, mergeSnippets, parseMathSnippets, type MathSnippet } from '@shared/mathsnippets'
 
   const TEXT_FILE = /\.(tex|cls|sty|bib|cfg|txt|md|json)$/i
@@ -390,7 +392,7 @@
 
   // --- Vault-wide search, replace and label rename -------------------------
 
-  let sidebar = $state<'files' | 'search'>('files')
+  let sidebar = $state<'files' | 'search' | 'symbols'>('files')
   let searchPanel = $state<SearchPanel>()
   // Bumped when files change, so the search panel searches again.
   let searchVersion = $state(0)
@@ -451,21 +453,41 @@
     await ensurePackages(packagesFor(model))
   }
 
+  /** A package to load, with options only where they matter (\usepackage[T1]{fontenc}). */
+  type PackageSpec = string | { name: string; options: string }
+
   /**
-   * Adds \usepackage lines the table needs to the document's preamble,
-   * unless the document (or its class, per the last build's log) loads them.
+   * The packages of `pkgs` the open document doesn't load yet (itself, or
+   * through its class, per the last build's log), and the document to add
+   * them to; null when there's no document.
    */
-  async function ensurePackages(pkgs: string[]): Promise<void> {
-    if (!pkgs.length || !active) return
+  async function missingPackages(pkgs: PackageSpec[]): Promise<{ root: string; text: string; missing: PackageSpec[] } | null> {
+    if (!active) return null
     const own = normalizeEol((await textOf(active)) ?? '')
     const root = /^[^%\n]*\\documentclass/m.test(own) ? active : result?.root
-    if (!root) return
+    if (!root) return null
     const text = root === active ? own : normalizeEol(await textOf(root))
     const log = result?.root === root ? result.log : ''
-    const loads = (p: string) =>
-      new RegExp(String.raw`[\\/]${p}\.sty`).test(log) || new RegExp(String.raw`\\(usepackage|RequirePackage)\s*(\[[^\]]*\])?\s*\{[^}]*\b${p}\b`).test(text)
-    const missing = pkgs.filter((p) => !loads(p))
-    if (!missing.length) return
+    const loads = (p: PackageSpec) => {
+      if (typeof p !== 'string') {
+        // Font encodings: \usepackage[T1]{fontenc} writes t1enc.def into the log.
+        return new RegExp(String.raw`[\\/]${p.options.toLowerCase()}enc\.def`, 'i').test(log) || new RegExp(String.raw`\\usepackage\s*\[[^\]]*\b${p.options}\b[^\]]*\]\s*\{${p.name}\}`).test(text)
+      }
+      return new RegExp(String.raw`[\\/]${p}\.sty`).test(log) || new RegExp(String.raw`\\(usepackage|RequirePackage)\s*(\[[^\]]*\])?\s*\{[^}]*\b${p}\b`).test(text)
+    }
+    return { root, text, missing: pkgs.filter((p) => !loads(p)) }
+  }
+
+  /**
+   * Adds the \usepackage lines for `pkgs` to the document's preamble, unless
+   * the document (or its class, per the last build's log) loads them.
+   */
+  async function ensurePackages(pkgs: PackageSpec[]): Promise<void> {
+    if (!pkgs.length) return
+    const found = await missingPackages(pkgs)
+    if (!found || !found.missing.length) return
+    const { root, text, missing } = found
+    const line = (p: PackageSpec) => (typeof p === 'string' ? `\\usepackage{${p}}` : `\\usepackage[${p.options}]{${p.name}}`)
     const begin = text.search(/^[^%\n]*\\begin\s*\{document\}/m)
     const preamble = begin < 0 ? text : text.slice(0, begin)
     const uses = [...preamble.matchAll(/^[^%\n]*\\usepackage.*$/gm)]
@@ -473,9 +495,61 @@
     const anchor = uses.at(-1) ?? cls
     if (!anchor) return
     const at = anchor.index! + anchor[0].length
-    await editor?.applyChangesTo(root, [{ from: at, to: at, insert: missing.map((p) => `\n\\usepackage{${p}}`).join('') }])
+    await editor?.applyChangesTo(root, [{ from: at, to: at, insert: missing.map((p) => `\n${line(p)}`).join('') }])
     addTab(root)
-    flash(`Added \\usepackage{${missing.join(', ')}} to ${root.split('/').pop()}`)
+    flash(`Added ${missing.map(line).join(', ')} to ${root.split('/').pop()}`)
+  }
+
+  // --- Symbols ----------------------------------------------------------------
+
+  // textcomp has been part of LaTeX itself since 2020, so it's never added.
+  const symbolPackages = (s: LibrarySymbol): PackageSpec[] => [
+    ...(s.fontenc ? [{ name: 'fontenc', options: s.fontenc }] : []),
+    ...(s.package && s.package !== 'textcomp' ? [s.package] : []),
+  ]
+
+  /**
+   * The packages and font encodings the open document loads: its own
+   * \usepackage lines, and (from the last build's log) what its class
+   * loads. Null when no document is open.
+   */
+  async function loadedPackages(): Promise<{ packages: Set<string>; encodings: Set<string> } | null> {
+    if (!active) return null
+    const own = normalizeEol((await textOf(active).catch(() => '')) ?? '')
+    const root = /^[^%\n]*\\documentclass/m.test(own) ? active : result?.root
+    if (!root) return null
+    const text = root === active ? own : normalizeEol(await textOf(root).catch(() => ''))
+    const log = result?.root === root ? result.log : ''
+    const packages = new Set<string>()
+    const encodings = new Set<string>()
+    for (const m of blankComments(text).matchAll(/\\(?:usepackage|RequirePackage)\s*(?:\[([^\]]*)\])?\s*\{([^}]*)\}/g)) {
+      for (const name of m[2].split(',')) packages.add(name.trim())
+      if (m[2].includes('fontenc')) for (const o of (m[1] ?? '').split(',')) encodings.add(o.trim().toUpperCase())
+    }
+    for (const m of log.matchAll(/[\\/]([A-Za-z0-9-]+)\.sty\b/g)) packages.add(m[1])
+    for (const m of log.matchAll(/[\\/]([A-Za-z0-9]+)enc\.def\b/gi)) encodings.add(m[1].toUpperCase())
+    return { packages, encodings }
+  }
+
+  const symbolActions: SymbolActions = {
+    insert(s) {
+      if (!editor || !active) return flash('Open a document to insert a symbol')
+      // A math symbol in text goes in $…$; a text symbol in math, in \text{…}.
+      const text = editor.docText()
+      const pos = editor.cursorPos()
+      const math = !!mathAtCursor(text, findMathRegions(text), pos)
+      let insert = s.mode === 'math' && !math ? `$${s.command}$` : s.mode === 'text' && math ? `\\text{${s.command}}` : s.command
+      // \alpha straight before a letter would run into it.
+      if (/[A-Za-z]$/.test(insert) && /^[A-Za-z]/.test(text.slice(pos, pos + 1))) insert += ' '
+      editor.insertAtCursor(insert)
+      editor.focus()
+      // And what it needs, if the document doesn't load it yet.
+      if (s.package || s.fontenc) ensurePackages(symbolPackages(s))
+    },
+    addPackage: (s) => ensurePackages(symbolPackages(s)),
+    hasPackage: async (s) => ((await missingPackages(symbolPackages(s)))?.missing.length ?? 1) === 0,
+    loadedPackages,
+    note: (message) => flash(message),
   }
 
   /** Unsaved buffers, which search reads instead of the disk copies. */
@@ -716,6 +790,7 @@
       <div class="side-tabs">
         <button class:on={sidebar === 'files'} onclick={() => (sidebar = 'files')}>Files</button>
         <button class:on={sidebar === 'search'} onclick={openSearch} title="Search the vault (Ctrl+Shift+H)">Search</button>
+        <button class:on={sidebar === 'symbols'} onclick={() => (sidebar = 'symbols')} title="Symbol library, and draw a symbol to find it">Symbols</button>
       </div>
       <!-- Both stay mounted, so the search keeps its query and results. -->
       <div class="side-body" hidden={sidebar !== 'files'}>
@@ -732,6 +807,9 @@
           onopen={openMatch}
           onreplace={replaceMatches}
         />
+      </div>
+      <div class="side-body" hidden={sidebar !== 'symbols'}>
+        <SymbolPanel actions={symbolActions} active={sidebar === 'symbols'} docKey="{active}|{pdfVersion}|{searchVersion}|{result?.root}" />
       </div>
     </aside>
 

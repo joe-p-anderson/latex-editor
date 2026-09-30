@@ -113,6 +113,8 @@ export interface EditorContext {
   environments: string[]
 }
 
+export type TouchpadEvent = { type: 'contact'; id: number; tip: boolean; x: number; y: number } | { type: 'button'; down: boolean }
+
 export interface Api {
   openVault(): Promise<VaultInfo | null>
   getVault(): Promise<VaultInfo | null>
@@ -150,6 +152,13 @@ export interface Api {
   reloadWords(): Promise<void>
   /** Keeps the View → Check Spelling tick in step. */
   setSpellcheckMenu(on: boolean): Promise<void>
+  /** Opens a credit link (Detexify's sites only) in the browser. */
+  openExternal(url: string): Promise<void>
+  /** Starts reading finger positions from the trackpad (Windows Precision Touchpad), with its aspect ratio. */
+  touchpadStart(): Promise<{ ok: true; aspect: number } | { ok: false; error: string }>
+  touchpadStop(): Promise<void>
+  /** A finger (x, y from 0 to 1 across the pad; tip: whether it touches), or the pad's physical button. */
+  onTouchpad(cb: (e: TouchpadEvent) => void): () => void
   /** A menu item for the renderer: 'math-shortcuts', or 'spellcheck' with whether it's now on. */
   onMenu(cb: (name: string, arg?: unknown) => void): () => void
   /** Searches the vault's text files; `overrides` (unsaved buffers) are searched instead of the disk copies. */

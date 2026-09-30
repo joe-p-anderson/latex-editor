@@ -19,7 +19,7 @@ What would make this a better LaTeX editor, roughly in order of payoff. Items ma
   - Still to do: live warnings as you type, for a `\left` with no `\right`, mismatched environments and unbalanced braces.
 - **Faster math typing (done).** Shortcuts that fire as you type in math: `//` → `\frac{}{}`, `@a` → `\alpha`, `xhat` → `\hat{x}`, `x1` → `x_1`. Each vault can edit the list.
   - Still to do: a units helper that suggests `\SI`/`\qty` for things like `9.8 m/s^2`, and text-mode triggers (`mk` → `$…$`).
-- **A symbol palette you can search.** Draw a symbol (like Detexify) or type "approx" to get `\approx`.
+- **A symbol palette you can search (done).** The Symbols panel: draw a symbol (Detexify, offline) or search the library, click to copy, double-click to insert, right-click to add its package.
 - **Warnings while you edit, with one-click fixes.** For example `$$ … $$` instead of `\[ … \]`, a missing `~` before `\ref`, `"quotes"`, and `...` instead of `\ldots`.
 - **Drawing help.** Live-preview a single `tikzpicture` without compiling the whole document. Start from free-body diagram and circuit templates.
 - **Copying from the PDF.** Select text in the PDF and jump to the source that made it.

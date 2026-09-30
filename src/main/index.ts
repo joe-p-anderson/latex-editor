@@ -8,6 +8,7 @@ import { editorContextFor, macrosFor } from './mathmacros'
 import { globalTemplatesDir, loadSettings, saveSettings } from './settings'
 import { searchVault } from './search'
 import { addWord, misspelled, reloadWords, suggestions } from './spell'
+import { startTouchpad, stopTouchpad } from './touchpad'
 import { forward, inverse } from './synctex'
 import { Vault } from './vault'
 import { isImage } from '../shared/images'
@@ -126,6 +127,19 @@ ipcMain.handle('images:list', async () => (await requireVault().files()).filter(
 ipcMain.handle('images:import', (_e, source: string) => importImage(requireVault(), source))
 ipcMain.handle('images:save', (_e, name: string, bytes: Uint8Array) => saveImage(requireVault(), name, bytes))
 ipcMain.handle('templates:move', (_e, rel: string) => moveToGlobalTemplates(rel))
+// Credit links (e.g. Detexify's) open in the browser; only these sites.
+ipcMain.handle('open-external', (_e, url: string) => {
+  if (/^https:\/\/(detexify\.kirelabs\.org|github\.com\/kirel\/detexify)/.test(url)) shell.openExternal(url)
+})
+// Trackpad tracing: absolute finger positions while the symbol pad traces.
+ipcMain.handle('touchpad:start', async () => {
+  try {
+    return { ok: true, ...(await startTouchpad((ev) => win?.webContents.send('touchpad:event', ev))) }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+ipcMain.handle('touchpad:stop', () => stopTouchpad())
 ipcMain.handle('spell:check', (_e, words: string[]) => misspelled(requireVault(), words))
 ipcMain.handle('spell:suggest', (_e, word: string) => suggestions(requireVault(), word))
 ipcMain.handle('spell:add', (_e, word: string) => addWord(requireVault(), word))
@@ -261,3 +275,4 @@ app.whenReady().then(() => {
   createWindow()
 })
 app.on('window-all-closed', () => app.quit())
+app.on('will-quit', () => stopTouchpad())
