@@ -203,6 +203,16 @@ In a marked paper, each file reads as part of the whole:
 - The title bar shows where you are, e.g. `3_reduced.tex · main §III` or `main §VI–VII`, and the status bar the section under the cursor with its number.
 - The paper's tabs are marked with a band of the detail colour.
 
+**The paper map.** In a marked paper, Contents lists every file in reading order, each with its § numbers and numbered sections. Click a file or a section to open it there.
+
+- **Reorder:** drag a file among its siblings. Its `\input` line moves, with any comment lines just above it.
+- **Switch off:** the eye comments out the file's `\input`, leaving it out of the build; click again to switch it back on.
+- **New section file:** **+** (at the end) or a file's ⋯ menu (after it). Give the section's title; the file is named from it, put where the paper's other files are, and opened.
+- **Move a section to its own file:** right-click a section in the map. Its text, up to the next heading at its level, goes to a new file, with an `\input` in its place.
+- **Put back:** a file's ⋯ menu puts its text back in place of its `\input`, then offers to send the file to the Recycle Bin.
+- **Renumbering:** when the paper's files are named `1_Intro`, `2_Model`, … and a reorder or a new file puts them out of order, the map offers to renumber them, listing each rename first. A reorder reuses the same numbers (so `67_discussion` keeps 67); a new file takes the next number and the files after it move up only as far as they must. **Undo** puts the old names back.
+- The ⋯ by the paper's name can stop treating it as a multi-part paper.
+
 `\include`, `\subfile`, `\import` and `\subimport` are read too; `\input` is what the app recommends, since it doesn't force page breaks and every journal and arXiv accept it.
 
 ### Tables

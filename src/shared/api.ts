@@ -165,6 +165,10 @@ export interface Api {
   closeVault(): Promise<void>
   readFile(rel: string): Promise<string>
   writeFile(rel: string, text: string): Promise<void>
+  /** Renames a vault file; fails if `to` exists. */
+  renameFile(from: string, to: string): Promise<void>
+  /** Sends a vault file to the Recycle Bin. */
+  trashFile(rel: string): Promise<void>
   compile(rel: string): Promise<CompileResult>
   /** A preview build of `rel` with unsaved `buffers` in place of the files on disk; null if it isn't part of a document. */
   compileDraft(rel: string, buffers: Record<string, string>): Promise<CompileResult | null>

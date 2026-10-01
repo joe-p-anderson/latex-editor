@@ -150,6 +150,12 @@ ipcMain.handle('vault:close', async () => {
 })
 ipcMain.handle('file:read', (_e, rel: string) => readFile(requireVault().abs(rel), 'utf8'))
 ipcMain.handle('file:write', (_e, rel: string, text: string) => writeFile(requireVault().abs(rel), text, 'utf8'))
+ipcMain.handle('file:rename', async (_e, from: string, to: string) => {
+  const v = requireVault()
+  if (await stat(v.abs(to)).then(() => true, () => false)) throw new Error(`${to} already exists`)
+  await rename(v.abs(from), v.abs(to))
+})
+ipcMain.handle('file:trash', (_e, rel: string) => shell.trashItem(requireVault().abs(rel)))
 ipcMain.handle('compile', (_e, rel: string) => compile(requireVault(), rel))
 ipcMain.handle('compile:draft', (_e, rel: string, buffers: Record<string, string>) => compileDraft(requireVault(), rel, buffers))
 /** Only PDFs the compiler produced (in .texcache), never arbitrary files. */

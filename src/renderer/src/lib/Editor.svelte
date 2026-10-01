@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { EditorView, basicSetup } from 'codemirror'
-  import { EditorState, Prec, type StateEffect } from '@codemirror/state'
+  import { Compartment, EditorState, Prec, type StateEffect } from '@codemirror/state'
   import { keymap } from '@codemirror/view'
   import { indentWithTab } from '@codemirror/commands'
   import { StreamLanguage } from '@codemirror/language'
@@ -72,6 +72,8 @@
   const scrolls = new Map<string, StateEffect<unknown>>()
 
   const latex = StreamLanguage.define(stex)
+  // Which file a state holds, for the live view's place in the paper; changed on rename.
+  const fileName = new Compartment()
 
   // Problems from the last compile, by vault-relative file, shown as
   // squiggles and gutter markers in whichever file is open.
@@ -150,7 +152,7 @@
         // Keep the file's own line endings: CodeMirror otherwise joins lines
         // with \n, and saving would rewrite every line of a CRLF file.
         EditorState.lineSeparator.of(text.includes('\r\n') ? '\r\n' : '\n'),
-        liveFile.of(rel),
+        fileName.of(liveFile.of(rel)),
         basicSetup,
         endleafEditorTheme,
         latex,
@@ -390,6 +392,21 @@
     current = null
     view.setState(EditorState.create({ doc: '' }))
     onoutline([])
+  }
+
+  /** `from` was renamed to `to` on disk: its state (text, undo, scroll) follows. */
+  export function rename(from: string, to: string): void {
+    for (const m of [states, saved, scrolls] as Map<string, unknown>[]) {
+      if (m.has(from)) {
+        m.set(to, m.get(from))
+        m.delete(from)
+      }
+    }
+    const effects = fileName.reconfigure(liveFile.of(to))
+    if (current === from) {
+      current = to
+      view.dispatch({ effects })
+    } else if (states.has(to)) states.set(to, states.get(to)!.update({ effects }).state)
   }
 
   /** Saves the open file, as Ctrl+S does. */

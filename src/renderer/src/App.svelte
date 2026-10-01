@@ -1,7 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import type { BibInfo, CompileResult, EditorContext, PaperInfo, Problem, QuickFix, TextEdit, TreeNode, VaultInfo } from '@shared/api'
-  import { isDocument, magicRoot, rootComment } from '@shared/project'
+  import { isDocument, magicRoot, parseIncludes, rootComment, type Include } from '@shared/project'
+  import { extractSection, includeBlock, inlineInclude, moveInclude, placeNewFile, renameIncludes, renumberPlan, slugify, toggleInclude } from '@shared/paperedit'
+  import PaperMap, { type PaperMapActions } from './lib/PaperMap.svelte'
   import { PaperModel } from '@shared/papermodel'
   import { outline as outlineOf } from '@shared/latexedit'
   import type { LivePaper } from './lib/live/live'
@@ -38,7 +40,6 @@
   import ActivityBar, { type View, type ViewButton } from './lib/ActivityBar.svelte'
   import StatusBar from './lib/StatusBar.svelte'
   import CitationsView from './lib/CitationsView.svelte'
-  import PartsView from './lib/PartsView.svelte'
   import Icon from './lib/Icon.svelte'
   import Welcome from './lib/Welcome.svelte'
   import EmptyPlate from './lib/EmptyPlate.svelte'
@@ -138,21 +139,16 @@
     { id: 'symbols', icon: 'symbols', tip: 'Symbols' },
   ]
 
-  // Contextual tools: Citations when the vault has a .bib file, Document
-  // parts when the open document's root \inputs other files.
+  // Contextual tools: Citations when the vault has a .bib file.
   const hasBib = $derived(!!vault && allFiles(vault.tree).some((f) => f.toLowerCase().endsWith('.bib')))
   // The paper the open file belongs to: its root and the files it pulls in.
   let paper = $state<PaperInfo | null>(null)
-  const docParts = $derived(paper && paper.files.length > 1 ? { root: paper.root, parts: paper.files.slice(1).map((f) => ({ rel: f.rel, exists: f.exists })) } : null)
   const tools = $derived<ViewButton[]>([
     ...(hasBib ? [{ id: 'cite', icon: 'cite', tip: 'Citations. Shown because this vault has a .bib file' } as ViewButton] : []),
-    ...(docParts?.parts.length
-      ? [{ id: 'parts', icon: 'multi', tip: `Document parts. Shown because ${docParts.root.split('/').pop()} uses \\input` } as ViewButton]
-      : []),
   ])
   // A tool that's no longer offered falls back to Files.
   $effect(() => {
-    if ((view === 'cite' && !hasBib) || (view === 'parts' && !docParts?.parts.length)) view = 'files'
+    if (view === 'cite' && !hasBib) view = 'files'
   })
 
   /** The paper `rel` belongs to (the main process works out its root). */
@@ -205,8 +201,219 @@
   // showing, so the paper's tabs stay marked.
   let paperTabs = $state(new Map<string, string>())
   $effect(() => {
-    if (paper?.declared) paperTabs = new Map(paper.files.map((f) => [f.rel, paper!.name]))
+    if (paper) paperTabs = paper.declared ? new Map(paper.files.map((f) => [f.rel, paper!.name])) : new Map()
   })
+
+  // --- The paper map's edits ---------------------------------------------------
+
+  const fileOf = (rel: string) => paper?.files.find((f) => f.rel === rel) ?? null
+  const sameInclude = (a: Include, b: Include) => a.cmd === b.cmd && a.dir === b.dir && a.arg === b.arg
+  /** `rel`'s include in its parent's current text (\n breaks), found afresh. */
+  const includeIn = (text: string, rel: string) => {
+    const want = fileOf(rel)?.include
+    return want ? (parseIncludes(text).find((i) => sameInclude(i, want)) ?? null) : null
+  }
+  const currentText = async (rel: string) => normalizeEol((await textOf(rel).catch(() => '')) ?? '')
+  const taken = (rel: string) => !!vault && allFiles(vault.tree).some((f) => f.toLowerCase() === rel.toLowerCase())
+
+  /** After the paper's structure changed: read it again and build it. */
+  async function afterPaperEdit(): Promise<void> {
+    if (active) await loadPaper(active)
+    if (paper) await compile(paper.root)
+  }
+
+  // Asking for a section title or a file name, then doing something with it.
+  let paperPrompt = $state<{ title: string; initial: string; hint: string; run: (value: string) => void } | null>(null)
+
+  const paperActions: PaperMapActions = {
+    async open(rel, line) {
+      await openFile(rel)
+      if (line > 1) editor?.gotoLine(line)
+    },
+    async toggle(rel) {
+      const f = fileOf(rel)
+      if (!f?.parent) return
+      await editAndSave(f.parent, (t) => {
+        const inc = includeIn(t, rel)
+        return inc ? toggleInclude(t, inc) : []
+      })
+      flash(`${rel.split('/').pop()} switched ${f.off ? 'on' : 'off'}`)
+      await afterPaperEdit()
+    },
+    async move(rel, target, place) {
+      const f = fileOf(rel)
+      if (!f?.parent || fileOf(target)?.parent !== f.parent) return
+      await editAndSave(f.parent, (t) => {
+        const a = includeIn(t, rel)
+        const b = includeIn(t, target)
+        return a && b ? moveInclude(t, a, b, place) : []
+      })
+      await afterPaperEdit()
+    },
+    newAfter(rel) {
+      const p = paper
+      if (!p) return
+      paperPrompt = {
+        title: 'New section file',
+        initial: '',
+        hint: `The section's title. The file goes beside the paper's other files, ${rel ? `after ${rel.split('/').pop()}` : 'at the end'}.`,
+        run: (title) => newSectionFile(p.root, rel, title),
+      }
+    },
+    extract(rel, line, title) {
+      const p = paper
+      if (!p) return
+      paperPrompt = {
+        title: `Move "${title}" to a file of its own`,
+        initial: slugify(title),
+        hint: `A file name (no .tex). ${rel.split('/').pop()} keeps an \input in its place.`,
+        run: (name) => extractToFile(p.root, rel, line, name),
+      }
+    },
+    async inline(rel) {
+      const f = fileOf(rel)
+      if (!f?.parent) return
+      const child = await currentText(rel)
+      await editAndSave(f.parent, (t) => {
+        const inc = includeIn(t, rel)
+        return inc ? inlineInclude(t, inc, child) : []
+      })
+      // Its text lives in the parent now; the file itself is asked about.
+      trashOffer = { rel, into: f.parent }
+      await afterPaperEdit()
+    },
+    unmark: () => markPaper(false),
+  }
+
+  // A file whose text was put back into its parent: send it to the Recycle Bin?
+  let trashOffer = $state<{ rel: string; into: string } | null>(null)
+  async function trashPutBack(): Promise<void> {
+    const t = trashOffer
+    trashOffer = null
+    if (!t) return
+    if (tabs.includes(t.rel)) forgetTab(t.rel)
+    await window.api.trashFile(t.rel).then(
+      () => flash(`Sent ${t.rel.split('/').pop()} to the Recycle Bin`),
+      (e: Error) => flash(`Couldn't remove ${t.rel}: ${e.message}`),
+    )
+  }
+
+  /** Creates a file for a new section, with its \input after `after`'s (or at the end of the root). */
+  async function newSectionFile(root: string, after: string | null, title: string): Promise<void> {
+    paperPrompt = null
+    title = title.trim()
+    if (!title || !paper) return
+    const parent = after ? (fileOf(after)?.parent ?? root) : root
+    const siblings = paper.files.filter((f) => f.parent === parent && f.include).map((f) => ({ rel: f.rel, arg: f.include!.arg }))
+    const { rel, arg } = placeNewFile(slugify(title), root, siblings, taken)
+    await window.api.writeFile(rel, `${rootComment(rel, root)}\n\\section{${title}}\n\n`)
+    await editAndSave(parent, (t) => {
+      const line = `\\input{${arg}}\n`
+      const prev = after ? includeIn(t, after) : null
+      if (prev) {
+        const b = includeBlock(t, prev)
+        return [{ from: b.to, to: b.to, insert: b.to === t.length && !t.endsWith('\n') ? `\n${line}` : line }]
+      }
+      // At the end of the root's includes, else before the bibliography or \end{document}.
+      const last = parseIncludes(t).at(-1)
+      if (last) {
+        const b = includeBlock(t, last)
+        return [{ from: b.to, to: b.to, insert: line }]
+      }
+      const end = t.search(/^[ \t]*\\(bibliography|printbibliography|end\s*\{document\})/m)
+      const at = end < 0 ? t.length : end
+      return [{ from: at, to: at, insert: line }]
+    })
+    await afterPaperEdit()
+    await openFile(rel)
+  }
+
+  /** Moves the section on `line` of `rel` into a new file `name`.tex. */
+  async function extractToFile(root: string, rel: string, line: number, name: string): Promise<void> {
+    paperPrompt = null
+    name = slugify(name.replace(/\.tex$/i, ''))
+    if (!paper || !name) return
+    const siblings = paper.files.filter((f) => f.parent === root && f.include).map((f) => ({ rel: f.rel, arg: f.include!.arg }))
+    const place = placeNewFile(name, root, siblings, taken)
+    const text = await currentText(rel)
+    const out = extractSection(text, line, 'input', place.arg, `${rootComment(place.rel, root)}\n`)
+    if (!out) return flash('No section heading on that line')
+    await window.api.writeFile(place.rel, out.body)
+    await editAndSave(rel, () => out.changes)
+    flash(`Moved to ${place.rel}`)
+    await afterPaperEdit()
+  }
+
+  // Number-prefixed file names out of order (after a reorder or a new file):
+  // the renames that would fix them, unless they were waved off.
+  let keptOrder = $state(new Set<string>())
+  const renames = $derived.by(() => {
+    const p = paper
+    if (!p?.declared) return []
+    const parents = [...new Set(p.files.map((f) => f.parent).filter((x): x is string => !!x))]
+    const plan = parents.flatMap((parent) => renumberPlan(p.files.filter((f) => f.parent === parent && f.exists && f.rel.endsWith('.tex')).map((f) => f.rel)))
+    return keptOrder.has(JSON.stringify(plan)) ? [] : plan
+  })
+
+  /** Renames files (from → to) and points the paper's includes at the new names. */
+  async function applyRenames(plan: { from: string; to: string }[]): Promise<boolean> {
+    const p = paper
+    if (!p || !editor) return false
+    const map = new Map(plan.map((r) => [r.from, r.to]))
+    // Includes first, while the paper still knows which file each one means.
+    const target = (parent: string) => (inc: Include) => p.files.find((f) => f.parent === parent && f.include && sameInclude(f.include, inc))?.rel ?? null
+    for (const parent of new Set(plan.map((r) => fileOf(r.from)?.parent).filter((x): x is string => !!x))) {
+      await editAndSave(parent, (t) => renameIncludes(t, parseIncludes(t), target(parent), map))
+    }
+    // Through temporary names, so 2→3 and 3→2 don't collide.
+    const temp = plan.map((r) => ({ ...r, tmp: `${r.from}.renaming` }))
+    try {
+      for (const r of temp) await window.api.renameFile(r.from, r.tmp)
+      for (const r of temp) await window.api.renameFile(r.tmp, r.to)
+    } catch (e) {
+      flash(`Couldn't rename: ${(e as Error).message}`)
+      return false
+    }
+    for (const r of plan) {
+      editor.rename(r.from, r.to)
+      tabs = tabs.map((t) => (t === r.from ? r.to : t))
+      mru = mru.map((t) => (t === r.from ? r.to : t))
+      if (dirty.has(r.from)) {
+        setDirty(r.from, false)
+        setDirty(r.to, true)
+      }
+      if (active === r.from) active = r.to
+    }
+    return true
+  }
+
+  // The last renumbering, so it can be undone.
+  let lastRenumber = $state<{ from: string; to: string }[] | null>(null)
+  async function renumber(): Promise<void> {
+    const plan = renames
+    if (!plan.length || !(await applyRenames(plan))) return
+    lastRenumber = plan
+    flash(`Renumbered ${plan.length} file${plan.length === 1 ? '' : 's'}`)
+    await afterPaperEdit()
+  }
+  async function undoRenumber(): Promise<void> {
+    const plan = lastRenumber
+    lastRenumber = null
+    if (!plan) return
+    if (active) await loadPaper(active) // the includes now name the new files
+    if (await applyRenames(plan.map((r) => ({ from: r.to, to: r.from })))) {
+      await afterPaperEdit()
+      // Undoing says "leave them": don't offer the same renames straight away.
+      keptOrder = new Set(keptOrder).add(JSON.stringify(renumberPlanNow()))
+    }
+  }
+  /** The renumber plan as it stands (for waving it off after an undo). */
+  const renumberPlanNow = () => {
+    const p = paper
+    if (!p) return []
+    const parents = [...new Set(p.files.map((f) => f.parent).filter((x): x is string => !!x))]
+    return parents.flatMap((parent) => renumberPlan(p.files.filter((f) => f.parent === parent && f.exists && f.rel.endsWith('.tex')).map((f) => f.rel)))
+  }
 
   /** Where the open file stands in its paper, for the title bar: main §III. */
   const place = $derived.by(() => {
@@ -1228,7 +1435,37 @@
                       <button onclick={() => markPaper(true)}>Mark as paper</button>
                     </div>
                   {/if}
-                  <Outline items={outlineItems} {cursorLine} onjump={(line) => editor?.gotoLine(line)} />
+                  {#if paper?.declared && inPaper(active)}
+                    <PaperMap
+                      {paper}
+                      model={paperModel}
+                      {active}
+                      {cursorLine}
+                      activeOutline={outlineItems}
+                      {renames}
+                      onrenumber={renumber}
+                      ondismissrenumber={() => (keptOrder = new Set(keptOrder).add(JSON.stringify(renames)))}
+                      actions={paperActions}
+                    />
+                    {#if trashOffer}
+                      {@const t = trashOffer}
+                      <div class="paper-offer">
+                        <span><strong>{t.rel.split('/').pop()}</strong> is now part of {t.into.split('/').pop()}, and nothing includes it. Send it to the Recycle Bin?</span>
+                        <span class="row">
+                          <button onclick={trashPutBack}>Send to Recycle Bin</button>
+                          <button onclick={() => (trashOffer = null)}>Keep it</button>
+                        </span>
+                      </div>
+                    {/if}
+                    {#if lastRenumber}
+                      <div class="paper-offer">
+                        <span>Renumbered {lastRenumber.length} file{lastRenumber.length === 1 ? '' : 's'}.</span>
+                        <button onclick={undoRenumber}>Undo</button>
+                      </div>
+                    {/if}
+                  {:else}
+                    <Outline items={outlineItems} {cursorLine} onjump={(line) => editor?.gotoLine(line)} />
+                  {/if}
                 </div>
               {/if}
             </section>
@@ -1257,8 +1494,6 @@
               }}
             />
           </div>
-        {:else if view === 'parts' && docParts}
-          <div class="side-body"><PartsView root={docParts.root} parts={docParts.parts} {active} onopen={openFile} /></div>
         {:else if view === 'appearance'}
           <div class="side-body">
             <AppearancePanel
@@ -1303,7 +1538,11 @@
                 {imageHooks}
                 {editingHooks}
                 {spellHooks}
-                onoutline={(items) => (outlineItems = items)}
+                onoutline={(items) => {
+                  outlineItems = items
+                  // The map's headings and numbers follow the open file's edits.
+                  if (inPaper(active)) rebuildPaperModel()
+                }}
                 oncursor={(line, col) => ((cursorLine = line), (cursorCol = col))}
                 onlivechange={(on) => (live = on)}
                 onedit={schedulePreview}
@@ -1374,6 +1613,20 @@
     onsubmit={(to) => renameLabel(from, to)}
     oncancel={() => {
       renaming = null
+      editor?.focus()
+    }}
+  />
+{/if}
+
+{#if paperPrompt}
+  {@const pp = paperPrompt}
+  <PromptDialog
+    title={pp.title}
+    initial={pp.initial}
+    hint={pp.hint}
+    onsubmit={(v) => pp.run(v)}
+    oncancel={() => {
+      paperPrompt = null
       editor?.focus()
     }}
   />
@@ -1515,6 +1768,10 @@
     flex-direction: column;
   }
 
+  .paper-offer .row {
+    display: flex;
+    gap: 6px;
+  }
   .paper-offer {
     display: flex;
     flex-direction: column;
