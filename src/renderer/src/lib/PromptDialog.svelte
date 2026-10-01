@@ -56,7 +56,7 @@
     flex-direction: column;
     gap: 8px;
     padding: 12px 14px;
-    background: var(--bg);
+    background: var(--paper);
     border-radius: 8px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
     outline: none;
@@ -65,12 +65,12 @@
     font: inherit;
     font-family: Consolas, 'Cascadia Mono', monospace;
     padding: 6px 8px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--line);
     border-radius: 5px;
-    outline-color: var(--accent);
+    outline-color: var(--detail);
   }
   .hint {
-    color: var(--muted);
+    color: var(--ink-soft);
     font-size: 12px;
   }
 </style>

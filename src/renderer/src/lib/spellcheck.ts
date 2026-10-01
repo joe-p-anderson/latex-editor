@@ -209,13 +209,13 @@ export function spellcheck(hooks: SpellHooks): Extension {
       },
     }),
     EditorView.baseTheme({
-      '.cm-misspelled': { textDecoration: 'underline wavy #cf222e', textDecorationSkipInk: 'none', textUnderlineOffset: '3px' },
-      '.cm-tooltip.cm-spell-menu, .cm-spell-menu': { display: 'flex', flexDirection: 'column', padding: '4px', minWidth: '180px', fontFamily: "'Segoe UI', system-ui, sans-serif", fontSize: '13px' },
+      '.cm-misspelled': { textDecoration: 'underline wavy var(--err)', textDecorationSkipInk: 'none', textUnderlineOffset: '3px' },
+      '.cm-tooltip.cm-spell-menu, .cm-spell-menu': { display: 'flex', flexDirection: 'column', padding: '4px', minWidth: '180px', fontFamily: 'var(--f-ui)', fontSize: '13px' },
       '.cm-spell-menu button': { border: 'none', background: 'none', textAlign: 'left', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer', font: 'inherit' },
-      '.cm-spell-menu button:hover': { background: 'var(--accent-soft, #e3ecfb)' },
+      '.cm-spell-menu button:hover': { background: 'var(--sel)' },
       '.cm-spell-menu .cm-spell-suggestion': { fontWeight: '600' },
-      '.cm-spell-menu hr': { border: 'none', borderTop: '1px solid var(--border, #d9dce1)', margin: '4px 0', width: '100%' },
-      '.cm-spell-note': { color: '#6a737d', padding: '4px 10px' },
+      '.cm-spell-menu hr': { border: 'none', borderTop: '1px solid var(--line)', margin: '4px 0', width: '100%' },
+      '.cm-spell-note': { color: 'var(--ink-soft)', padding: '4px 10px' },
     }),
   ]
 }

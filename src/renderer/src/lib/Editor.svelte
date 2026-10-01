@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { EditorView, basicSetup } from 'codemirror'
-  import { EditorState, Prec } from '@codemirror/state'
+  import { EditorState, Prec, type StateEffect } from '@codemirror/state'
   import { keymap } from '@codemirror/view'
   import { indentWithTab } from '@codemirror/commands'
   import { StreamLanguage } from '@codemirror/language'
@@ -19,6 +19,7 @@
   import { EDIT_TABLE_EVENT } from './live/widgets'
   import { tableRangeAt } from '@shared/tablemodel'
   import { OPEN_LOCATION_EVENT, type OpenLocation } from './citations'
+  import { endleafEditorTheme } from './editorTheme'
 
   let {
     onsave,
@@ -28,14 +29,14 @@
     editingHooks,
     spellHooks,
     onoutline,
-    oncursorline,
+    oncursor,
     onlivechange,
     onedit,
     onopenlocation,
   }: {
     onsave: (rel: string, text: string) => void
     ondirtychange: (rel: string, dirty: boolean) => void
-    /** Ctrl+J: show the cursor's line in the PDF. */
+    /** Ctrl+Alt+J: show the cursor's line in the PDF. */
     onsyncforward: () => void
     /** Image picker, autocomplete, hover previews, drop and paste. */
     imageHooks: ImageHooks
@@ -45,8 +46,8 @@
     spellHooks: SpellHooks
     /** The open file's sections and questions, after each (debounced) change. */
     onoutline: (items: OutlineItem[]) => void
-    /** 1-based line of the cursor, when it moves. */
-    oncursorline: (line: number) => void
+    /** 1-based line and column of the cursor, when it moves. */
+    oncursor: (line: number, col: number) => void
     /** Live mode was turned on or off (or a file with the other setting was opened). */
     onlivechange: (live: boolean) => void
     /** The open file's text changed (typing, undo, a quick fix). */
@@ -64,6 +65,8 @@
   // disk, for the unsaved-changes dot.
   const states = new Map<string, EditorState>()
   const saved = new Map<string, string>()
+  // Where each file was scrolled to, so switching back returns there.
+  const scrolls = new Map<string, StateEffect<unknown>>()
 
   const latex = StreamLanguage.define(stex)
 
@@ -125,6 +128,12 @@
     outlineTimer = setTimeout(() => onoutline(outline(view.state.doc.toString())), delay)
   }
 
+  function reportCursor(state: EditorState): void {
+    const head = state.selection.main.head
+    const line = state.doc.lineAt(head)
+    oncursor(line.number, head - line.from + 1)
+  }
+
   function makeState(text: string): EditorState {
     // In live mode a file opens past its (folded) preamble. CodeMirror counts
     // a line break as one character, so the offset is taken with \n breaks.
@@ -137,6 +146,7 @@
         // with \n, and saving would rewrite every line of a CRLF file.
         EditorState.lineSeparator.of(text.includes('\r\n') ? '\r\n' : '\n'),
         basicSetup,
+        endleafEditorTheme,
         latex,
         lintGutter(),
         preview,
@@ -148,7 +158,7 @@
         Prec.highest(
           keymap.of([
             { key: 'Mod-s', preventDefault: true, run: () => (save(), true) },
-            { key: 'Mod-j', preventDefault: true, run: () => (onsyncforward(), true) },
+            { key: 'Mod-Alt-j', preventDefault: true, run: () => (onsyncforward(), true) },
           ]),
         ),
         keymap.of([indentWithTab]),
@@ -156,7 +166,7 @@
           if (u.docChanged && current) ondirtychange(current, u.state.sliceDoc() !== saved.get(current))
           if (u.docChanged) publishOutline(300)
           if (u.docChanged && current) onedit(current)
-          if (u.docChanged || u.selectionSet) oncursorline(u.state.doc.lineAt(u.state.selection.main.head).number)
+          if (u.docChanged || u.selectionSet) reportCursor(u.state)
           if (isLive(u.state) !== isLive(u.startState)) {
             try {
               localStorage.setItem(LIVE_KEY, String(isLive(u.state)))
@@ -188,14 +198,19 @@
     if (rel === current) return
     const fresh = !states.has(rel)
     const state = await load(rel)
-    if (current) states.set(current, view.state)
+    if (current) {
+      states.set(current, view.state)
+      scrolls.set(current, view.scrollSnapshot())
+    }
     current = rel
     view.setState(state)
-    // A newly opened file starts at its cursor, not wherever the last file was scrolled.
-    if (fresh) view.dispatch({ effects: EditorView.scrollIntoView(state.selection.main.head, { y: 'start', yMargin: 60 }) })
+    // A newly opened file starts at its cursor; one opened before, where it was left.
+    const scroll = scrolls.get(rel)
+    if (fresh || !scroll) view.dispatch({ effects: EditorView.scrollIntoView(state.selection.main.head, { y: 'start', yMargin: 60 }) })
+    else view.dispatch({ effects: scroll })
     onlivechange(isLive(state))
     publishOutline(0)
-    oncursorline(cursorLine())
+    reportCursor(view.state)
     showDiagnostics()
     view.focus()
   }
@@ -358,6 +373,7 @@
   /** Forgets `rel` (e.g. it was moved out of the vault), leaving the editor empty if it was open. */
   export function close(rel: string): void {
     states.delete(rel)
+    scrolls.delete(rel)
     saved.delete(rel)
     if (current !== rel) return
     current = null
@@ -458,15 +474,15 @@
   .host :global(.cm-cite-card) {
     max-width: 480px;
     padding: 4px 8px;
-    font-family: system-ui, sans-serif;
+    font-family: var(--f-ui);
     font-size: 12px;
     line-height: 1.4;
   }
   .host :global(.cm-cite-card.missing) {
-    color: #cf222e;
+    color: var(--err);
   }
   .host :global(.cm-scroller) {
-    font-family: Consolas, 'Cascadia Mono', monospace;
+    font-family: var(--f-mono);
     font-size: 14px;
     line-height: 1.5;
   }

@@ -2,16 +2,19 @@
 // puts on the editor, so plain source mode is untouched.
 import { EditorView } from '@codemirror/view'
 
-const ui = "'Segoe UI', system-ui, sans-serif"
-const mono = "Consolas, 'Cascadia Mono', monospace"
-const muted = 'var(--muted, #6a737d)'
-const accent = 'var(--accent, #2f6fdb)'
+const ui = 'var(--f-ui)'
+const mono = 'var(--f-mono)'
+const muted = 'var(--ink-soft)'
+const accent = 'var(--detail)'
 
 export const liveTheme = EditorView.baseTheme({
   '&.cm-live .cm-content': {
-    fontFamily: "Cambria, Georgia, 'Times New Roman', serif",
-    fontSize: '16px',
-    lineHeight: '1.6',
+    fontFamily: 'var(--f-page)',
+    fontSize: 'var(--page-size)',
+    lineHeight: '1.56',
+    textAlign: 'justify',
+    hyphens: 'auto',
+    fontKerning: 'normal',
   },
 
   // Headings keep their size while being edited, so the line doesn't jump.
@@ -48,12 +51,12 @@ export const liveTheme = EditorView.baseTheme({
   '.cm-live-marker.bullet .cm-live-marker-label': { color: muted },
   '.cm-live-marker.term': { minWidth: '0', textAlign: 'left' },
   '.cm-live-marker.term .cm-live-marker-label': { fontWeight: '700' },
-  '.cm-live-marker.correct .cm-live-marker-label': { color: 'var(--ok, #1a7f37)' },
+  '.cm-live-marker.correct .cm-live-marker-label': { color: 'var(--ok)' },
   '.cm-live-points': {
     fontFamily: ui,
     fontSize: '10px',
     color: muted,
-    border: '1px solid var(--border, #d9dce1)',
+    border: '1px solid var(--line)',
     borderRadius: '8px',
     padding: '0 5px',
     marginLeft: '4px',
@@ -61,13 +64,13 @@ export const liveTheme = EditorView.baseTheme({
   },
 
   // Rendered math.
-  '.cm-live-math': { cursor: 'text' },
+  '.cm-live-math': { cursor: 'text', color: 'var(--math)' },
   '.cm-live-math svg': { verticalAlign: 'middle', maxWidth: '100%' },
   '.cm-live-math.block': { display: 'block', textAlign: 'center', padding: '4px 0', overflowX: 'auto' },
   '.cm-live-math.error': {
     fontFamily: mono,
     fontSize: '0.85em',
-    textDecoration: 'wavy underline #cf222e',
+    textDecoration: 'wavy underline var(--err)',
     textUnderlineOffset: '3px',
   },
 
@@ -81,16 +84,32 @@ export const liveTheme = EditorView.baseTheme({
     fontFamily: ui,
     fontSize: '12px',
     color: muted,
-    background: 'var(--panel, #f6f8fa)',
-    border: '1px solid var(--border, #d9dce1)',
+    background: 'var(--side)',
+    border: '1px solid var(--line)',
     borderRadius: '6px',
     cursor: 'pointer',
   },
-  '.cm-live-preamble-title': { fontWeight: '600', color: 'var(--fg, #1f2328)' },
+  '.cm-live-preamble-title': { fontWeight: '600', color: 'var(--ink)' },
 
-  // A construct being edited: a light tint says "this is source".
-  '&.cm-live .cm-live-src': { backgroundColor: 'rgba(47, 111, 219, 0.05)' },
-  '&.cm-live .cm-live-code': { fontFamily: mono, fontSize: '13.5px', backgroundColor: 'rgba(0, 0, 0, 0.03)' },
+  // The source block under the cursor: set in the mono at 0.74 × the text
+  // size, with a rule on its left, running into the outer margin so typical
+  // 74–80-character source lines don't wrap. Its line numbers show in the
+  // inner margin (see editorTheme.ts).
+  '&.cm-live .cm-live-src': {
+    backgroundColor: 'var(--srcbg)',
+    boxShadow: 'inset 2px 0 0 var(--detail)',
+    fontFamily: mono,
+    fontSize: 'calc(var(--page-size) * 0.74)',
+    lineHeight: '1.62',
+    textAlign: 'left',
+    hyphens: 'none',
+    marginLeft: '-0.7em',
+    paddingLeft: 'calc(0.7em + 6px)',
+    marginRight: 'calc(-1 * clamp(0.7em, var(--pad-r) - 36px, 110px))',
+  },
+  // Wide tables and display math may run into the outer margin, up to 70 px.
+  '&.cm-live .cm-live-math.block, &.cm-live .cm-live-table': { marginRight: 'calc(-1 * min(70px, var(--pad-r)))' },
+  '&.cm-live .cm-live-code': { fontFamily: mono, fontSize: '13.5px', backgroundColor: 'var(--srcbg)' },
 
   // \textbf and friends.
   '.cm-live-textbf': { fontWeight: '700' },
@@ -115,14 +134,14 @@ export const liveTheme = EditorView.baseTheme({
     verticalAlign: '1px',
     cursor: 'pointer',
   },
-  '.cm-live-chip.label': { color: muted, background: 'rgba(110, 119, 129, 0.1)' },
-  '.cm-live-chip.ref': { color: accent, background: 'var(--accent-soft, #e3ecfb)' },
-  '.cm-live-chip.cite': { color: '#8250df', background: 'rgba(130, 80, 223, 0.1)' },
-  '.cm-live-chip.missing': { color: '#cf222e', background: 'rgba(207, 34, 46, 0.1)' },
+  '.cm-live-chip.label': { color: muted, background: 'var(--sel)' },
+  '.cm-live-chip.ref': { color: accent, background: 'var(--sel)' },
+  '.cm-live-chip.cite': { color: 'var(--math)', background: 'color-mix(in srgb, var(--math) 14%, transparent)' },
+  '.cm-live-chip.missing': { color: 'var(--err)', background: 'color-mix(in srgb, var(--err) 12%, transparent)' },
 
   '.cm-live-sym.faint': { color: muted, opacity: '0.55' },
   '.cm-live-sp': {
-    backgroundImage: 'radial-gradient(circle, rgba(110, 119, 129, 0.3) 0.07em, transparent 0.09em)',
+    backgroundImage: 'radial-gradient(circle, color-mix(in srgb, var(--ink-soft) 45%, transparent) 0.07em, transparent 0.09em)',
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'center',
   },
@@ -136,11 +155,11 @@ export const liveTheme = EditorView.baseTheme({
     borderRadius: '6px',
     cursor: 'text',
   },
-  '.cm-live-figure:hover, .cm-live-table:hover, .cm-live-preamble:hover': { borderColor: 'var(--border, #d9dce1)' },
+  '.cm-live-figure:hover, .cm-live-table:hover, .cm-live-preamble:hover': { borderColor: 'var(--line)' },
   '.cm-live-figure-images': { display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' },
   '.cm-live-img img': { display: 'block', maxWidth: '100%', maxHeight: '320px' },
   '.cm-live-img': { fontFamily: ui, fontSize: '12px', color: muted },
-  '.cm-live-img.missing': { color: '#cf222e', padding: '12px', border: '1px dashed currentColor', borderRadius: '4px' },
+  '.cm-live-img.missing': { color: 'var(--err)', padding: '12px', border: '1px dashed currentColor', borderRadius: '4px' },
   '.cm-live-image.block': { padding: '4px 0', textAlign: 'center', cursor: 'text' },
   '.cm-live-image': { display: 'inline-block', verticalAlign: 'middle', cursor: 'text' },
   '.cm-live-caption': { fontSize: '0.92em', margin: '6px 0 2px' },
@@ -149,10 +168,10 @@ export const liveTheme = EditorView.baseTheme({
   '.cm-live-table td.align-l': { textAlign: 'left' },
   '.cm-live-table td.align-c': { textAlign: 'center' },
   '.cm-live-table td.align-r': { textAlign: 'right' },
-  '.cm-live-table td.vl': { borderLeft: '1px solid #57606a' },
-  '.cm-live-table td.vr': { borderRight: '1px solid #57606a' },
-  '.cm-live-table tr.rule-above td': { borderTop: '1px solid #57606a' },
-  '.cm-live-table tr.rule-below td': { borderBottom: '1px solid #57606a' },
+  '.cm-live-table td.vl': { borderLeft: '1px solid var(--ink-soft)' },
+  '.cm-live-table td.vr': { borderRight: '1px solid var(--ink-soft)' },
+  '.cm-live-table tr.rule-above td': { borderTop: '1px solid var(--ink-soft)' },
+  '.cm-live-table tr.rule-below td': { borderBottom: '1px solid var(--ink-soft)' },
   '.cm-live-table': { position: 'relative' },
   '.cm-live-table-edit': {
     position: 'absolute',
@@ -161,14 +180,14 @@ export const liveTheme = EditorView.baseTheme({
     fontFamily: ui,
     fontSize: '11px',
     padding: '1px 8px',
-    border: '1px solid var(--border, #d9dce1)',
+    border: '1px solid var(--line)',
     borderRadius: '4px',
-    background: 'var(--bg, white)',
+    background: 'var(--paper)',
     color: muted,
     cursor: 'pointer',
     opacity: '0',
   },
   '.cm-live-table:hover .cm-live-table-edit': { opacity: '1' },
-  '.cm-live-table-edit:hover': { color: 'var(--accent, #2f6fdb)', borderColor: 'var(--accent, #2f6fdb)' },
+  '.cm-live-table-edit:hover': { color: 'var(--detail)', borderColor: 'var(--detail)' },
   '.cm-live-table-src': { fontFamily: mono, fontSize: '12px', textAlign: 'left', margin: '0', whiteSpace: 'pre-wrap' },
 })

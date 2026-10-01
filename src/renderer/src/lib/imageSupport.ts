@@ -137,7 +137,7 @@ function previewDom(rel: string): HTMLElement {
 }
 
 const theme = EditorView.baseTheme({
-  '.cm-image-preview': { padding: '6px', maxWidth: '300px', background: '#fff' },
+  '.cm-image-preview': { padding: '6px', maxWidth: '300px', background: 'var(--pdf)' },
   '.cm-image-preview img': { display: 'block', maxWidth: '280px', maxHeight: '220px', margin: '0 auto 4px' },
-  '.cm-image-label': { fontSize: '11px', color: '#6a737d', fontFamily: "'Segoe UI', system-ui, sans-serif", wordBreak: 'break-all' },
+  '.cm-image-label': { fontSize: '11px', color: 'var(--ink-soft)', fontFamily: 'var(--f-ui)', wordBreak: 'break-all' },
 })

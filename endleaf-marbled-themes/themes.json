@@ -1,0 +1,598 @@
+{
+  "app": "endleaf",
+  "iconSizeTiers": {
+    "full": ">= 96 px",
+    "mid": "24-64 px",
+    "small": "<= 20 px"
+  },
+  "themes": [
+    {
+      "id": "autumn-ember",
+      "name": "Autumn Ember",
+      "modes": {
+        "dark": {
+          "marbling": [
+            "#3E1A14",
+            "#5A2616",
+            "#2A1C1A",
+            "#8A5424",
+            "#4A1E16",
+            "#C89A5A"
+          ],
+          "vein": "#C89A5A",
+          "label": "#17120F",
+          "leafFoil": [
+            {
+              "offset": 0,
+              "color": "#7A5516"
+            },
+            {
+              "offset": 0.2,
+              "color": "#D9B45A"
+            },
+            {
+              "offset": 0.34,
+              "color": "#F7E3A1"
+            },
+            {
+              "offset": 0.5,
+              "color": "#B8913A"
+            },
+            {
+              "offset": 0.68,
+              "color": "#E8C874"
+            },
+            {
+              "offset": 0.85,
+              "color": "#8A6420"
+            },
+            {
+              "offset": 1,
+              "color": "#D2AA50"
+            }
+          ],
+          "icons": {
+            "full": "icons/autumn-ember-dark-full.svg",
+            "mid": "icons/autumn-ember-dark-mid.svg",
+            "small": "icons/autumn-ember-dark-small.svg"
+          }
+        },
+        "light": {
+          "marbling": [
+            "#EAD6BE",
+            "#D9B48A",
+            "#F2E6D2",
+            "#C07A4E",
+            "#E3C7A4",
+            "#9E4A2C"
+          ],
+          "vein": "#9E4A2C",
+          "label": "#FBF6EC",
+          "leafFoil": [
+            {
+              "offset": 0,
+              "color": "#6B2412"
+            },
+            {
+              "offset": 0.25,
+              "color": "#B04A24"
+            },
+            {
+              "offset": 0.4,
+              "color": "#DE8A5A"
+            },
+            {
+              "offset": 0.58,
+              "color": "#A23E1C"
+            },
+            {
+              "offset": 0.8,
+              "color": "#C9683A"
+            },
+            {
+              "offset": 1,
+              "color": "#7A2A14"
+            }
+          ],
+          "icons": {
+            "full": "icons/autumn-ember-light-full.svg",
+            "mid": "icons/autumn-ember-light-mid.svg",
+            "small": "icons/autumn-ember-light-small.svg"
+          }
+        }
+      }
+    },
+    {
+      "id": "bookbinders-blue",
+      "name": "Bookbinder\u2019s Blue",
+      "modes": {
+        "dark": {
+          "marbling": [
+            "#1A2440",
+            "#24345A",
+            "#141B30",
+            "#3E5680",
+            "#1E2A4A",
+            "#D8CBA8"
+          ],
+          "vein": "#D8CBA8",
+          "label": "#0F1424",
+          "leafFoil": [
+            {
+              "offset": 0,
+              "color": "#6E2E10"
+            },
+            {
+              "offset": 0.18,
+              "color": "#C2672F"
+            },
+            {
+              "offset": 0.32,
+              "color": "#F4BC86"
+            },
+            {
+              "offset": 0.45,
+              "color": "#B8592A"
+            },
+            {
+              "offset": 0.62,
+              "color": "#E79A5C"
+            },
+            {
+              "offset": 0.8,
+              "color": "#8E3F17"
+            },
+            {
+              "offset": 1,
+              "color": "#D07A40"
+            }
+          ],
+          "icons": {
+            "full": "icons/bookbinders-blue-dark-full.svg",
+            "mid": "icons/bookbinders-blue-dark-mid.svg",
+            "small": "icons/bookbinders-blue-dark-small.svg"
+          }
+        },
+        "light": {
+          "marbling": [
+            "#DCE3EA",
+            "#B8C6D6",
+            "#EEF1F2",
+            "#7F97B4",
+            "#CCD6E0",
+            "#34507A"
+          ],
+          "vein": "#34507A",
+          "label": "#FBFAF6",
+          "leafFoil": [
+            {
+              "offset": 0,
+              "color": "#5E250C"
+            },
+            {
+              "offset": 0.18,
+              "color": "#A9521F"
+            },
+            {
+              "offset": 0.32,
+              "color": "#E0996A"
+            },
+            {
+              "offset": 0.45,
+              "color": "#9A4418"
+            },
+            {
+              "offset": 0.62,
+              "color": "#C9773F"
+            },
+            {
+              "offset": 0.8,
+              "color": "#6E2E10"
+            },
+            {
+              "offset": 1,
+              "color": "#B0602C"
+            }
+          ],
+          "icons": {
+            "full": "icons/bookbinders-blue-light-full.svg",
+            "mid": "icons/bookbinders-blue-light-mid.svg",
+            "small": "icons/bookbinders-blue-light-small.svg"
+          }
+        }
+      }
+    },
+    {
+      "id": "oxblood-gilt",
+      "name": "Oxblood & Gilt",
+      "modes": {
+        "dark": {
+          "marbling": [
+            "#3A0F12",
+            "#5A1A1E",
+            "#2A0A0D",
+            "#7A2A2A",
+            "#471418",
+            "#D9B45A"
+          ],
+          "vein": "#D9B45A",
+          "label": "#140808",
+          "leafFoil": [
+            {
+              "offset": 0,
+              "color": "#7A5516"
+            },
+            {
+              "offset": 0.2,
+              "color": "#D9B45A"
+            },
+            {
+              "offset": 0.34,
+              "color": "#F7E3A1"
+            },
+            {
+              "offset": 0.5,
+              "color": "#B8913A"
+            },
+            {
+              "offset": 0.68,
+              "color": "#E8C874"
+            },
+            {
+              "offset": 0.85,
+              "color": "#8A6420"
+            },
+            {
+              "offset": 1,
+              "color": "#D2AA50"
+            }
+          ],
+          "icons": {
+            "full": "icons/oxblood-gilt-dark-full.svg",
+            "mid": "icons/oxblood-gilt-dark-mid.svg",
+            "small": "icons/oxblood-gilt-dark-small.svg"
+          }
+        },
+        "light": {
+          "marbling": [
+            "#EFD9D2",
+            "#DDB5AA",
+            "#F7ECE6",
+            "#B7766A",
+            "#E7C8BE",
+            "#B8913A"
+          ],
+          "vein": "#B8913A",
+          "label": "#FCF7F2",
+          "leafFoil": [
+            {
+              "offset": 0,
+              "color": "#4A0E10"
+            },
+            {
+              "offset": 0.3,
+              "color": "#8A2A26"
+            },
+            {
+              "offset": 0.45,
+              "color": "#C0645A"
+            },
+            {
+              "offset": 0.6,
+              "color": "#7A1E1C"
+            },
+            {
+              "offset": 0.85,
+              "color": "#A2403A"
+            },
+            {
+              "offset": 1,
+              "color": "#5A1414"
+            }
+          ],
+          "icons": {
+            "full": "icons/oxblood-gilt-light-full.svg",
+            "mid": "icons/oxblood-gilt-light-mid.svg",
+            "small": "icons/oxblood-gilt-light-small.svg"
+          }
+        }
+      }
+    },
+    {
+      "id": "forest-floor",
+      "name": "Forest Floor",
+      "modes": {
+        "dark": {
+          "marbling": [
+            "#1E2A1C",
+            "#34422A",
+            "#171F16",
+            "#5C5A2E",
+            "#28331F",
+            "#C9973A"
+          ],
+          "vein": "#C9973A",
+          "label": "#11160F",
+          "leafFoil": [
+            {
+              "offset": 0,
+              "color": "#6E2E10"
+            },
+            {
+              "offset": 0.18,
+              "color": "#C2672F"
+            },
+            {
+              "offset": 0.32,
+              "color": "#F4BC86"
+            },
+            {
+              "offset": 0.45,
+              "color": "#B8592A"
+            },
+            {
+              "offset": 0.62,
+              "color": "#E79A5C"
+            },
+            {
+              "offset": 0.8,
+              "color": "#8E3F17"
+            },
+            {
+              "offset": 1,
+              "color": "#D07A40"
+            }
+          ],
+          "icons": {
+            "full": "icons/forest-floor-dark-full.svg",
+            "mid": "icons/forest-floor-dark-mid.svg",
+            "small": "icons/forest-floor-dark-small.svg"
+          }
+        },
+        "light": {
+          "marbling": [
+            "#E6E6D2",
+            "#C8CCA8",
+            "#F1F0E2",
+            "#98A070",
+            "#DADBC0",
+            "#8A5A2A"
+          ],
+          "vein": "#8A5A2A",
+          "label": "#FBFAF2",
+          "leafFoil": [
+            {
+              "offset": 0,
+              "color": "#6B2412"
+            },
+            {
+              "offset": 0.25,
+              "color": "#B04A24"
+            },
+            {
+              "offset": 0.4,
+              "color": "#DE8A5A"
+            },
+            {
+              "offset": 0.58,
+              "color": "#A23E1C"
+            },
+            {
+              "offset": 0.8,
+              "color": "#C9683A"
+            },
+            {
+              "offset": 1,
+              "color": "#7A2A14"
+            }
+          ],
+          "icons": {
+            "full": "icons/forest-floor-light-full.svg",
+            "mid": "icons/forest-floor-light-mid.svg",
+            "small": "icons/forest-floor-light-small.svg"
+          }
+        }
+      }
+    },
+    {
+      "id": "plum-amber",
+      "name": "Plum & Amber",
+      "modes": {
+        "dark": {
+          "marbling": [
+            "#2A1628",
+            "#442240",
+            "#1E1020",
+            "#6A3A58",
+            "#361C33",
+            "#E0A248"
+          ],
+          "vein": "#E0A248",
+          "label": "#140B14",
+          "leafFoil": [
+            {
+              "offset": 0,
+              "color": "#7A5516"
+            },
+            {
+              "offset": 0.2,
+              "color": "#D9B45A"
+            },
+            {
+              "offset": 0.34,
+              "color": "#F7E3A1"
+            },
+            {
+              "offset": 0.5,
+              "color": "#B8913A"
+            },
+            {
+              "offset": 0.68,
+              "color": "#E8C874"
+            },
+            {
+              "offset": 0.85,
+              "color": "#8A6420"
+            },
+            {
+              "offset": 1,
+              "color": "#D2AA50"
+            }
+          ],
+          "icons": {
+            "full": "icons/plum-amber-dark-full.svg",
+            "mid": "icons/plum-amber-dark-mid.svg",
+            "small": "icons/plum-amber-dark-small.svg"
+          }
+        },
+        "light": {
+          "marbling": [
+            "#ECDFE6",
+            "#D4BCCB",
+            "#F6EEF1",
+            "#A77C94",
+            "#E2D0DA",
+            "#C9822E"
+          ],
+          "vein": "#C9822E",
+          "label": "#FCF8F8",
+          "leafFoil": [
+            {
+              "offset": 0,
+              "color": "#5E250C"
+            },
+            {
+              "offset": 0.18,
+              "color": "#A9521F"
+            },
+            {
+              "offset": 0.32,
+              "color": "#E0996A"
+            },
+            {
+              "offset": 0.45,
+              "color": "#9A4418"
+            },
+            {
+              "offset": 0.62,
+              "color": "#C9773F"
+            },
+            {
+              "offset": 0.8,
+              "color": "#6E2E10"
+            },
+            {
+              "offset": 1,
+              "color": "#B0602C"
+            }
+          ],
+          "icons": {
+            "full": "icons/plum-amber-light-full.svg",
+            "mid": "icons/plum-amber-light-mid.svg",
+            "small": "icons/plum-amber-light-small.svg"
+          }
+        }
+      }
+    },
+    {
+      "id": "slate-ember",
+      "name": "Slate & Ember",
+      "modes": {
+        "dark": {
+          "marbling": [
+            "#1E1F22",
+            "#2A2B2F",
+            "#18191B",
+            "#36373C",
+            "#232427",
+            "#C8703A"
+          ],
+          "vein": "#C8703A",
+          "label": "#111113",
+          "leafFoil": [
+            {
+              "offset": 0,
+              "color": "#6E2E10"
+            },
+            {
+              "offset": 0.18,
+              "color": "#C2672F"
+            },
+            {
+              "offset": 0.32,
+              "color": "#F4BC86"
+            },
+            {
+              "offset": 0.45,
+              "color": "#B8592A"
+            },
+            {
+              "offset": 0.62,
+              "color": "#E79A5C"
+            },
+            {
+              "offset": 0.8,
+              "color": "#8E3F17"
+            },
+            {
+              "offset": 1,
+              "color": "#D07A40"
+            }
+          ],
+          "icons": {
+            "full": "icons/slate-ember-dark-full.svg",
+            "mid": "icons/slate-ember-dark-mid.svg",
+            "small": "icons/slate-ember-dark-small.svg"
+          }
+        },
+        "light": {
+          "marbling": [
+            "#E9E6E1",
+            "#D8D4CD",
+            "#F3F1ED",
+            "#BDB7AE",
+            "#E1DDD6",
+            "#A9521F"
+          ],
+          "vein": "#A9521F",
+          "label": "#FCFBF9",
+          "leafFoil": [
+            {
+              "offset": 0,
+              "color": "#5E250C"
+            },
+            {
+              "offset": 0.18,
+              "color": "#A9521F"
+            },
+            {
+              "offset": 0.32,
+              "color": "#E0996A"
+            },
+            {
+              "offset": 0.45,
+              "color": "#9A4418"
+            },
+            {
+              "offset": 0.62,
+              "color": "#C9773F"
+            },
+            {
+              "offset": 0.8,
+              "color": "#6E2E10"
+            },
+            {
+              "offset": 1,
+              "color": "#B0602C"
+            }
+          ],
+          "icons": {
+            "full": "icons/slate-ember-light-full.svg",
+            "mid": "icons/slate-ember-light-mid.svg",
+            "small": "icons/slate-ember-light-small.svg"
+          }
+        }
+      }
+    }
+  ]
+}

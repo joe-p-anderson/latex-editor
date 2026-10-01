@@ -101,44 +101,57 @@
 {/if}
 
 <style>
+  /* The Plain look's conventional tab bar, over a thin marbled rule. */
   .tabs {
     display: flex;
     overflow-x: auto;
-    background: var(--panel);
-    border-bottom: 1px solid var(--border);
-    scrollbar-width: thin;
+    background: var(--tabpaper);
+    border-bottom: 4px solid transparent;
+    border-image: var(--marbleimg) 1;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
+    scrollbar-width: none;
     flex: none;
+    height: 40px;
   }
   .tab {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 5px 6px 5px 12px;
-    border-right: 1px solid var(--border);
+    gap: 7px;
+    padding: 0 6px 0 14px;
+    border-right: 1px solid var(--line);
     cursor: pointer;
     white-space: nowrap;
-    color: var(--muted);
+    color: var(--ink-soft);
     position: relative;
     user-select: none;
   }
   .tab:hover {
-    background: var(--bg);
+    color: var(--ink);
   }
   .tab.active {
-    background: var(--bg);
-    color: var(--text);
-    box-shadow: inset 0 2px 0 var(--accent);
+    background: var(--desk);
+    color: var(--ink);
   }
-  .tab.drop-before::before,
+  /* the active tab's foil line */
+  .tab.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 2px;
+    background: var(--foil);
+  }
+  .tab.drop-before::after,
   .tab.drop-after::after {
     content: '';
     position: absolute;
     top: 3px;
     bottom: 3px;
     width: 2px;
-    background: var(--accent);
+    background: var(--detail);
   }
-  .tab.drop-before::before {
+  .tab.drop-before::after {
     left: -1px;
   }
   .tab.drop-after::after {
@@ -146,7 +159,7 @@
   }
   .dir {
     font-size: 11px;
-    color: var(--muted);
+    color: var(--ink-soft);
   }
   .close {
     border: none;
@@ -156,7 +169,7 @@
     height: 18px;
     line-height: 18px;
     border-radius: 3px;
-    color: var(--muted);
+    color: var(--ink-soft);
     font-size: 14px;
   }
   .close .dot {

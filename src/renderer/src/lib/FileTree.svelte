@@ -78,19 +78,19 @@
     text-overflow: ellipsis;
   }
   .row:hover {
-    background: var(--accent-soft);
+    background: var(--sel);
   }
   .chev {
     display: inline-block;
     width: 14px;
-    color: var(--muted);
+    color: var(--ink-soft);
   }
   .active {
-    background: var(--accent-soft);
+    background: var(--sel);
     font-weight: 600;
   }
   .dot {
-    color: var(--accent);
+    color: var(--detail);
     margin-left: 6px;
     font-size: 9px;
   }

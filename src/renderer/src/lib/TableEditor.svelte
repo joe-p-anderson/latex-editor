@@ -580,7 +580,7 @@
     max-height: 92vh;
     display: flex;
     flex-direction: column;
-    background: var(--bg);
+    background: var(--paper);
     border-radius: 8px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
     outline: none;
@@ -599,12 +599,12 @@
     padding: 8px 14px;
   }
   .top {
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--line);
   }
   .toolbar {
     gap: 14px;
-    background: var(--panel);
-    border-bottom: 1px solid var(--border);
+    background: var(--side);
+    border-bottom: 1px solid var(--line);
   }
   .group {
     display: flex;
@@ -612,7 +612,7 @@
     gap: 3px;
   }
   .group .label {
-    color: var(--muted);
+    color: var(--ink-soft);
     margin-right: 4px;
     min-width: 62px;
   }
@@ -620,34 +620,34 @@
     padding: 2px 7px;
   }
   button.on {
-    color: var(--accent);
-    border-color: var(--accent);
-    background: var(--accent-soft);
+    color: var(--detail);
+    border-color: var(--detail);
+    background: var(--sel);
   }
   button.primary {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: white;
+    background: var(--detail);
+    border-color: var(--detail);
+    color: var(--paper);
   }
   button.primary:hover {
-    background: #2560c4;
+    background: color-mix(in srgb, var(--detail) 85%, var(--ink));
   }
   select,
   input {
     font: inherit;
-    border: 1px solid var(--border);
+    border: 1px solid var(--line);
     border-radius: 4px;
     padding: 2px 4px;
-    background: var(--bg);
+    background: var(--paper);
   }
   .hint {
     padding-top: 6px;
     padding-bottom: 6px;
-    background: #fff8c5;
-    color: #633c01;
+    background: color-mix(in srgb, var(--warn) 18%, var(--paper));
+    color: var(--ink);
   }
   .muted {
-    color: var(--muted);
+    color: var(--ink-soft);
   }
   .spacer {
     flex: 1;
@@ -656,10 +656,10 @@
     display: flex;
     align-items: center;
     gap: 5px;
-    color: var(--muted);
+    color: var(--ink-soft);
   }
   .field input {
-    color: var(--text);
+    color: var(--ink);
   }
   .field.grow {
     flex: 1;
@@ -691,11 +691,11 @@
   }
   .grid th {
     font-weight: normal;
-    color: var(--muted);
+    color: var(--ink-soft);
     padding: 2px;
   }
   .grid th.sel {
-    color: var(--accent);
+    color: var(--detail);
   }
   .colhead {
     display: flex;
@@ -721,18 +721,18 @@
   }
   .grid td {
     padding: 0;
-    border: 1px solid var(--border);
+    border: 1px solid var(--line);
     min-width: 90px;
   }
   .grid tr.rule td {
-    border-top: 2px solid #57606a;
+    border-top: 2px solid var(--ink-soft);
   }
   .grid td.end {
     border: none;
     height: 0;
   }
   .grid tr.rule td.end {
-    border-top: 2px solid #57606a;
+    border-top: 2px solid var(--ink-soft);
   }
   .grid td input {
     width: 100%;
@@ -746,24 +746,24 @@
     outline: none;
   }
   .grid td.sel {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--detail);
     outline-offset: -1px;
   }
   .grid td.range {
-    background: var(--accent-soft);
+    background: var(--sel);
   }
   .grid td.merged {
-    background: #f6f8fa;
+    background: var(--side);
   }
 
   .below {
     padding-top: 0;
   }
   .float {
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--line);
   }
   .preview-wrap {
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--line);
     padding: 6px 14px;
     max-height: 30vh;
     overflow: auto;
@@ -807,28 +807,28 @@
     text-align: right;
   }
   .preview :global(td.vl) {
-    border-left: 1px solid #333;
+    border-left: 1px solid var(--ink);
   }
   .preview :global(td.vr) {
-    border-right: 1px solid #333;
+    border-right: 1px solid var(--ink);
   }
   .preview :global(tr.rule-above td) {
-    border-top: 1px solid #333;
+    border-top: 1px solid var(--ink);
   }
   .preview :global(tr.rule-thick td) {
-    border-top: 2px solid #333;
+    border-top: 2px solid var(--ink);
   }
   .preview :global(tr.rule-below td) {
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid var(--ink);
   }
   .preview :global(tr.rule-below-thick td) {
-    border-bottom: 2px solid #333;
+    border-bottom: 2px solid var(--ink);
   }
   .preview :global(.caption) {
     margin: 4px 0;
     font-size: 0.92em;
   }
   .bottom {
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--line);
   }
 </style>

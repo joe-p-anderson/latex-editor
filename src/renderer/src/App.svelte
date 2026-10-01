@@ -27,10 +27,34 @@
   import SymbolPanel, { type LibrarySymbol, type SymbolActions } from './lib/SymbolPanel.svelte'
   import { findMathRegions, mathAtCursor } from '@shared/mathregions'
   import { BUILTIN_MATH_SNIPPETS, mathSnippetsFileTemplate, mergeSnippets, parseMathSnippets, type MathSnippet } from '@shared/mathsnippets'
+  import AppearancePanel from './lib/AppearancePanel.svelte'
+  import { applyAppearance, logoUrl, smallLogo } from './lib/appearance'
+  import { marbleCss } from './lib/marbles.svelte'
+  import TitleBar, { type BuildState } from './lib/TitleBar.svelte'
+  import ActivityBar, { type View, type ViewButton } from './lib/ActivityBar.svelte'
+  import StatusBar from './lib/StatusBar.svelte'
+  import CitationsView from './lib/CitationsView.svelte'
+  import PartsView from './lib/PartsView.svelte'
+  import Icon from './lib/Icon.svelte'
+  import Welcome from './lib/Welcome.svelte'
+  import EmptyPlate from './lib/EmptyPlate.svelte'
+  import IndexTabs from './lib/IndexTabs.svelte'
+  import Riffle from './lib/Riffle.svelte'
+  import { tick } from 'svelte'
+  import {
+    DEFAULT_APP_APPEARANCE,
+    defaultVaultAppearance,
+    normalizeAppAppearance,
+    normalizeVaultAppearance,
+    type AppAppearance,
+    type VaultAppearance,
+  } from '@shared/appearance'
 
   const TEXT_FILE = /\.(tex|cls|sty|bib|cfg|txt|md|json)$/i
 
   let vault = $state<VaultInfo | null>(null)
+  // Whether the vault reopened at launch (if any) has loaded.
+  let started = $state(false)
   let active = $state<string | null>(null)
   // Open files in tab order, and most recently used first (for Ctrl+Tab).
   let tabs = $state<string[]>([])
@@ -56,13 +80,190 @@
   let pdfVersion = $state(0)
   let compileSeq = 0
 
-  // Editor share of the editor+PDF area, adjusted by dragging the splitter.
-  let split = $state(0.5)
-  let main = $state<HTMLDivElement>()
+  // --- Workbench layout ---------------------------------------------------------
+  // Pane sizes and what's open are remembered per install (localStorage).
+
+  const LAYOUT_KEY = 'endleaf-layout'
+  const savedLayout = (() => {
+    try {
+      return JSON.parse(localStorage.getItem(LAYOUT_KEY) ?? '{}')
+    } catch {
+      return {}
+    }
+  })()
+  /** Editor share of the editor+PDF area, adjusted by dragging the splitter. */
+  let split = $state<number>(savedLayout.split ?? 0.6)
+  let pdfOpen = $state<boolean>(savedLayout.pdfOpen ?? false)
+  let sideOpen = $state<boolean>(savedLayout.sideOpen ?? true)
+  let sideWidth = $state<number>(savedLayout.sideWidth ?? 272)
+  let panelOpen = $state(false)
+  let panelHeight = $state<number>(savedLayout.panelHeight ?? 190)
+  let panelTab = $state<'problems' | 'log'>('problems')
+  // Sidebar sections (Files, Contents) folded open or closed.
+  let filesSection = $state(true)
+  let contentsSection = $state(true)
+  $effect(() => {
+    const layout = { split, pdfOpen, sideOpen, sideWidth, panelHeight }
+    try {
+      localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout))
+    } catch {
+      // not remembered; fine
+    }
+  })
+  let editors = $state<HTMLDivElement>()
+  let work = $state<HTMLDivElement>()
+  let mainArea = $state<HTMLDivElement>()
 
   $effect(() => {
-    document.title = vault ? `${vault.name} — LaTeX Editor` : 'LaTeX Editor'
+    document.title = vault ? `${vault.name} · endleaf` : 'endleaf'
   })
+
+  // The sidebar's view. Clicking the lit view's icon (or Ctrl+Shift+B) folds the sidebar away.
+  let view = $state<View>('files')
+  function showView(v: View): void {
+    if (sideOpen && view === v) sideOpen = false
+    else {
+      view = v
+      sideOpen = true
+    }
+  }
+
+  const VIEWS: ViewButton[] = [
+    { id: 'files', icon: 'files', tip: 'Files and contents' },
+    { id: 'search', icon: 'search', tip: 'Search the vault (Ctrl+Shift+H)' },
+    { id: 'symbols', icon: 'symbols', tip: 'Symbols' },
+  ]
+
+  // Contextual tools: Citations when the vault has a .bib file, Document
+  // parts when the open document's root \inputs other files.
+  const hasBib = $derived(!!vault && allFiles(vault.tree).some((f) => f.toLowerCase().endsWith('.bib')))
+  let docParts = $state<{ root: string; parts: { rel: string; exists: boolean }[] } | null>(null)
+  const tools = $derived<ViewButton[]>([
+    ...(hasBib ? [{ id: 'cite', icon: 'cite', tip: 'Citations. Shown because this vault has a .bib file' } as ViewButton] : []),
+    ...(docParts?.parts.length
+      ? [{ id: 'parts', icon: 'multi', tip: `Document parts. Shown because ${docParts.root.split('/').pop()} uses \\input` } as ViewButton]
+      : []),
+  ])
+  // A tool that's no longer offered falls back to Files.
+  $effect(() => {
+    if ((view === 'cite' && !hasBib) || (view === 'parts' && !docParts?.parts.length)) view = 'files'
+  })
+
+  /** The files the open document's root \inputs or \includes, in order. */
+  async function loadParts(rel: string): Promise<void> {
+    if (!rel.endsWith('.tex') || !vault) return
+    const own = normalizeEol((await textOf(rel).catch(() => '')) ?? '')
+    const root = /^[^%\n]*\\documentclass/m.test(own) ? rel : result?.root
+    if (!root) return void (docParts = null)
+    const text = root === rel ? own : normalizeEol((await textOf(root).catch(() => '')) ?? '')
+    const dir = root.includes('/') ? root.slice(0, root.lastIndexOf('/') + 1) : ''
+    const present = new Set(allFiles(vault.tree))
+    const seen = new Set<string>()
+    const parts: { rel: string; exists: boolean }[] = []
+    for (const m of blankComments(text).matchAll(/\\(?:input|include|subfile)\s*\{([^}]+)\}/g)) {
+      let target = (dir + m[1].trim()).replace(/\\/g, '/').replace(/^\.\//, '')
+      if (!/\.\w+$/.test(target)) target += '.tex'
+      if (seen.has(target)) continue
+      seen.add(target)
+      parts.push({ rel: target, exists: present.has(target) })
+    }
+    docParts = { root, parts }
+  }
+
+  /** Dragging the sidebar's edge; below 140 px it closes. */
+  function dragSidebar(ev: PointerEvent): void {
+    const target = ev.currentTarget as HTMLElement
+    target.setPointerCapture(ev.pointerId)
+    const left = work!.getBoundingClientRect().left + 52
+    const move = (m: PointerEvent) => {
+      const w = m.clientX - left
+      if (w < 140) sideOpen = false
+      else {
+        sideOpen = true
+        sideWidth = Math.min(600, w)
+      }
+    }
+    target.addEventListener('pointermove', move)
+    target.addEventListener('pointerup', () => target.removeEventListener('pointermove', move), { once: true })
+  }
+
+  /** Dragging the bottom panel's top edge. */
+  function dragPanel(ev: PointerEvent): void {
+    const target = ev.currentTarget as HTMLElement
+    target.setPointerCapture(ev.pointerId)
+    const box = mainArea!.getBoundingClientRect()
+    const move = (m: PointerEvent) => (panelHeight = Math.min(box.height - 120, Math.max(80, box.bottom - m.clientY)))
+    target.addEventListener('pointermove', move)
+    target.addEventListener('pointerup', () => target.removeEventListener('pointermove', move), { once: true })
+  }
+
+  // The cursor, and the heading it's under, for the status bar.
+  let cursorCol = $state(1)
+  const section = $derived.by(() => {
+    const at = outlineItems.findLast((it) => it.line <= cursorLine && it.kind !== 'question')
+    return at ? `§ ${at.title}` : null
+  })
+
+  let branch = $state<string | null>(null)
+  const refreshBranch = () => window.api.gitBranch().then((b) => (branch = b))
+
+  // The build, as the title bar's note and ribbon show it.
+  const build = $derived.by<BuildState>(() => {
+    if (compiling) return { kind: 'busy', note: 'Setting type…' }
+    if (previewing) return { kind: 'busy', note: 'Previewing…', detail: 'Building your unsaved text. Ctrl+S saves and updates pdf/' }
+    if (!result) return { kind: 'none', note: '' }
+    const errors = result.problems.filter((p) => p.severity === 'error' && !p.hidden && !p.followOn).length
+    const how = `${result.root}: ${result.passes} pass${result.passes === 1 ? '' : 'es'}${result.preloaded ? ', preamble preloaded' : ''}`
+    if (errors) return { kind: 'err', note: `${errors} error${errors === 1 ? '' : 's'}${result.draft ? ' in preview' : ' · pdf/ unchanged'}`, detail: how }
+    return { kind: 'ok', note: `${result.draft ? 'Preview' : 'Built'} · ${(result.durationMs / 1000).toFixed(1)} s`, detail: how }
+  })
+  const problemCounts = $derived({
+    errors: result?.problems.filter((p) => p.severity === 'error' && !p.hidden && !p.followOn).length ?? 0,
+    warnings: result?.problems.filter((p) => p.severity === 'warning' && !p.hidden).length ?? 0,
+  })
+
+  function togglePdf(): void {
+    pdfOpen = !pdfOpen
+  }
+  function togglePanel(tab?: 'problems' | 'log'): void {
+    if (tab && panelOpen && panelTab !== tab) panelTab = tab
+    else panelOpen = !panelOpen
+    if (tab) panelTab = tab
+  }
+
+  // --- Appearance -------------------------------------------------------------
+
+  // Global choices from settings.json; the endpaper comes with the vault.
+  let appearance = $state<AppAppearance>(DEFAULT_APP_APPEARANCE)
+  const endpaper = $derived(vault?.appearance ?? defaultVaultAppearance(''))
+  // The palette's small logo and the endpaper, for the title bar, activity bar and status bar.
+  const logo = $derived(smallLogo(endpaper.palette))
+  const swatch = $derived(marbleCss(endpaper, 'small'))
+  $effect(() => {
+    if (!started) return // the endpaper isn't known yet; don't marble a sheet for nothing
+    const tokens = applyAppearance(appearance, endpaper)
+    window.api.setWindowChrome(tokens.chrome, tokens['chrome-ink-soft'])
+  })
+
+  // Dragging the line-length slider changes it many times a second; it's saved once it settles.
+  let appearanceTimer: ReturnType<typeof setTimeout> | undefined
+  function setAppearance(changes: Partial<AppAppearance>): void {
+    appearance = normalizeAppAppearance({ ...appearance, ...changes })
+    clearTimeout(appearanceTimer)
+    const saved = $state.snapshot(appearance)
+    appearanceTimer = setTimeout(() => window.api.setAppearance(saved), 250)
+  }
+
+  async function setEndpaper(changes: Partial<VaultAppearance>): Promise<void> {
+    if (!vault) return
+    vault.appearance = normalizeVaultAppearance({ ...vault.appearance, ...changes }, vault.name)
+    await window.api.setVaultAppearance(changes).catch((e: Error) => flash(`Couldn't save .vault.json: ${e.message}`))
+  }
+
+  function restoreDefaults(): void {
+    setAppearance(DEFAULT_APP_APPEARANCE)
+    if (vault) setEndpaper(defaultVaultAppearance(vault.name))
+  }
 
   // The vault's images, for the picker, autocomplete and hover previews.
   let images = $state<string[]>([])
@@ -191,13 +392,13 @@
 
   // Spelling: on unless switched off (View → Check Spelling), remembered here.
   const SPELL_KEY = 'spellcheck'
-  let spellOn = (() => {
+  let spellOn = $state((() => {
     try {
       return localStorage.getItem(SPELL_KEY) !== 'false'
     } catch {
       return true
     }
-  })()
+  })())
   const spellHooks: SpellHooks = {
     enabled: () => spellOn,
     check: (words) => window.api.spellCheck(words),
@@ -214,6 +415,7 @@
     } catch {
       // not remembered; fine
     }
+    window.api.setSpellcheckMenu(on)
     editor?.refreshSpellcheck()
   }
 
@@ -223,10 +425,13 @@
   }
 
   onMount(() => {
+    window.api.getAppearance().then((a) => (appearance = a))
     window.api.getVault().then((v) => {
       vault = v
+      started = true
       loadImages()
       loadSnippets()
+      refreshBranch()
     })
     const offTree = window.api.onTreeChanged((tree) => {
       if (vault) vault.tree = tree
@@ -243,17 +448,60 @@
     const offAppMenu = window.api.onMenu((name, arg) => {
       if (name === 'math-shortcuts') editMathShortcuts()
       else if (name === 'spellcheck') setSpelling(arg === true)
+      else if (vault) menuCommand(name)
     })
     window.api.setSpellcheckMenu(spellOn)
     return () => (offTree(), offMenu(), offVault(), offClose(), offAppMenu())
   })
 
-  async function openVault(): Promise<void> {
+  /** Menu items the renderer carries out (most also have a shortcut, handled in onkeydown). */
+  function menuCommand(name: string): void {
+    if (name === 'quick-open') quickOpen = true
+    else if (name === 'save-all') saveAll()
+    else if (name === 'find-in-vault') openSearch()
+    else if (name === 'insert-image' && active?.endsWith('.tex')) picker = { mode: 'insert', initial: '' }
+    else if (name === 'cite') openCitePicker()
+    else if (name === 'toggle-live') editor?.toggleLiveMode()
+    else if (name === 'toggle-pdf') togglePdf()
+    else if (name === 'toggle-sidebar') sideOpen = !sideOpen
+    else if (name === 'toggle-panel') togglePanel()
+    else if (name === 'appearance') showView('appearance')
+    else if (name === 'recompile' && active) compile(active)
+    else if (name === 'sync-forward') syncForward()
+    else if (name === 'close-vault') closeVault()
+  }
+
+  /** File → Open Vault and the welcome screen's "Open a folder…". */
+  const openVault = () => switchVault(() => window.api.openVault())
+
+  /**
+   * Swaps in the vault `get` opens (after offering to save unsaved files);
+   * `get` returning null (a cancelled dialog) changes nothing.
+   */
+  async function switchVault(get: () => Promise<VaultInfo | null>): Promise<void> {
     if (vault && !(await settleUnsaved('opening another vault'))) return
-    const v = await window.api.openVault()
+    const v = await get().catch((e: Error) => (flash(e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')), null))
     if (!v) return
-    for (const rel of tabs) editor?.close(rel)
+    reset()
     vault = v
+    loadImages()
+    loadSnippets()
+    refreshBranch()
+  }
+
+  /** Back to the welcome screen. */
+  async function closeVault(): Promise<void> {
+    if (!(await settleUnsaved('closing the vault'))) return
+    reset()
+    vault = null
+    await window.api.closeVault()
+  }
+
+  let riffle = $state<{ n: number; forward: boolean } | null>(null)
+
+  /** Forgets the open vault's files, build and tabs. */
+  function reset(): void {
+    for (const rel of tabs) editor?.close(rel)
     active = null
     tabs = []
     mru = []
@@ -261,10 +509,10 @@
     result = null
     pdf = null
     outlineItems = []
+    docParts = null
     clearSpellingCache() // another vault, another word list
-    loadImages()
-    loadSnippets()
   }
+
 
   async function openFile(rel: string): Promise<void> {
     if (isImage(rel)) {
@@ -274,6 +522,10 @@
     }
     if (!TEXT_FILE.test(rel)) return
     const previous = active
+    // The Bench look riffles the pages: later tabs turn leaves away, earlier ones bring them in.
+    if (appearance.look === 'bench' && previous && previous !== rel && tabs.includes(previous) && tabs.includes(rel)) {
+      riffle = { n: (riffle?.n ?? 0) + 1, forward: tabs.indexOf(rel) > tabs.indexOf(previous) }
+    }
     await editor?.open(rel)
     active = rel
     // A new tab goes just after the one that was showing.
@@ -391,6 +643,10 @@
     else if (key === 's' && e.altKey && !e.shiftKey) saveAll()
     else if (key === 'h' && e.shiftKey && !e.altKey) openSearch()
     else if (key === 'c' && e.shiftKey && !e.altKey) openCitePicker()
+    else if (key === 'j' && plain) togglePanel()
+    else if (key === 'j' && e.altKey && !e.shiftKey) syncForward()
+    else if (key === 'v' && e.altKey && !e.shiftKey) togglePdf()
+    else if (key === 'b' && e.shiftKey && !e.altKey) sideOpen = !sideOpen
     else handled = false
     if (handled) {
       e.preventDefault()
@@ -417,6 +673,7 @@
     if (rel !== active) return
     editor?.setMacros(macros)
     if (ctx) context = ctx
+    loadParts(rel)
     await loadBib(rel)
   }
 
@@ -445,7 +702,6 @@
 
   // --- Vault-wide search, replace and label rename -------------------------
 
-  let sidebar = $state<'files' | 'search' | 'symbols'>('files')
   let searchPanel = $state<SearchPanel>()
   // Bumped when files change, so the search panel searches again.
   let searchVersion = $state(0)
@@ -608,8 +864,10 @@
   /** Unsaved buffers, which search reads instead of the disk copies. */
   const overrides = () => Object.fromEntries(editor?.dirtyTexts() ?? [])
 
-  function openSearch(): void {
-    sidebar = 'search'
+  async function openSearch(): Promise<void> {
+    view = 'search'
+    sideOpen = true
+    await tick()
     searchPanel?.focusWith(editor?.selectedText() ?? '')
   }
 
@@ -674,6 +932,7 @@
 
   async function save(rel: string, text: string): Promise<void> {
     await window.api.writeFile(rel, text)
+    if (rel === active) loadParts(rel)
     searchVersion++
     await reloadIfSettings(rel)
     if (COMPILES.test(rel)) await compile(rel)
@@ -694,7 +953,12 @@
   }
 
   function show(r: CompileResult): void {
+    const hadErrors = (result?.problems ?? []).some((p) => p.severity === 'error' && !p.hidden)
     result = r
+    if (!hadErrors && r.problems.some((p) => p.severity === 'error' && !p.hidden)) {
+      panelOpen = true
+      panelTab = 'problems'
+    }
     editor?.setProblems(r.problems)
     if (active) loadMacros(active) // the preamble or a template may have changed
     if (r.pdf) {
@@ -767,6 +1031,7 @@
   /** Source → PDF: highlight where the cursor's line appears. */
   async function syncForward(): Promise<void> {
     if (!pdf || !active || !editor) return
+    pdfOpen = true
     const target = await window.api.syncForward(pdf, active, editor.cursorLine())
     if (target) viewer?.show(target)
     else flash(`${active} isn't part of the PDF being shown`)
@@ -788,7 +1053,7 @@
   function startDrag(ev: PointerEvent): void {
     const target = ev.currentTarget as HTMLElement
     target.setPointerCapture(ev.pointerId)
-    const box = main!.getBoundingClientRect()
+    const box = editors!.getBoundingClientRect()
     const move = (m: PointerEvent) => (split = Math.min(0.8, Math.max(0.2, (m.clientX - box.left) / box.width)))
     target.addEventListener('pointermove', move)
     target.addEventListener('pointerup', () => target.removeEventListener('pointermove', move), { once: true })
@@ -797,118 +1062,169 @@
 
 <svelte:window onkeydowncapture={onkeydown} {onkeyup} onblur={endCycle} />
 
-{#if !vault}
-  <div class="welcome">
-    <h1>LaTeX Editor</h1>
-    <p>Open a folder of LaTeX documents, such as a course's <code>latex/</code> folder.</p>
-    <button onclick={openVault}>Open vault…</button>
-  </div>
-{:else}
-  <div class="app">
-    <header>
-      <strong>{vault.name}</strong>
-      <span class="file">{active ?? ''}</span>
-      <span class="spacer"></span>
-      {#if note}<span class="note">{note}</span>{/if}
-      <button
-        class="toggle"
-        class:on={live}
-        disabled={!active}
-        onclick={() => editor?.toggleLiveMode()}
-        title={live ? 'Live view: showing the document rendered. Click for plain source (Ctrl+Shift+L)' : 'Plain source. Click for the live view (Ctrl+Shift+L)'}
-        >{live ? 'Live' : 'Source'}</button
-      >
-      <button disabled={!active?.endsWith('.tex')} onclick={() => (picker = { mode: 'insert', initial: '' })} title="Insert an image from the vault (or type ![[ in the editor)">Insert image</button>
-      <button disabled={!active?.endsWith('.tex')} onclick={openCitePicker} title={'Cite a reference from the bibliography (Ctrl+Shift+C, or type \\cite{)'}>Cite</button>
-      <button disabled={!pdf || !active} onclick={syncForward} title="Show the cursor's line in the PDF (Ctrl+J)">Show in PDF →</button>
-      {#if compiling}
-        <span class="status">Compiling…</span>
-      {:else if previewing}
-        <span class="status" title="Building your unsaved text. Ctrl+S saves and updates pdf/">Previewing…</span>
-      {:else if result}
-        {@const errors = result.problems.filter((p) => p.severity === 'error' && !p.hidden && !p.followOn).length}
-        {@const warnings = result.problems.filter((p) => p.severity === 'warning' && !p.hidden).length}
-        {@const how = `${result.draft ? 'Preview of unsaved text: pdf/ is updated when you save. ' : ''}${result.passes} pass${result.passes === 1 ? '' : 'es'}${result.preloaded ? ', preamble preloaded' : ''}`}
-        {#if errors}
-          <span class="status err" title={how}>✗ {errors} error{errors === 1 ? '' : 's'} in {result.root}{result.draft ? ' (preview)' : ''}</span>
-        {:else}
-          <span class="status ok" title={how}>
-            ✓ {#if result.draft}<span class="preview">preview</span>{/if}{result.root} · {(result.durationMs / 1000).toFixed(1)} s{#if warnings}<span class="warn"> · {warnings} warning{warnings === 1 ? '' : 's'}</span>{/if}
-          </span>
-        {/if}
-      {/if}
-      <button disabled={!active || compiling} onclick={() => active && compile(active)}>Recompile</button>
-    </header>
+<div class="window">
+  <TitleBar
+    {logo}
+    vaultName={vault?.name ?? null}
+    file={active}
+    {live}
+    canLive={!!active}
+    {pdfOpen}
+    {panelOpen}
+    {build}
+    onrunning={() => vault && (quickOpen = true)}
+    onlive={(on) => editor?.setLiveMode(on)}
+    ontogglepdf={togglePdf}
+    ontogglepanel={() => togglePanel()}
+    onribbon={() => togglePanel('problems')}
+  />
 
-    <aside>
-      <div class="side-tabs">
-        <button class:on={sidebar === 'files'} onclick={() => (sidebar = 'files')}>Files</button>
-        <button class:on={sidebar === 'search'} onclick={openSearch} title="Search the vault (Ctrl+Shift+H)">Search</button>
-        <button class:on={sidebar === 'symbols'} onclick={() => (sidebar = 'symbols')} title="Symbol library, and draw a symbol to find it">Symbols</button>
-      </div>
-      <!-- Both stay mounted, so the search keeps its query and results. -->
-      <div class="side-body" hidden={sidebar !== 'files'}>
-        <div class="tree"><FileTree nodes={vault.tree} {active} {dirty} onopen={openFile} /></div>
-        {#if active?.endsWith('.tex')}
-          <div class="outline"><Outline items={outlineItems} {cursorLine} onjump={(line) => editor?.gotoLine(line)} /></div>
-        {/if}
-      </div>
-      <div class="side-body" hidden={sidebar !== 'search'}>
-        <SearchPanel
-          bind:this={searchPanel}
-          search={(q, o) => window.api.search(q, o, overrides())}
-          version={searchVersion}
-          onopen={openMatch}
-          onreplace={replaceMatches}
-        />
-      </div>
-      <div class="side-body" hidden={sidebar !== 'symbols'}>
-        <SymbolPanel actions={symbolActions} active={sidebar === 'symbols'} docKey="{active}|{pdfVersion}|{searchVersion}|{result?.root}" />
-      </div>
-    </aside>
+  {#if !started}
+    <div class="starting"></div>
+  {:else if !vault}
+    <Welcome
+      onopen={openVault}
+      onopenat={(root) => switchVault(() => window.api.openVaultAt(root))}
+      onnew={() => switchVault(() => window.api.newVault())}
+    />
+    {#if note}<div class="note welcome-note">{note}</div>{/if}
+  {:else}
+    <div class="work" bind:this={work} style:grid-template-columns="52px {sideOpen ? `${sideWidth}px 0` : '0 0'} minmax(0, 1fr)">
+      <ActivityBar views={VIEWS} {tools} current={view} open={sideOpen} {swatch} {logo} onselect={showView} />
 
-    <div class="main" bind:this={main} style:grid-template-columns="{split}fr 6px {1 - split}fr">
-      <section class="editor-pane">
-        {#if offerMove && active}
-          {@const file = active.split('/').pop()}
-          <div class="banner">
-            <span>
-              <strong>{file}</strong> is a template. Move it to the global template folder so every vault can use it?
-              {#if vault.globalTemplates}<span class="where" title={vault.globalTemplates}>{vault.globalTemplates}</span>{/if}
-            </span>
-            <span class="spacer"></span>
-            <button onclick={moveActiveToGlobal}>Move</button>
-            <button onclick={() => (keptInVault = new Set(keptInVault).add(active!))} title="Keep editing it here; asked again next time the app starts">Not now</button>
-          </div>
-        {/if}
-        <TabBar {tabs} {active} {dirty} onselect={openFile} onclose={closeTab} onmove={moveTab} />
-        <div class="editor">
-          <Editor
-            bind:this={editor}
-            onsave={save}
-            ondirtychange={setDirty}
-            onsyncforward={syncForward}
-            {imageHooks}
-            {editingHooks}
-            {spellHooks}
-            onoutline={(items) => (outlineItems = items)}
-            oncursorline={(line) => (cursorLine = line)}
-            onlivechange={(on) => (live = on)}
-            onedit={schedulePreview}
-            onopenlocation={async (loc) => {
-              await openFile(loc.file)
-              editor?.gotoLine(loc.line)
-            }}
+      <aside class="sidebar" hidden={!sideOpen}>
+        <!-- Each view stays mounted, so search keeps its query and results. -->
+        <div class="side-body" hidden={view !== 'files'}>
+          <section class="sec grow" class:open={filesSection}>
+            <button class="sec-h" onclick={() => (filesSection = !filesSection)}>
+              <Icon name="chev" size={12} /><span class="t">{vault.name}</span>
+            </button>
+            {#if filesSection}<div class="sec-b"><FileTree nodes={vault.tree} {active} {dirty} onopen={openFile} /></div>{/if}
+          </section>
+          {#if active?.endsWith('.tex')}
+            <section class="sec contents" class:open={contentsSection}>
+              <button class="sec-h" onclick={() => (contentsSection = !contentsSection)}>
+                <Icon name="chev" size={12} /><span class="t">Contents</span>
+              </button>
+              {#if contentsSection}<div class="sec-b"><Outline items={outlineItems} {cursorLine} onjump={(line) => editor?.gotoLine(line)} /></div>{/if}
+            </section>
+          {/if}
+        </div>
+        <div class="side-body" hidden={view !== 'search'}>
+          <SearchPanel
+            bind:this={searchPanel}
+            search={(q, o) => window.api.search(q, o, overrides())}
+            version={searchVersion}
+            onopen={openMatch}
+            onreplace={replaceMatches}
           />
         </div>
-        {#if !active}<p class="hint">Pick a file on the left.</p>{/if}
-        {#if result}<ProblemsPanel {result} onjump={jumpTo} onfix={applyFix} />{/if}
-      </section>
-      <div class="splitter" role="separator" aria-orientation="vertical" onpointerdown={startDrag}></div>
-      <section class="pdf-pane"><PdfViewer bind:this={viewer} {pdf} version={pdfVersion} onsyncclick={syncInverse} /></section>
+        <div class="side-body" hidden={view !== 'symbols'}>
+          <SymbolPanel actions={symbolActions} active={sideOpen && view === 'symbols'} docKey="{active}|{pdfVersion}|{searchVersion}|{result?.root}" />
+        </div>
+        {#if view === 'cite'}
+          <div class="side-body">
+            <CitationsView
+              {bib}
+              oncite={(key) => insertCitation([key])}
+              onopen={async (file, line) => {
+                await openFile(file)
+                editor?.gotoLine(line)
+              }}
+            />
+          </div>
+        {:else if view === 'parts' && docParts}
+          <div class="side-body"><PartsView root={docParts.root} parts={docParts.parts} {active} onopen={openFile} /></div>
+        {:else if view === 'appearance'}
+          <div class="side-body">
+            <AppearancePanel
+              app={appearance}
+              endpaper={vault.appearance}
+              vaultName={vault.name}
+              onapp={setAppearance}
+              onvault={setEndpaper}
+              ondefaults={restoreDefaults}
+            />
+          </div>
+        {/if}
+      </aside>
+      <div class="splitter v" hidden={!sideOpen} role="separator" aria-orientation="vertical" onpointerdown={dragSidebar}></div>
+
+      <div class="main" bind:this={mainArea} style:grid-template-rows="minmax(0, 1fr) {panelOpen ? `0 ${panelHeight}px` : '0 0'}">
+        <div class="editors" class:spread={pdfOpen} bind:this={editors} style:grid-template-columns={pdfOpen ? `${split}fr 0 ${1 - split}fr` : '1fr 0 0'}>
+          <section class="editor-pane">
+            {#if offerMove && active}
+              {@const file = active.split('/').pop()}
+              <div class="banner">
+                <span>
+                  <strong>{file}</strong> is a template. Move it to the global template folder so every vault can use it?
+                  {#if vault.globalTemplates}<span class="where" title={vault.globalTemplates}>{vault.globalTemplates}</span>{/if}
+                </span>
+                <span class="spacer"></span>
+                <button onclick={moveActiveToGlobal}>Move</button>
+                <button onclick={() => (keptInVault = new Set(keptInVault).add(active!))} title="Keep editing it here; asked again next time the app starts">Not now</button>
+              </div>
+            {/if}
+            {#if appearance.look === 'plain'}<TabBar {tabs} {active} {dirty} onselect={openFile} onclose={closeTab} onmove={moveTab} />{/if}
+            <div class="editor">
+              {#if appearance.look === 'bench'}
+                <IndexTabs {tabs} {active} {dirty} edge={appearance.tabs} onselect={openFile} onclose={closeTab} />
+                <Riffle run={riffle} />
+              {/if}
+              <Editor
+                bind:this={editor}
+                onsave={save}
+                ondirtychange={setDirty}
+                onsyncforward={syncForward}
+                {imageHooks}
+                {editingHooks}
+                {spellHooks}
+                onoutline={(items) => (outlineItems = items)}
+                oncursor={(line, col) => ((cursorLine = line), (cursorCol = col))}
+                onlivechange={(on) => (live = on)}
+                onedit={schedulePreview}
+                onopenlocation={async (loc) => {
+                  await openFile(loc.file)
+                  editor?.gotoLine(loc.line)
+                }}
+              />
+            </div>
+            {#if !active}<EmptyPlate logo={logoUrl(endpaper.palette, 'mid')} />{/if}
+            {#if note}<div class="note">{note}</div>{/if}
+          </section>
+          <div class="splitter v" hidden={!pdfOpen} role="separator" aria-orientation="vertical" onpointerdown={startDrag}></div>
+          <section class="pdf-pane" hidden={!pdfOpen}>
+            <PdfViewer bind:this={viewer} {pdf} version={pdfVersion} onsyncclick={syncInverse} onclose={() => (pdfOpen = false)} />
+          </section>
+        </div>
+        <div class="splitter h" hidden={!panelOpen} role="separator" aria-orientation="horizontal" onpointerdown={dragPanel}></div>
+        {#if panelOpen}
+          <ProblemsPanel {result} bind:tab={panelTab} onjump={jumpTo} onfix={applyFix} onclose={() => (panelOpen = false)} />
+        {/if}
+      </div>
     </div>
-  </div>
-{/if}
+
+    <StatusBar
+      vaultName={vault.name}
+      {swatch}
+      {branch}
+      section={active?.endsWith('.tex') ? section : null}
+      cursor={active ? { line: cursorLine, col: cursorCol } : null}
+      {live}
+      spelling={spellOn}
+      problems={problemCounts}
+      onendpaper={() => showView('appearance')}
+      onsection={() => {
+        view = 'files'
+        sideOpen = true
+        contentsSection = true
+      }}
+      onlive={() => editor?.toggleLiveMode()}
+      onspelling={() => setSpelling(!spellOn)}
+      onproblems={() => togglePanel('problems')}
+    />
+  {/if}
+</div>
 
 {#if tableEdit && editor}
   <TableEditor
@@ -977,91 +1293,39 @@
 {/if}
 
 <style>
-  .welcome {
+  .window {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
     height: 100%;
-    gap: 8px;
-  }
-  .welcome h1 {
-    margin: 0;
-    font-weight: 600;
-  }
-  .welcome button {
-    font-size: 15px;
-    padding: 8px 20px;
+    background: var(--paper);
   }
 
-  .app {
-    display: grid;
-    grid-template-columns: 240px 1fr;
-    grid-template-rows: auto 1fr;
-    height: 100%;
-  }
-  header {
-    grid-column: 1 / -1;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 6px 12px;
-    border-bottom: 1px solid var(--border);
-    background: var(--panel);
-  }
-  header .file {
-    color: var(--muted);
-  }
-  .spacer {
+  .starting {
     flex: 1;
   }
-  .status {
-    color: var(--muted);
-  }
-  .note {
-    color: #9a6700;
-    background: #fff8c5;
-    border-radius: 4px;
-    padding: 2px 8px;
-  }
-  .toggle {
-    min-width: 64px;
-  }
-  .toggle.on {
-    color: var(--accent);
-    border-color: var(--accent);
-    background: var(--accent-soft);
-  }
-  .status.ok {
-    color: var(--ok);
-  }
-  .status.err {
-    color: var(--err);
-    font-weight: 600;
-  }
-
-  aside {
-    border-right: 1px solid var(--border);
-    background: var(--panel);
+  .work {
+    flex: 1;
     min-height: 0;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  /* the sidebar: the flat side tone in the Plain look */
+  /* Each pane keeps its own column, so hiding the sidebar or PDF doesn't shift the others. */
+  .work > :global(.activity) {
+    grid-column: 1;
+  }
+  .sidebar {
+    grid-column: 2;
+    min-width: 0;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+    background: var(--side);
+    box-shadow: inset -1px 0 0 var(--line);
   }
-  .side-tabs {
-    display: flex;
-    border-bottom: 1px solid var(--border);
-  }
-  .side-tabs button {
-    flex: 1;
-    border: none;
-    border-radius: 0;
-    background: none;
-    padding: 5px 0;
-    color: var(--muted);
-  }
-  .side-tabs button.on {
-    color: var(--text);
-    box-shadow: inset 0 -2px 0 var(--accent);
+  .sidebar[hidden] {
+    display: none;
   }
   .side-body {
     flex: 1;
@@ -1072,73 +1336,197 @@
   .side-body[hidden] {
     display: none;
   }
-  .tree {
-    flex: 1 1 55%;
+  .sec {
+    display: flex;
+    flex-direction: column;
     min-height: 0;
   }
-  .outline {
-    flex: 1 1 45%;
+  .sec + .sec {
+    border-top: 1px solid var(--line);
+  }
+  .sec.grow.open {
+    flex: 1;
+  }
+  .sec.contents.open {
+    flex: 0 1 44%;
+  }
+  .sec-h {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 34px;
+    padding: 0 6px 0 10px;
+    border: 0;
+    border-radius: 0;
+    text-align: left;
+    font: 600 14px var(--f-page);
+    letter-spacing: 0.12em;
+    font-variant-caps: all-small-caps;
+    color: var(--ink-soft);
+  }
+  .sec-h:hover:not(:disabled) {
+    background: none;
+    color: var(--ink);
+  }
+  .sec-h :global(.ic) {
+    transition: transform 0.15s;
+  }
+  .sec.open > .sec-h :global(.ic) {
+    transform: rotate(90deg);
+  }
+  .sec-h .t {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .sec-b {
+    flex: 1;
     min-height: 0;
-    border-top: 1px solid var(--border);
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
   }
 
+  .splitter {
+    position: relative;
+    z-index: 5;
+  }
+  .splitter[hidden] {
+    display: none;
+  }
+  .splitter::before {
+    content: '';
+    position: absolute;
+    inset: 0 -4px;
+    cursor: col-resize;
+  }
+  .splitter.h::before {
+    inset: -4px 0;
+    cursor: row-resize;
+  }
+  .splitter:hover::before {
+    background: color-mix(in srgb, var(--detail) 35%, transparent);
+  }
+
+  .work > .splitter {
+    grid-column: 3;
+  }
+  .editors > .splitter {
+    grid-column: 2;
+  }
+  .pdf-pane {
+    grid-column: 3;
+  }
   .main {
+    grid-column: 4;
+    display: grid;
+    min-width: 0;
+    min-height: 0;
+  }
+  .editors {
     display: grid;
     min-height: 0;
     min-width: 0;
   }
   .editor-pane {
+    grid-column: 1;
+    background: var(--desk);
     display: flex;
     flex-direction: column;
     min-height: 0;
     min-width: 0;
     position: relative;
   }
+  /*
+   * The page column's geometry (docs/design/ENDLEAF.md, "The page column"),
+   * from the measure (--textw) and this container's width:
+   *   page  = textw / (1 − 7.5 % − 11 %), no wider than the desk allows
+   *   inner = 7.5 % of the page, 24–64 px; outer = 11 %, 30–104 px
+   * Bench adds the boards (and the edge stack on the right), and room for
+   * the index tabs on the left.
+   */
   .editor {
     flex: 1;
     min-height: 0;
+    position: relative;
+    overflow: hidden; /* the riffle's turning leaves stay inside */
+    container-type: inline-size;
+    --room-l: min(50px, 4cqw);
+    --room-r: min(50px, 4cqw);
+    --board-l: 0px;
+    --board-r: 0px;
+    --leaf-w: max(
+      260px,
+      min(calc(var(--textw, 606px) / 0.815), calc(100cqw - 14px - var(--room-l) - var(--room-r) - var(--board-l) - var(--board-r)))
+    );
+    /* where the book starts: its left board, then the page */
+    --book-x: max(var(--room-l), calc((100cqw - 14px - var(--leaf-w) - var(--board-l) - var(--board-r)) / 2));
+    --pad-l: clamp(24px, calc(var(--leaf-w) * 0.075), 64px);
+    --pad-r: clamp(30px, calc(var(--leaf-w) * 0.11), 104px);
+  }
+  :global(:root[data-look='bench']) .editor {
+    --board-l: 18px;
+    --board-r: 26px;
+  }
+  :global(:root[data-look='bench'][data-tabs='left']) .editor {
+    --room-l: 156px;
+  }
+  /* The open book: the page runs to the spine, its outer margin now on the left. */
+  :global(:root[data-look='bench']) .editors.spread .editor {
+    --room-r: 0px;
+    --board-r: 0px;
+    --leaf-w: max(260px, calc(100cqw - 14px - var(--room-l) - var(--board-l)));
+    --book-x: var(--room-l);
+    --pad-l: clamp(30px, calc(var(--leaf-w) * 0.11), 104px);
+    --pad-r: clamp(24px, calc(var(--leaf-w) * 0.075), 64px);
+  }
+  .pdf-pane {
+    min-width: 0;
+    min-height: 0;
+    box-shadow: inset 1px 0 0 var(--line);
+  }
+  .pdf-pane[hidden] {
+    display: block;
+    visibility: hidden;
+    width: 0;
+    overflow: hidden;
+  }
+  .note {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: calc(100% - 32px);
+    padding: 6px 14px;
+    border-radius: 4px;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--warn) 22%, var(--paper));
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+    z-index: 10;
+    pointer-events: none;
   }
   .banner {
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 6px 12px;
-    color: #0a3069;
-    background: #ddf4ff;
-    border-bottom: 1px solid #54aeff66;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--detail) 14%, var(--paper));
+    border-bottom: 1px solid var(--line);
   }
   .banner .where {
     display: block;
-    color: var(--muted);
+    color: var(--ink-soft);
     font-size: 12px;
   }
-  .hint {
-    position: absolute;
-    top: 40%;
-    width: 100%;
-    text-align: center;
-    color: var(--muted);
+  .spacer {
+    flex: 1;
   }
-  .status .preview {
-    font-size: 11px;
-    color: var(--muted);
-    border: 1px solid var(--border);
-    border-radius: 3px;
-    padding: 0 4px;
-    margin-right: 4px;
-  }
-  .status .warn {
-    color: #9a6700;
-  }
-  .splitter {
-    cursor: col-resize;
-    background: var(--border);
-  }
-  .splitter:hover {
-    background: var(--accent);
-  }
-  .pdf-pane {
-    min-width: 0;
-    min-height: 0;
+  .welcome-note {
+    position: fixed;
+    bottom: 24px;
   }
 </style>

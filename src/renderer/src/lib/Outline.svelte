@@ -24,7 +24,6 @@
 </script>
 
 <section>
-  <h2>Outline</h2>
   <nav bind:this={list}>
     {#each items as item, i (i)}
       <button
@@ -49,15 +48,6 @@
     min-height: 0;
     height: 100%;
   }
-  h2 {
-    margin: 0;
-    padding: 6px 10px 4px;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--muted);
-  }
   nav {
     overflow: auto;
     flex: 1;
@@ -78,21 +68,21 @@
     text-overflow: ellipsis;
   }
   .row:hover {
-    background: var(--accent-soft);
+    background: var(--sel);
   }
   .row.chapter,
   .row.section {
     font-weight: 600;
   }
   .row.question {
-    color: var(--muted);
+    color: var(--ink-soft);
   }
   .row.current {
-    background: var(--accent-soft);
-    color: var(--text);
+    background: var(--sel);
+    color: var(--ink);
   }
   .empty {
     margin: 4px 10px;
-    color: var(--muted);
+    color: var(--ink-soft);
   }
 </style>

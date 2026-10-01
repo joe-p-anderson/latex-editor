@@ -1,0 +1,150 @@
+/*
+ * The Bench look (docs/design/ENDLEAF.md, "Bench"). The same DOM as Plain;
+ * :root[data-look='bench'] (set by lib/appearance.ts) switches these on.
+ * The material tiles (--chrome-img, --grainimg, --deskimg, --leatherimg) are
+ * drawn by lib/materials.ts.
+ */
+
+/* ---- Chrome: the title bar, activity bar and status bar, bound in a material. */
+:root[data-look='bench'] :is(.titlebar, .activity, .statusbar) {
+  background: var(--chrome-img) 0 0 / 256px, var(--chrome);
+  text-shadow: 0 1px 0 var(--chl);
+}
+:root[data-look='bench'] .titlebar {
+  box-shadow:
+    inset 0 -1px 0 rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(0, 0, 0, 0.35);
+}
+:root[data-look='bench'] .statusbar {
+  box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.35);
+}
+:root[data-look='bench'] .activity {
+  padding-right: 0;
+  box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.4);
+}
+/* The marbled hinge is the Plain look's accent; Bench has its boards. */
+:root[data-look='bench'] .activity::after {
+  display: none;
+}
+:root[data-look='bench'] .activity .act {
+  width: 46px;
+  filter: drop-shadow(0 1px 0 var(--chl));
+}
+:root[data-look='bench'] .titlebar .tbtn {
+  border-color: rgba(0, 0, 0, 0.35);
+  background: var(--chrome-btn);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+:root[data-look='bench'] .titlebar .tbtn.on {
+  background: rgba(0, 0, 0, 0.18);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+/* On dark leather the running title is gilt. */
+:root[data-look='bench'][data-page='black'] .titlebar .running {
+  background-image: var(--foil);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.6));
+}
+
+/* ---- Sidebar and bottom panel: plain paper in the side tone, with the grain. */
+:root[data-look='bench'] :is(.sidebar, .panel) {
+  background-color: var(--side);
+  background-image: var(--grainimg);
+  background-size: 512px;
+  background-blend-mode: soft-light;
+}
+:root[data-look='bench'] .panel .body {
+  background: transparent;
+}
+
+/* ---- The desk: a tiled texture that scrolls with the document. */
+:root[data-look='bench'] .cm-editor {
+  background: var(--desk);
+}
+:root[data-look='bench'] .cm-scroller {
+  background: var(--deskimg) 0 0 / 256px repeat local, var(--desk);
+}
+
+/*
+ * ---- The book: one tall page. The gutters (inner margin) and content are
+ * the page; marbled boards show around it, with a 6 px stack of trimmed page
+ * edges on the right and bottom (the left edge is plain), and a soft contact
+ * shadow on the desk. Borders hold the boards and edges, so both halves of
+ * the page have the same top and bottom and their lines stay level.
+ */
+:root[data-look='bench'] .cm-gutters,
+:root[data-look='bench'] .cm-content {
+  border-style: solid;
+  border-color: transparent;
+  border-width: 18px 0 25px 0;
+  background-blend-mode: soft-light, normal, normal, normal;
+}
+:root[data-look='bench'] .cm-gutters {
+  border-left-width: 18px;
+  background:
+    var(--grainimg) 0 0 / 512px padding-box,
+    linear-gradient(var(--paper), var(--paper)) padding-box,
+    linear-gradient(transparent, rgba(0, 0, 0, 0.14)) left 18px bottom 20px / 100% 5px no-repeat border-box,
+    var(--marbleimg) 0 0 / 1500px auto border-box;
+  background-color: transparent;
+  box-shadow: -2px 14px 24px -14px rgba(0, 0, 0, 0.55);
+}
+:root[data-look='bench'] .cm-content {
+  border-right-width: 26px;
+  background:
+    var(--grainimg) 0 0 / 512px padding-box,
+    linear-gradient(var(--paper), var(--paper)) padding-box,
+    repeating-linear-gradient(90deg, var(--paper) 0 1.2px, color-mix(in srgb, var(--paper) 78%, #000) 1.2px 1.9px) right 20px top 21px / 6px calc(100% - 41px) no-repeat border-box,
+    repeating-linear-gradient(180deg, var(--paper) 0 1.2px, color-mix(in srgb, var(--paper) 78%, #000) 1.2px 1.9px) left bottom 20px / calc(100% - 23px) 5px no-repeat border-box,
+    var(--marbleimg) 0 0 / 1500px auto border-box;
+  box-shadow:
+    4px 14px 24px -12px rgba(0, 0, 0, 0.55),
+    0 2px 5px rgba(0, 0, 0, 0.25);
+}
+/* The open book: the page runs into the spine, with no board or edge on that side. */
+:root[data-look='bench'] .editors.spread .cm-scroller {
+  overflow-x: hidden;
+}
+:root[data-look='bench'] .editors.spread .cm-content {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  border-right-width: 0;
+  background:
+    var(--grainimg) 0 0 / 512px padding-box,
+    linear-gradient(var(--paper), var(--paper)) padding-box,
+    linear-gradient(270deg, rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0)) right top / 34px 100% no-repeat padding-box,
+    var(--marbleimg) 0 0 / 1500px auto border-box;
+  background-blend-mode: soft-light, normal, normal, normal;
+}
+
+/* ---- The PDF, as the open book's back endpaper. */
+:root[data-look='bench'] .editors.spread .pdf-pane {
+  box-shadow:
+    inset 22px 0 26px -16px rgba(0, 0, 0, 0.5),
+    inset 1px 0 0 rgba(0, 0, 0, 0.35);
+}
+:root[data-look='bench'] .pdf-pane .viewer {
+  background: var(--marbleimg) 0 0 / 1500px auto, var(--desk);
+}
+/* The controls are a small leather label pinned at the top of the endpaper. */
+:root[data-look='bench'] .pdf-pane .bar {
+  background: var(--leatherimg) 0 0 / 256px, #3e2416;
+  color: #e9d6ae;
+  text-shadow: 0 1px 0 #000;
+  border-radius: 4px;
+}
+:root[data-look='bench'] .pdf-pane .bar button {
+  color: inherit;
+  border-color: rgba(0, 0, 0, 0.45);
+  background: rgba(255, 240, 215, 0.08);
+}
+
+/* ---- Plain-only accents. */
+:root[data-look='bench'] .note {
+  background-image: var(--grainimg);
+  background-blend-mode: soft-light;
+}

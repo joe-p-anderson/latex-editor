@@ -188,19 +188,19 @@
     border: none;
     background: none;
     padding: 0;
-    color: var(--muted);
+    color: var(--ink-soft);
   }
   .field {
     flex: 1;
     display: flex;
     align-items: center;
-    border: 1px solid var(--border);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    background: var(--bg);
+    background: var(--paper);
     min-width: 0;
   }
   .field:focus-within {
-    border-color: var(--accent);
+    border-color: var(--detail);
   }
   .field input {
     flex: 1;
@@ -222,17 +222,17 @@
     padding: 0 4px;
     font-size: 11px;
     line-height: 18px;
-    color: var(--muted);
+    color: var(--ink-soft);
     font-family: Consolas, monospace;
   }
   .opts button.on {
-    color: var(--accent);
-    border-color: var(--accent);
-    background: var(--accent-soft);
+    color: var(--detail);
+    border-color: var(--detail);
+    background: var(--sel);
   }
   .summary {
     padding: 2px 10px 6px;
-    color: var(--muted);
+    color: var(--ink-soft);
     font-size: 12px;
     min-height: 20px;
   }
@@ -252,7 +252,7 @@
   }
   .file:hover,
   .match:hover {
-    background: var(--accent-soft);
+    background: var(--sel);
   }
   .file-row,
   .match-row {
@@ -273,23 +273,23 @@
     background: none;
   }
   .tri {
-    color: var(--muted);
+    color: var(--ink-soft);
     width: 10px;
   }
   .name {
     font-weight: 600;
   }
   .dir {
-    color: var(--muted);
+    color: var(--ink-soft);
     font-size: 11px;
     overflow: hidden;
     text-overflow: ellipsis;
     flex: 1;
   }
   .count {
-    color: var(--muted);
+    color: var(--ink-soft);
     font-size: 11px;
-    background: var(--border);
+    background: var(--line);
     border-radius: 8px;
     padding: 0 6px;
   }
@@ -299,7 +299,7 @@
     font-size: 12px;
   }
   .ln {
-    color: var(--muted);
+    color: var(--ink-soft);
     min-width: 2.5em;
     text-align: right;
   }
@@ -308,16 +308,16 @@
     text-overflow: ellipsis;
   }
   mark {
-    background: #fff3a3;
+    background: var(--hl);
     color: inherit;
     border-radius: 2px;
   }
   mark.strike {
-    background: #ffd7d5;
+    background: var(--del);
     text-decoration: line-through;
   }
   ins {
-    background: #ccf2d1;
+    background: var(--ins);
     text-decoration: none;
     border-radius: 2px;
   }

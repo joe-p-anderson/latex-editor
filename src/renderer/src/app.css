@@ -1,17 +1,73 @@
+/*
+ * The endleaf token set (docs/design/ENDLEAF.md, "Colour"). lib/appearance.ts
+ * sets every token at runtime from the palette, page and look; the values
+ * here are the defaults (Plain, Bookbinder's Blue, black page), so the first
+ * paint matches. Components use the shared tokens; the p-* tokens are the
+ * Plain look's own.
+ */
 :root {
-  --bg: #ffffff;
-  --panel: #f5f6f8;
-  --border: #d9dce1;
-  --text: #1f2328;
-  --muted: #6a737d;
-  --accent: #2f6fdb;
-  --accent-soft: #e3ecfb;
-  --ok: #1a7f37;
-  --err: #cf222e;
-  --pdf-bg: #525659;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  /* the page and its ink */
+  --paper: #1F2539;
+  --ink: #EBE2D3;
+  --ink-soft: #9D9A98;
+  --pencil: #64656D;
+  --detail: #D8CBA8;
+  --srcbg: #2C3141;
+  --math: #A9ADB3;
+  /* surfaces around it */
+  --side: #12182B;
+  --tabpaper: #111628;
+  --line: #2C303F;
+  --sel: #3A3C44;
+  --bar: #0F1424;
+  --desk: #141B30;
+  /* the chrome: title bar, activity bar, status bar */
+  --chrome: #0F1424;
+  --chrome-ink: #EBE2D3;
+  --chrome-ink-soft: #9D9A98;
+  --chrome-active: #EBE2D3;
+  --chrome-btn: #3A3C44;
+  --chl: transparent;
+  /* the palette's foil and endpaper */
+  --gilt: #F4BC86;
+  --foil: linear-gradient(115deg, #6E2E10 0%, #C2672F 18%, #F4BC86 32%, #B8592A 45%, #E79A5C 62%, #8E3F17 80%, #D07A40 100%);
+  --detail-chrome: #2F4E7E;
+  --marbleimg: linear-gradient(115deg, #1A2440 0%, #24345A 20%, #141B30 40%, #3E5680 60%, #1E2A4A 80%, #D8CBA8 100%);
+  --pdf: #FFFFFF;
+  /* the Plain look */
+  --p-bar: #0F1424;
+  --p-chrome: #111628;
+  --p-side: #12182B;
+  --p-desk: #141B30;
+  --p-page: #1F2539;
+  --p-text: #EBE2D3;
+  --p-muted: #9D9A98;
+  --p-faint: #64656D;
+  --p-accent: #D8CBA8;
+  --p-line: #2C303F;
+  --p-sel: #3A3C44;
+  --p-srcbg: #2C3141;
+  --p-math: #A9ADB3;
+  /* status */
+  --ok: #7DBE84;
+  --err: #F08A7E;
+  --warn: #E0B65A;
+  /* search highlights, legible on either page */
+  --hl: color-mix(in srgb, var(--detail) 30%, transparent);
+  --del: rgba(230, 70, 60, 0.28);
+  --ins: rgba(60, 180, 90, 0.28);
+
+  --f-ui: 'Source Sans 3 Variable', system-ui, 'Segoe UI', sans-serif;
+  --f-page: 'Crimson Pro Variable', Georgia, 'Times New Roman', serif;
+  --f-mono: Consolas, 'Cascadia Mono', monospace;
+  --page-size: 19px;
+  /* the text column: line length × the face's average character width */
+  --textw: 606px;
+
+  color-scheme: dark;
+  font-family: var(--f-ui);
   font-size: 13px;
-  color: var(--text);
+  color: var(--ink);
 }
 
 * {
@@ -23,22 +79,35 @@ body,
 #app {
   height: 100%;
   margin: 0;
-  background: var(--bg);
+  background: var(--paper);
   overflow: hidden;
+}
+
+:focus-visible {
+  outline: 2px solid var(--detail);
+  outline-offset: 1px;
 }
 
 button {
   font: inherit;
-  border: 1px solid var(--border);
-  background: var(--bg);
+  color: inherit;
+  border: 1px solid var(--line);
+  background: transparent;
   border-radius: 4px;
   padding: 3px 10px;
   cursor: pointer;
 }
 button:hover:not(:disabled) {
-  background: var(--accent-soft);
+  background: var(--sel);
 }
 button:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+input,
+select,
+textarea {
+  color: inherit;
+  background: var(--paper);
 }

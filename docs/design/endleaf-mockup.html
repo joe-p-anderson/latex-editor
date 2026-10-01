@@ -1,0 +1,2266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+<title>Endleaf Workbench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Crimson+Pro:ital,wght@0,400..700;1,400..600&family=EB+Garamond:ital,wght@0,400..700;1,400..600&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: a workbench. Bound chrome around a long wooden desk; one tall book lies on it and scrolls as far as the document goes.
+   The palette chooses the marbling, gilt, logo and the paper stock; everything else is fixed material. */
+:root{
+  color-scheme:light;
+  --paper:#F5EDDD; --ink:#2B2219; --ink-soft:#6E6152; --pencil:#9A8E7E; --detail:#9A3F22; --srcbg:rgba(120,85,35,.07); --math:#3D4F6E;
+  --side:#EFE8DA; --tabpaper:#E6DDCB; --pdf:#FFFFFF;
+  --gilt:#D9B45A;
+  --foil:linear-gradient(115deg,#7A5516 0%,#D9B45A 20%,#F7E3A1 34%,#B8913A 50%,#E8C874 68%,#8A6420 85%,#D2AA50 100%);
+  --grainimg:none; --woodimg:none; --marbleimg:none; --saddleimg:none; --linenimg:none; --leatherimg:none;
+  --chrome-img:var(--saddleimg); --chrome-base:#A8703F; --cink:#2E1B0E; --cink-soft:#4A301C; --cactive:#120903; --chl:rgba(255,232,196,.35); --cbtn:rgba(255,240,215,.16);
+  --f-ui:"Source Sans 3",system-ui,"Segoe UI",sans-serif;
+  --f-page:"Crimson Pro",Georgia,"Times New Roman",serif;
+  --f-display:"EB Garamond",Garamond,Georgia,serif;
+  --f-type:"Courier Prime","Courier New",Courier,monospace;
+  --page-size:19px; --textw:660px; --lightgrad:none;
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:#1A130E;color:var(--ink);font:13px/1.4 var(--f-ui);display:flex;flex-direction:column;overflow:hidden}
+body.dragging{user-select:none}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--detail);outline-offset:1px}
+.ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.lg{display:block}.lg svg{width:100%;height:100%;display:block}
+.paper{background-color:var(--paper);background-image:var(--grainimg);background-size:512px;background-blend-mode:soft-light}
+
+/* ---------- mockup controls ---------- */
+.mockbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:7px 16px;background:#16110D;border-bottom:1px solid #000;font-size:12px;color:#A99478}
+.mockbar .tag{font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:10px;color:#E8D6B4;padding:2px 7px;border:1px dashed #6E5A44;border-radius:4px}
+.mk{display:flex;align-items:center;gap:6px}
+.mk select{font:inherit;color:#EADBC0;background:#241B14;border:1px solid #4A3A2C;border-radius:5px;padding:2px 4px}
+.mk input[type=range]{accent-color:#D9B45A;width:100px}
+.mk output{font-variant-numeric:tabular-nums;color:#EADBC0;min-width:14ch}
+.seg{display:inline-flex;border:1px solid #4A3A2C;border-radius:6px;overflow:hidden;background:#201811}
+.seg button{border:0;background:none;padding:3px 8px;cursor:pointer;color:#A99478;font-size:12px}
+.seg button+button{border-left:1px solid #4A3A2C}
+.seg button.on{background:#3A2C20;color:#F2E2C2}
+.mkbtn{border:1px solid #4A3A2C;background:#241B14;color:#EADBC0;border-radius:5px;padding:2px 8px;cursor:pointer}
+.mkstatus{color:#D9B45A;font-style:italic}
+
+/* ---------- chrome materials ---------- */
+.window[data-chrome=saddle]{--chrome-img:var(--saddleimg);--chrome-base:#A8703F;--cink:#2A170A;--cink-soft:#4A2E18;--cactive:#0F0703;--chl:rgba(255,232,196,.38);--cbtn:rgba(255,240,215,.16)}
+.window[data-chrome=linen]{--chrome-img:var(--linenimg);--chrome-base:#CDC6B4;--cink:#26231F;--cink-soft:#4F4A42;--cactive:var(--detail-chrome);--chl:rgba(255,255,255,.5);--cbtn:rgba(255,255,255,.3)}
+.window[data-chrome=dark]{--chrome-img:var(--leatherimg);--chrome-base:#4A2A1A;--cink:#F0DDB8;--cink-soft:#D2BB92;--cactive:var(--gilt);--chl:rgba(0,0,0,.65);--cbtn:rgba(0,0,0,.2)}
+.chrome{background:var(--chrome-img) 0 0/256px,var(--chrome-base);color:var(--cink)}
+
+/* ---------- window ---------- */
+.window{flex:1;min-height:0;display:grid;grid-template-rows:36px minmax(0,1fr) 24px;position:relative;background:#1A130E}
+.titlebar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;position:relative;z-index:8;box-shadow:inset 0 -1px 0 rgba(0,0,0,.45),0 1px 0 rgba(0,0,0,.35)}
+.tb-left{display:flex;align-items:center;gap:2px;padding-left:12px;min-width:0;overflow:hidden}
+.tb-logo{width:20px;height:20px;margin-right:8px;flex:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.4))}
+.tb-logo svg{width:100%;height:100%;display:block}
+.menus{display:flex}
+.menus button{border:0;background:none;padding:4px 8px;border-radius:3px;color:var(--cink);cursor:default;text-shadow:0 1px 0 var(--chl);font-weight:500}
+.menus button:hover{background:var(--cbtn)}
+.running{border:0;background-color:transparent;cursor:pointer;padding:2px 16px;border-radius:3px;font:600 16px var(--f-display);white-space:nowrap;max-width:44vw;overflow:hidden;text-overflow:ellipsis;color:var(--cink);text-shadow:0 1px 0 var(--chl)}
+.running:hover{background-color:var(--cbtn)}
+.running .sc{font-variant-caps:all-small-caps;letter-spacing:.1em}
+.window[data-chrome=dark] .running{background-image:var(--foil);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;filter:drop-shadow(0 1px 0 rgba(0,0,0,.6))}
+.window[data-chrome=dark] .running:hover{background-color:transparent;filter:brightness(1.2) drop-shadow(0 1px 0 rgba(0,0,0,.6))}
+.tb-right{display:flex;justify-content:flex-end;align-items:center;height:100%;min-width:0;gap:6px}
+.tbtn{height:24px;min-width:26px;padding:0 8px;border:1px solid rgba(0,0,0,.35);border-radius:4px;background:var(--cbtn);color:var(--cink);display:inline-grid;place-items:center;cursor:pointer;font-size:12.5px;font-weight:600;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12);text-shadow:0 1px 0 var(--chl)}
+.tbtn:hover{filter:brightness(1.08)}
+.tbtn.on{background:rgba(0,0,0,.22);box-shadow:inset 0 1px 3px rgba(0,0,0,.4);color:var(--cactive)}
+.window[data-chrome=saddle] .tbtn.on,.window[data-chrome=linen] .tbtn.on{background:rgba(0,0,0,.14)}
+.tbtn .ic{width:16px;height:16px;stroke-width:1.8}
+.tseg{display:inline-flex}
+.tseg .tbtn{border-radius:0}.tseg .tbtn:first-child{border-radius:4px 0 0 4px}.tseg .tbtn:last-child{border-radius:0 4px 4px 0;border-left:0}
+.tseg .tbtn:disabled{opacity:.45;cursor:default}
+.build-note{font-size:12px;color:var(--cink-soft);margin:0 4px 0 6px;white-space:nowrap;font-weight:500;text-shadow:0 1px 0 var(--chl)}
+.ribbon{flex:none;align-self:flex-start;width:20px;height:50px;margin:0 16px 0 2px;border:0;padding:0 0 13px;cursor:pointer;color:rgba(255,248,236,.95);
+  background:linear-gradient(90deg,color-mix(in srgb,var(--detail-chrome) 70%,#000) 0,var(--detail-chrome) 22%,color-mix(in srgb,var(--detail-chrome) 72%,#fff) 45%,var(--detail-chrome) 62%,color-mix(in srgb,var(--detail-chrome) 65%,#000) 100%);
+  clip-path:polygon(0 0,100% 0,100% 100%,50% calc(100% - 8px),0 100%);display:flex;align-items:flex-end;justify-content:center;filter:drop-shadow(0 2px 2px rgba(0,0,0,.4))}
+.ribbon .ic{width:12px;height:12px;stroke-width:2.6}
+.ribbon.err{--detail-chrome:#A32A1E}
+.ribbon.busy{height:42px;animation:sway 1.2s ease-in-out infinite;transform-origin:top center}
+@keyframes sway{50%{transform:rotate(3deg)}}
+.winctl{display:flex;height:100%}
+.winctl button{width:44px;border:0;background:none;display:grid;place-items:center;color:var(--cink-soft);cursor:default}
+.winctl button:hover{background:var(--cbtn)}
+.winctl button.close:hover{background:#A3261A;color:#fff}
+.winctl .ic{width:13px;height:13px;stroke-width:1.3}
+
+.work{display:grid;grid-template-columns:52px var(--sw,272px) 0 minmax(0,1fr);min-height:0;position:relative}
+.activity{grid-column:1;grid-row:1;display:flex;flex-direction:column;align-items:center;padding:6px 0;position:relative;z-index:4;box-shadow:inset -1px 0 0 rgba(0,0,0,.4)}
+.sidebar{grid-column:2;grid-row:1}#split-side{grid-column:3;grid-row:1}.main{grid-column:4;grid-row:1}
+.act{width:46px;height:44px;display:grid;place-items:center;border:0;background:none;position:relative;cursor:pointer;color:var(--cink-soft);filter:drop-shadow(0 1px 0 var(--chl))}
+.act .ic{width:23px;height:23px;stroke-width:1.9}
+.act:hover{color:var(--cink)}
+.act.on{color:var(--cactive)}
+.act.on::before{content:"";position:absolute;left:1px;top:9px;bottom:9px;width:3px;border-radius:2px;background:var(--foil)}
+.act-sep{width:26px;height:0;border-top:1px solid rgba(0,0,0,.3);border-bottom:1px solid var(--chl);margin:8px 0}
+.act-label{font:700 8.5px var(--f-ui);letter-spacing:.14em;text-transform:uppercase;color:var(--cink-soft);margin-bottom:2px;text-shadow:0 1px 0 var(--chl)}
+.act-spacer{flex:1}
+.act .swatch{width:24px;height:24px;border-radius:5px;overflow:hidden;display:block;box-shadow:0 1px 2px rgba(0,0,0,.45)}
+
+/* sidebar: plain paper */
+.sidebar{min-width:0;display:flex;flex-direction:column;overflow:hidden;background-color:var(--side);background-image:var(--grainimg);background-size:512px;background-blend-mode:soft-light;color:var(--ink);box-shadow:inset -1px 0 0 rgba(0,0,0,.18)}
+.sec{display:flex;flex-direction:column;min-height:0}
+.sec+.sec{border-top:1px solid color-mix(in srgb,var(--ink) 14%,transparent)}
+.sec.grow{flex:1}
+.sec-h{flex:none;display:flex;align-items:center;gap:4px;height:34px;padding:0 6px 0 12px;font:600 13px var(--f-display);letter-spacing:.12em;font-variant-caps:all-small-caps;color:var(--ink-soft);user-select:none}
+.sec-h .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.sec-h.fold{cursor:pointer}
+.sec-h.fold .ic{width:12px;height:12px;transition:transform .15s}
+.sec.open>.sec-h.fold .ic{transform:rotate(90deg)}
+.sec:not(.open)>.sec-b{display:none}
+.sec:not(.open).grow{flex:0}
+.sec-b{overflow:auto;min-height:0;flex:1;padding-bottom:8px;scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--ink) 25%,transparent) transparent}
+.mini{width:22px;height:22px;border:0;background:none;border-radius:3px;display:grid;place-items:center;color:var(--ink-soft);cursor:pointer}
+.mini:hover{background:color-mix(in srgb,var(--ink) 8%,transparent);color:var(--ink)}
+.mini .ic{width:14px;height:14px}
+.row{display:flex;align-items:center;gap:7px;height:25px;padding-right:10px;cursor:pointer;white-space:nowrap;border:0;background:none;width:100%;text-align:left;font:400 13.5px var(--f-ui);color:var(--ink)}
+.row:hover{background:color-mix(in srgb,var(--ink) 6%,transparent)}
+.row.on{background:color-mix(in srgb,var(--detail) 15%,transparent);font-weight:600}
+.row .ic{width:12px;height:12px;color:var(--ink-soft)}
+.row .nm{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.row .dot{width:6px;height:6px;border-radius:50%;background:var(--detail);margin-left:auto}
+.ft{width:14px;text-align:center;font:600 12px/1 var(--f-page);color:var(--ink-soft);flex:none}
+.ft.tex{color:var(--detail)}
+.out{padding-left:14px}.out .n{color:var(--ink-soft);width:16px;flex:none;font-variant-numeric:tabular-nums}.out.sub{padding-left:30px;color:var(--ink-soft);font-size:13px}
+.hint{font:italic 13px/1.45 var(--f-page);color:var(--ink-soft);padding:4px 12px 8px;margin:0}
+.field{margin:4px 12px 6px;display:flex;align-items:center;border:1px solid color-mix(in srgb,var(--ink) 22%,transparent);border-radius:4px;background:color-mix(in srgb,var(--paper) 70%,#fff)}
+.field input{flex:1;min-width:0;border:0;background:none;padding:5px 8px;font:13.5px var(--f-ui);color:var(--ink);outline:none}
+.field:focus-within{border-color:var(--detail)}
+.opt{border:0;background:none;border-radius:3px;padding:1px 4px;margin-right:2px;font:700 11px/1.4 var(--f-type);color:var(--pencil);cursor:pointer}
+.opt.on{color:var(--detail);background:color-mix(in srgb,var(--detail) 12%,transparent)}
+.res-file{display:flex;align-items:center;gap:6px;height:24px;padding:0 10px;font-weight:600;font-size:13.5px}
+.res-file .c{margin-left:auto;font-weight:500;font-size:12px;color:var(--ink-soft)}
+.res{display:block;width:100%;border:0;background:none;text-align:left;padding:0 10px 0 30px;height:23px;font:13px/23px var(--f-ui);color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.res:hover{color:var(--ink);background:color-mix(in srgb,var(--ink) 6%,transparent)}
+.res mark{background:color-mix(in srgb,var(--detail) 25%,transparent);color:var(--ink)}
+.pad{margin:6px 12px;position:relative}
+.pad canvas{width:100%;height:124px;display:block;border-radius:4px;touch-action:none;cursor:crosshair;background:color-mix(in srgb,var(--paper) 60%,#fff);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ink) 22%,transparent)}
+.pad .ph{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:0 16px;font:italic 13.5px var(--f-page);color:var(--pencil);pointer-events:none}
+.guesses{display:flex;gap:6px;margin:0 12px 6px;flex-wrap:wrap;align-items:center}
+.symgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:5px;padding:6px 12px 12px}
+.sym{height:34px;border:1px solid color-mix(in srgb,var(--ink) 16%,transparent);border-radius:4px;background:color-mix(in srgb,var(--paper) 60%,#fff);font:20px/1 "STIX Two Math","Cambria Math",var(--f-page);color:var(--ink);cursor:pointer}
+.sym:hover{color:var(--detail);border-color:var(--detail)}
+.bibcard{display:block;width:calc(100% - 24px);margin:6px 12px;padding:7px 10px;border:1px solid color-mix(in srgb,var(--ink) 14%,transparent);border-radius:4px;background:color-mix(in srgb,var(--paper) 60%,#fff);text-align:left;font:13px/1.4 var(--f-page);color:var(--ink);cursor:pointer}
+.bibcard:hover{border-color:var(--detail)}
+.bibcard b{display:block;font:600 12px var(--f-type);color:var(--detail)}
+.ctxnote{margin:2px 12px 8px;font:italic 13.5px/1.4 var(--f-page);color:var(--ink-soft)}
+
+.splitter{position:relative;z-index:5}
+.splitter::before{content:"";position:absolute;inset:0 -4px;cursor:col-resize}
+.splitter.h::before{inset:-4px 0;cursor:row-resize}
+.main{display:grid;grid-template-rows:minmax(0,1fr) 0 var(--ph,150px);min-width:0;min-height:0}
+#split-panel{grid-row:2}.panel{grid-row:3}
+
+/* ---------- the desk: a long table you scroll along ---------- */
+.deskwrap{grid-row:1;position:relative;min-height:0;min-width:0;overflow:hidden}
+.desk{position:absolute;inset:0;overflow:auto;background:var(--woodimg) 0 0/var(--desksize,256px) repeat,#5A564F;background-attachment:local;scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.45) transparent}
+.light{position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;z-index:20;background:var(--lightgrad);transition:background .5s}
+.desk-in{padding:44px 0 90px;min-height:100%;box-sizing:border-box}
+.desk-in.toptabs{padding-top:14px}
+.book{position:relative;width:var(--bookw,760px)}
+.board{position:absolute;inset:-18px -20px -20px -18px;border-radius:3px 5px 5px 3px;background:var(--marbleimg) 0 0/1500px auto repeat,#6A3A26;
+  box-shadow:0 0 0 1px rgba(0,0,0,.35),0 14px 28px -14px rgba(0,0,0,.55),0 2px 5px rgba(0,0,0,.25)}
+.board::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 1px 0 rgba(255,255,255,.22),inset 0 -2px 3px rgba(0,0,0,.25),inset 1px 0 0 rgba(255,255,255,.1)}
+.block{position:relative;z-index:2;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;padding:0 6px 5px 0}
+.block.spread{padding-left:6px}
+.edge{position:absolute;pointer-events:none}
+.edge.r{top:0;right:0;bottom:0;width:6px;clip-path:polygon(0 0,100% 3px,100% 100%,0 calc(100% - 5px));
+  background:linear-gradient(90deg,transparent,rgba(0,0,0,.12)),repeating-linear-gradient(90deg,var(--paper) 0 1.2px,color-mix(in srgb,var(--paper) 78%,#000) 1.2px 1.9px)}
+.edge.b{left:0;right:0;bottom:0;height:5px;clip-path:polygon(0 0,calc(100% - 6px) 0,100% 100%,3px 100%);
+  background:linear-gradient(transparent,rgba(0,0,0,.14)),repeating-linear-gradient(180deg,var(--paper) 0 1.2px,color-mix(in srgb,var(--paper) 78%,#000) 1.2px 1.9px)}
+.edge.l{top:0;left:0;bottom:0;width:6px;clip-path:polygon(0 3px,100% 0,100% calc(100% - 5px),0 100%);
+  background:linear-gradient(270deg,transparent,rgba(0,0,0,.12)),repeating-linear-gradient(90deg,color-mix(in srgb,var(--paper) 78%,#000) 0 .7px,var(--paper) .7px 1.9px)}
+.block.spread .edge.b{clip-path:polygon(6px 0,calc(100% - 6px) 0,100% 100%,0 100%)}
+.leaves{position:relative;display:flex;align-items:stretch}
+.leaf{position:relative;min-width:0;padding:60px var(--pad-r,90px) 110px var(--pad-l,56px);box-sizing:border-box}
+.leaf.pdfleaf{background:var(--pdf);color:#151311}
+.leaf::after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 1px rgba(0,0,0,.25)}
+.block.spread .leaf.verso::before,.block.spread .leaf.recto::before{content:"";position:absolute;top:0;bottom:0;width:34px;pointer-events:none;z-index:1}
+.block.spread .leaf.verso::before{right:0;background:linear-gradient(270deg,rgba(0,0,0,.14),rgba(0,0,0,0))}
+.block.spread .leaf.recto::before{left:0;background:linear-gradient(90deg,rgba(0,0,0,.12),rgba(0,0,0,0))}
+.gutter{width:0;position:relative;z-index:5}
+.gutter::before{content:"";position:absolute;top:0;bottom:0;left:-5px;width:10px;cursor:col-resize}
+
+/* printed text */
+.col{max-width:var(--textw);font:400 var(--page-size)/1.56 var(--f-page);color:var(--ink);hyphens:auto;-webkit-hyphens:auto;font-kerning:normal;position:relative}
+.verso .col{margin-left:auto}
+.col.guides::after{content:"";position:absolute;top:-30px;bottom:0;left:0;right:0;border-inline:1px dashed color-mix(in srgb,var(--detail) 60%,transparent);pointer-events:none}
+.guide-label{position:absolute;top:-38px;left:0;right:0;text-align:center;font:600 11px var(--f-ui);color:var(--detail);letter-spacing:.03em}
+.blk{position:relative;margin:0 0 .8em;cursor:text;border-radius:2px}
+.blk::before{content:"";position:absolute;left:-16px;top:.3em;bottom:.3em;width:2px;background:color-mix(in srgb,var(--ink) 30%,transparent);opacity:0;transition:opacity .15s}
+.blk:hover::before{opacity:1}
+.blk.flash{animation:flash 1.3s}
+@keyframes flash{0%,40%{background:color-mix(in srgb,var(--detail) 20%,transparent)}100%{background:transparent}}
+.blk.src{margin-left:-.7em;margin-right:calc(-1 * clamp(.7em,var(--pad-r,90px) - 36px,110px));padding:.4em .7em;background:var(--srcbg);box-shadow:inset 2px 0 0 var(--detail);
+  font:400 calc(var(--page-size)*.74)/1.62 var(--f-type);white-space:pre-wrap;word-break:break-word;hyphens:none}
+.blk.src::before{display:none}
+.line{position:relative;min-height:1.62em}
+.ln{position:absolute;right:calc(100% + .7em + 12px);top:0;font:italic 12px var(--f-page);line-height:inherit;color:var(--pencil);white-space:nowrap;word-break:normal;user-select:none}
+.t-cmd{color:var(--detail)}.t-math{color:var(--math)}.t-com{color:var(--pencil);font-style:italic}.t-br{color:var(--ink-soft)}
+.caret{display:inline-block;width:1.6px;height:1.15em;background:var(--ink);vertical-align:-.2em;margin:0 -.8px;animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+:is(.col,.pdfdoc) .course{margin:0;font-variant-caps:all-small-caps;letter-spacing:.12em;opacity:.72}
+:is(.col,.pdfdoc) h1{font-size:1.75em;line-height:1.15;font-weight:600;margin:.1em 0 .15em;text-wrap:balance}
+:is(.col,.pdfdoc) .due{margin:0;font-style:italic;opacity:.72}
+:is(.col,.pdfdoc) h2{font-size:1.22em;font-weight:650;margin:1.4em 0 .15em;line-height:1.3;text-wrap:balance}
+:is(.col,.pdfdoc) h2 .no{display:inline-block;min-width:1.6em}
+:is(.col,.pdfdoc) p{margin:0;text-align:justify}
+:is(.col,.pdfdoc) p.tcap{text-align:left}
+:is(.col,.pdfdoc) .v{font-style:italic}
+.col a.ref{color:var(--detail);text-decoration:none;border-bottom:1px dotted currentColor;cursor:pointer}
+.pdfdoc a.ref{color:inherit;text-decoration:none}
+:is(.col,.pdfdoc) .undef{font-weight:700}
+.col .undef{color:#C0392B}
+.col .star{color:var(--detail)}
+math{font-family:"STIX Two Math","Cambria Math","Latin Modern Math",math;font-size:1.02em}
+.eq{display:flex;align-items:center;gap:1em;margin:.8em 0}
+.eq math{flex:1;font-size:1.1em}
+ol.parts{list-style:none;padding:0 0 0 2.1em;margin:.5em 0 0;counter-reset:p}
+ol.parts li{position:relative;margin-bottom:.35em;counter-increment:p}
+ol.parts li::before{content:"(" counter(p,lower-alpha) ")";position:absolute;left:-2.1em}
+figure{margin:1.1em 0;text-align:center}
+figure svg{width:min(100%,380px);height:auto;display:block;margin:0 auto .5em;overflow:visible}
+figcaption,.tcap{font-size:.86em;line-height:1.45;text-align:left;max-width:34em;margin:0 auto}
+figcaption b,.tcap b{font-weight:650}
+.col .wide{margin-right:calc(-1 * clamp(0px,var(--pad-r,90px) - 30px,70px))}
+.tablewrap{overflow-x:auto}
+table.bk{border-collapse:collapse;width:100%;font-variant-numeric:lining-nums tabular-nums;border-top:1.4px solid currentColor;border-bottom:1.4px solid currentColor;margin:.2em 0 .6em}
+table.bk th{font-weight:600;border-bottom:.8px solid currentColor;padding:.3em .8em;text-align:center;white-space:nowrap}
+table.bk td{padding:.25em .8em;text-align:center}
+table.bk th:first-child,table.bk td:first-child{text-align:left}
+table.bk td.blank{opacity:.5}
+.pdfdoc{width:560px;font:400 12px/1.45 var(--f-page);color:#151311}
+.pdfdoc .blk{cursor:default;margin-bottom:.75em}.pdfdoc .blk::before{display:none}
+.pdfbreak{margin:44px -200px 40px;height:14px;background:linear-gradient(rgba(0,0,0,.06),rgba(0,0,0,0) 40%),#F1F1EF;box-shadow:inset 0 1px 0 rgba(0,0,0,.08),inset 0 -1px 0 rgba(0,0,0,.08)}
+
+/* ---------- file tabs, four ways ---------- */
+/* 1. fore-edge index tabs */
+.rail{position:absolute;top:0;bottom:0;left:calc(100% - 7px);width:130px;z-index:1;pointer-events:none}
+.ftabs{position:sticky;top:22px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;padding:36px 0 20px}
+.ftab{pointer-events:auto;position:relative;display:flex;align-items:center;gap:6px;height:30px;max-width:124px;padding:0 9px 0 16px;border:0;border-radius:0 7px 7px 0;
+  background-color:var(--tabpaper);background-image:var(--grainimg);background-size:512px;background-blend-mode:soft-light;color:var(--ink);font:500 12.5px var(--f-ui);
+  box-shadow:1px 1px 0 rgba(0,0,0,.12),2px 2px 5px rgba(0,0,0,.28);cursor:pointer;transform:translateX(-8px);transition:transform .14s}
+.ftab:hover{transform:translateX(-3px)}
+.ftab.on{background-color:var(--paper);transform:none;font-weight:700;z-index:2}
+.ftab .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ftab .dot{width:6px;height:6px;border-radius:50%;background:var(--detail);flex:none}
+.ftab .x,.slip .x,.slab .x{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;flex:none;opacity:0;color:inherit}
+.ftab:hover .x,.slip:hover .x,.slab:hover .x{opacity:.7}
+.ftab .x:hover,.slip .x:hover,.slab .x:hover{opacity:1;background:rgba(0,0,0,.12)}
+.ftab .x .ic,.slip .x .ic,.slab .x .ic{width:10px;height:10px;stroke-width:2.2}
+/* 2. thumb index (large) */
+.thumbs{position:absolute;inset:0;z-index:1;pointer-events:none}
+.thumb{position:absolute;right:-40px;width:80px;height:80px;border-radius:50%;clip-path:inset(0 50% 0 0);
+  background:radial-gradient(circle at 50% 50%,transparent 0 24px,rgba(0,0,0,.14) 40px),repeating-radial-gradient(circle at 50% 50%,var(--paper) 0 1.3px,color-mix(in srgb,var(--paper) 74%,#000) 1.3px 2px)}
+.thumb .lab{position:absolute;left:5px;top:50%;transform:translateY(-50%);width:33px;height:24px;border-radius:2px;background:#16100B;display:grid;place-items:center;
+  font:700 10.5px/1 var(--f-ui);letter-spacing:.01em;text-transform:uppercase;color:#C8B78F;box-shadow:0 0 0 .5px rgba(0,0,0,.5)}
+.thumb.on .lab{background-image:var(--foil);color:#1B120C}
+.thumb-hits{position:absolute;inset:0;z-index:4;pointer-events:none}
+.thumb-hit{position:absolute;right:-8px;width:50px;height:72px;border:0;background:none;cursor:pointer;pointer-events:auto;padding:0}
+.thumb-hit .tip{position:absolute;right:56px;top:50%;transform:translateY(-50%);white-space:nowrap;background:var(--paper);color:var(--ink);font:13px var(--f-ui);padding:3px 8px;border-radius:3px;box-shadow:0 2px 6px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:opacity .12s}
+.thumb-hit:hover .tip{opacity:1}
+.thumb-hit .x{position:absolute;right:-12px;top:50%;transform:translateY(-50%);width:18px;height:18px;border-radius:50%;background:#16100B;color:#E9D9B4;display:grid;place-items:center;opacity:0}
+.thumb-hit:hover .x{opacity:1}
+.thumb-hit .x .ic{width:10px;height:10px;stroke-width:2.2}
+/* 3 + 4. along the head of the book */
+.topstrip{position:sticky;top:0;z-index:6;height:52px;margin-bottom:-24px;display:flex;align-items:flex-end;gap:8px;padding:0 18px;pointer-events:none;box-sizing:border-box}
+.slip{pointer-events:auto;position:relative;display:flex;align-items:flex-start;gap:4px;width:118px;height:40px;padding:6px 6px 0 10px;border:0;cursor:pointer;
+  background-color:var(--tabpaper);background-image:var(--grainimg);background-size:512px;background-blend-mode:soft-light;color:var(--ink);font:500 12.5px var(--f-ui);text-align:left;
+  box-shadow:0 1px 3px rgba(0,0,0,.3);transform:rotate(var(--rot,0deg)) translateY(6px);transition:transform .14s;clip-path:polygon(0 0,100% 2px,100% 100%,0 100%)}
+.slip:hover{transform:rotate(var(--rot,0deg)) translateY(2px)}
+.slip.on{background-color:var(--paper);transform:rotate(var(--rot,0deg)) translateY(-3px);font-weight:700;z-index:2}
+.slip .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slip .dot{position:absolute;left:4px;top:11px;width:4px;height:4px;border-radius:50%;background:var(--detail)}
+.slab{pointer-events:auto;display:flex;align-items:center;gap:6px;height:28px;padding:0 8px 0 13px;border:0;cursor:pointer;border-radius:3px 3px 0 0;
+  background:var(--leatherimg) 0 0/256px,#3E2416;color:#D9C194;font:600 13px var(--f-display);letter-spacing:.1em;font-variant-caps:all-small-caps;white-space:nowrap;
+  box-shadow:inset 0 1px 0 rgba(255,220,170,.15),0 -1px 3px rgba(0,0,0,.3);position:relative;transform:translateY(-14px)}
+.slab::before,.slab::after{content:"";position:absolute;left:5px;right:5px;height:1px;background:var(--foil);opacity:.55}
+.slab::before{top:4px}.slab::after{bottom:4px}
+.slab.on{height:34px;transform:translateY(-14px);color:transparent;background-image:var(--foil),var(--leatherimg);-webkit-background-clip:text,border-box;background-clip:text,border-box;background-size:auto,256px}
+.slab.on{color:#F4DE9C;background:var(--leatherimg) 0 0/256px,#2A170D;text-shadow:0 1px 0 #000}
+.slab.on::before,.slab.on::after{opacity:1}
+.slab .dot{width:5px;height:5px;border-radius:50%;background:var(--gilt)}
+
+.riffle{position:absolute;z-index:15;perspective:1800px;perspective-origin:0% 50%;pointer-events:none;overflow:visible}
+.riffle .rl{position:absolute;inset:0;transform-origin:0 50%;backface-visibility:hidden;background-color:var(--paper);background-image:repeating-linear-gradient(transparent 0 17px,color-mix(in srgb,var(--ink) 7%,transparent) 17px 25px);
+  background-size:calc(100% - 150px) calc(100% - 140px);background-position:60px 60px;background-repeat:no-repeat;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08),-2px 0 6px rgba(0,0,0,.12)}
+
+.empty-fill{min-height:62vh;background:var(--marbleimg) center/1500px auto,#6A3A26;display:grid;place-items:center;padding:30px;margin-right:-6px;margin-bottom:-5px}
+.plate{position:relative;background-color:var(--paper);background-image:var(--grainimg);background-size:512px;background-blend-mode:soft-light;color:var(--ink);padding:26px 32px 22px;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.plate::before{content:"";position:absolute;inset:7px;border:1.2px solid color-mix(in srgb,var(--ink) 65%,transparent);outline:.6px solid color-mix(in srgb,var(--ink) 50%,transparent);outline-offset:-4px;pointer-events:none}
+.plate .exl{font:500 11px var(--f-display);letter-spacing:.34em;text-align:center;color:var(--ink-soft);margin:0 0 6px}
+.empty-plate{width:min(360px,100%);text-align:center}
+.empty-plate .lg{width:46px;height:46px;margin:0 auto 8px}
+.empty-plate h3{font:500 24px var(--f-display);margin:0 0 12px}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;text-align:left;font:15px var(--f-page);color:var(--ink-soft);align-items:center}
+kbd{font:700 11px var(--f-type);padding:2px 6px;border:1px solid color-mix(in srgb,var(--ink) 40%,transparent);border-bottom-width:2px;border-radius:3px;color:var(--ink);white-space:nowrap;justify-self:end}
+
+/* welcome: the front endpaper with a bookplate */
+.threshold{position:absolute;inset:36px 0 0 0;z-index:9;display:grid;place-items:center;padding:24px 16px;overflow:auto;background:var(--marbleimg) center/cover,#5A2A1C}
+.threshold .plate{width:min(600px,100%);padding:30px 42px 30px}
+.brand{display:flex;align-items:center;gap:18px;margin-bottom:18px}
+.brand .lg{width:78px;height:78px;flex:none}
+.brand h1{font:500 50px/1 var(--f-display);margin:0;letter-spacing:.01em}
+.brand p{margin:6px 0 0;font:italic 16px var(--f-page);color:var(--ink-soft)}
+.lbl{font:500 12px var(--f-display);letter-spacing:.24em;color:var(--ink-soft);margin:0 0 4px;border-bottom:.8px solid color-mix(in srgb,var(--ink) 35%,transparent);padding-bottom:3px;text-transform:uppercase}
+.vaults{display:flex;flex-direction:column;margin:4px -10px 18px}
+.vault{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:6px 10px;border:0;background:none;text-align:left;cursor:pointer;color:var(--ink)}
+.vault:hover,.vault:focus-visible{background:color-mix(in srgb,var(--ink) 7%,transparent)}
+.vault .chip{width:44px;height:30px;display:block;background:center/cover;box-shadow:0 1px 2px rgba(0,0,0,.4)}
+.vault b{font:600 16px var(--f-page);display:block}
+.vault small{font:12.5px var(--f-type);color:var(--ink-soft)}
+.vault .when{font:italic 14px var(--f-page);color:var(--ink-soft);white-space:nowrap}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.btn{border:1px solid color-mix(in srgb,var(--ink) 45%,transparent);background:transparent;padding:6px 14px;cursor:pointer;font:600 14px var(--f-page);color:var(--ink);border-radius:2px}
+.btn:hover{background:color-mix(in srgb,var(--ink) 6%,transparent)}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+/* bottom panel: paper */
+.panel{min-height:0;display:flex;flex-direction:column;background-color:var(--side);background-image:var(--grainimg);background-size:512px;background-blend-mode:soft-light;color:var(--ink);box-shadow:inset 0 1px 0 rgba(0,0,0,.2)}
+.panel-head{display:flex;align-items:center;gap:2px;height:32px;flex:none;padding:0 6px 0 8px}
+.ptab{border:0;background:none;padding:5px 9px;font:600 14px var(--f-display);letter-spacing:.12em;font-variant-caps:all-small-caps;color:var(--ink-soft);cursor:pointer;position:relative}
+.ptab.on{color:var(--ink)}
+.ptab.on::after{content:"";position:absolute;left:9px;right:9px;bottom:1px;height:1.5px;background:var(--detail)}
+.ptab .n{color:var(--detail);margin-left:3px}
+.panel-body{flex:1;overflow:auto;min-height:0}
+.prob{display:flex;align-items:center;gap:8px;width:100%;border:0;background:none;padding:0 14px;height:25px;text-align:left;font:13.5px var(--f-ui);cursor:pointer;color:var(--ink)}
+.prob:hover{background:color-mix(in srgb,var(--ink) 6%,transparent)}
+.prob .ic{width:14px;height:14px}
+.prob .w{color:#A06A0C}.prob .i{color:#4E7939}
+.prob code{font:12.5px var(--f-type)}
+.prob .where{margin-left:auto;color:var(--ink-soft);white-space:nowrap;font:12.5px var(--f-type)}
+.log{font:12.5px/1.65 var(--f-type);color:var(--ink-soft);padding:2px 14px;margin:0;white-space:pre-wrap}
+.log .hl{color:#A06A0C}
+
+.statusbar{display:flex;align-items:stretch;font-size:12px;white-space:nowrap;overflow:hidden;position:relative;z-index:8;box-shadow:inset 0 1px 0 rgba(0,0,0,.35)}
+.sb{display:flex;align-items:center;gap:6px;padding:0 9px;border:0;background:none;cursor:pointer;color:var(--cink);font-size:12px;font-weight:500;text-shadow:0 1px 0 var(--chl)}
+.sb:hover{background:var(--cbtn)}
+.sb .ic{width:13px;height:13px;stroke-width:1.9}
+.sb .chip{width:14px;height:14px;border-radius:2px;display:block;background:center/cover;box-shadow:0 0 0 .5px rgba(0,0,0,.5)}
+.sb-spacer{flex:1}
+
+/* overlays */
+.pop{position:absolute;z-index:30;background-color:var(--side);background-image:var(--grainimg);background-size:512px;background-blend-mode:soft-light;color:var(--ink);border-radius:4px;box-shadow:0 10px 30px rgba(0,0,0,.4),0 0 0 1px rgba(0,0,0,.15)}
+.endpop{left:58px;bottom:30px;width:min(480px,calc(100vw - 80px));padding:4px 14px 14px;max-height:calc(100% - 80px);overflow:auto}
+.endpop h4{margin:10px 0 8px;font:600 14px var(--f-display);letter-spacing:.12em;font-variant-caps:all-small-caps;color:var(--ink-soft)}
+.endpop .paperline{font:italic 13.5px var(--f-page);color:var(--ink-soft);margin:2px 0 0}
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
+.sw{border:0;background:none;padding:0;cursor:pointer;text-align:left;color:var(--ink)}
+.sw .m{position:relative;display:block;height:60px;background:center/cover;box-shadow:0 1px 3px rgba(0,0,0,.35);outline:2px solid transparent;outline-offset:2px}
+.sw .m .lg{position:absolute;right:5px;bottom:5px;width:20px;height:20px}
+.sw.on .m{outline-color:var(--detail)}
+.sw span{display:block;font:12.5px var(--f-ui);margin-top:4px}
+.qo{top:46px;left:50%;transform:translateX(-50%);width:min(560px,calc(100% - 32px));overflow:hidden}
+.qo input{width:100%;box-sizing:border-box;border:0;border-bottom:1px solid color-mix(in srgb,var(--ink) 18%,transparent);background:transparent;padding:11px 14px;font:15px var(--f-ui);color:var(--ink);outline:none}
+.qo .list{max-height:330px;overflow:auto;padding:4px 0}
+.qo .row{padding-left:14px;height:28px}.qo .row small{color:var(--ink-soft);font-size:12px;margin-left:6px}
+.toast{position:absolute;left:50%;bottom:44px;transform:translateX(-50%);z-index:40;background:var(--ink);color:var(--paper);padding:6px 14px;font:13px var(--f-ui);border-radius:3px;box-shadow:0 3px 8px rgba(0,0,0,.35);opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+.loading{position:absolute;inset:0;z-index:50;display:grid;place-items:center;background:#1A130E;color:#D6C09A;font:italic 18px var(--f-page)}
+.ftab{width:138px;max-width:none}
+.editors{grid-row:1;display:grid;grid-template-columns:minmax(0,1fr) 0 var(--pw,0px);min-height:0;min-width:0}
+.editors>.deskwrap{grid-column:1;grid-row:1}#split-pdf{grid-column:2;grid-row:1}.pdfpane{grid-column:3;grid-row:1}
+.pdfpane{position:relative;min-width:0;overflow:hidden;background:var(--marbleimg) center/cover,#5A2A1C;box-shadow:inset 1px 0 0 rgba(0,0,0,.4)}
+.pdfscroll{position:absolute;inset:0;overflow:auto;padding:52px 0 40px;scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.45) transparent}
+.pdfsheet{width:612px;min-height:792px;box-sizing:border-box;margin:0 auto 22px;background:#fff;color:#151311;padding:64px 74px;box-shadow:0 2px 10px rgba(0,0,0,.45)}
+.pdfsheet .pdfdoc{width:auto}
+.pdfbar{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:3;display:flex;align-items:center;gap:4px;padding:3px 4px 3px 12px;border-radius:16px;font-size:12.5px;font-weight:500;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.4);text-shadow:0 1px 0 var(--chl)}
+.pdfbar .tbtn{height:22px;min-width:24px;padding:0 6px;border-radius:11px}
+.empty-ep{position:absolute;inset:0;z-index:5;display:grid;place-items:center;padding:24px;background:var(--marbleimg) center/cover,#5A2A1C}
+/* the plain look: same structure, flat colours, marbling only as an accent */
+.window[data-chrome=plain]{--chrome-img:none;--chrome-base:var(--p-bar);--cink:var(--p-text);--cink-soft:var(--p-muted);--cactive:var(--p-text);--chl:transparent;--cbtn:var(--p-sel)}
+.window[data-look=plain] .desk{top:36px;background:var(--p-desk)}
+.window[data-look=plain] .light{display:none}
+.window[data-look=plain] .board,.window[data-look=plain] .rail{display:none}
+.window[data-look=plain] :is(.paper,.sidebar,.panel,.pop,.plate){background-image:none}
+.window[data-look=plain] .leaf::after{box-shadow:none}
+.window[data-look=plain] .activity::after{content:"";position:absolute;right:0;top:0;bottom:0;width:9px;box-shadow:inset 1px 0 0 rgba(0,0,0,.2);background:var(--marbleimg) center/cover}
+.window[data-look=plain] .act{filter:none;margin-right:9px;width:40px}
+.window[data-look=plain] .empty-ep{top:40px}
+.window[data-look=plain] .desk{top:40px}
+.window[data-look=plain] .deskwrap::before{content:"";position:absolute;top:36px;left:0;right:0;height:4px;background:var(--marbleimg) center/cover;z-index:6;box-shadow:0 1px 0 rgba(0,0,0,.15)}
+.window[data-look=plain] .titlebar{box-shadow:inset 0 -1px 0 var(--p-line)}
+.window[data-look=plain] .statusbar{box-shadow:inset 0 1px 0 var(--p-line)}
+.window[data-look=plain] .sidebar{box-shadow:inset -1px 0 0 var(--p-line)}
+.tabbar{display:none}
+.window[data-look=plain] .tabbar{display:flex;position:absolute;top:0;left:0;right:0;height:36px;background:var(--p-chrome);border-bottom:1px solid var(--p-line);z-index:6;overflow-x:auto;scrollbar-width:none}
+.ptb{display:flex;align-items:center;gap:7px;padding:0 6px 0 14px;border:0;border-right:1px solid var(--p-line);background:none;color:var(--p-muted);font:13px var(--f-ui);cursor:pointer;position:relative;white-space:nowrap;margin-bottom:-1px}
+.ptb.on{background:var(--p-desk);color:var(--p-text)}
+.ptb.on::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:var(--foil)}
+.ptb .dot{width:6px;height:6px;border-radius:50%;background:var(--p-text);opacity:.6}
+.ptb .x{width:18px;height:18px;border-radius:4px;display:grid;place-items:center;opacity:0}
+.ptb:hover .x,.ptb.on .x{opacity:.8}
+.ptb .x:hover{background:var(--p-sel)}
+.ptb .x .ic{width:12px;height:12px}
+/* the open book: your page on the left, the back endpaper on the right with the PDF lying on it */
+.block.spread{padding:0 0 5px 6px}
+.block.spread .edge.r{display:none}
+.block.spread .edge.b{right:var(--rw,0px);clip-path:polygon(6px 0,100% 0,100% 100%,0 100%)}
+.ep-recto{position:relative;flex:none;min-width:0;background:var(--marbleimg) 0 0/1500px auto repeat,#5A2A1C;box-shadow:inset 22px 0 26px -16px rgba(0,0,0,.5),inset 1px 0 0 rgba(0,0,0,.35)}
+.ep-sticky{position:sticky;top:12px;height:var(--deskh,600px);display:flex;flex-direction:column;align-items:center;padding-top:10px;box-sizing:border-box}
+.ep-scroll{flex:1;min-height:0;width:100%;overflow:auto;padding:4px 0 30px;box-sizing:border-box;scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.45) transparent}
+.rail.left{left:auto;right:calc(100% - 7px)}
+.rail.left .ftabs{align-items:flex-end}
+.rail.left .ftab{border-radius:7px 0 0 7px;padding:0 16px 0 9px;transform:translateX(8px);box-shadow:-1px 1px 0 rgba(0,0,0,.12),-2px 2px 5px rgba(0,0,0,.28)}
+.rail.left .ftab:hover{transform:translateX(3px)}
+.rail.left .ftab.on{transform:none}
+.window[data-look=plain] .leaf.verso::before{display:none}
+/* PDF controls pinned to the top of the endpaper in the open book */
+.ep-sticky .pdfbar{position:relative;top:auto;left:auto;transform:none;margin:0 0 12px;flex:none;z-index:4}
+/* Appearance panel (the theme builder) */
+.tgroup{padding:4px 12px 10px}
+.tlabel{font:600 14px var(--f-display);letter-spacing:.1em;font-variant-caps:all-small-caps;color:var(--ink-soft);margin-bottom:6px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.tlabel output{font:12px var(--f-ui);letter-spacing:0;font-variant-caps:normal;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.tchoices{display:flex;flex-wrap:wrap;gap:4px}
+.tchoices button,.tbtn2{border:1px solid color-mix(in srgb,var(--ink) 22%,transparent);background:transparent;color:var(--ink);border-radius:4px;padding:4px 9px;font:13px var(--f-ui);cursor:pointer}
+.tchoices button:hover,.tbtn2:hover{border-color:color-mix(in srgb,var(--ink) 45%,transparent)}
+.tchoices button.on{border-color:var(--detail);background:color-mix(in srgb,var(--detail) 18%,transparent);font-weight:600}
+.tchoices button:disabled{opacity:.45;cursor:default}
+.thint{margin:6px 0 0;font:italic 13.5px/1.35 var(--f-page);color:var(--ink-soft)}
+.tsec{margin:8px 12px 6px;padding-top:12px;border-top:1px solid color-mix(in srgb,var(--ink) 14%,transparent);font:600 15px var(--f-display);color:var(--ink)}
+.tsw.swatches{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px 8px}
+.tsw .sw .m{height:40px}
+.tsw .sw .m .lg{width:16px;height:16px;right:4px;bottom:4px}
+.tsw .sw span:last-child{font-size:11.5px;line-height:1.25}
+.trow{display:flex;gap:6px;align-items:center;margin-top:9px}
+#themepanel input[type=range]{width:100%;accent-color:var(--detail)}
+.tcheck{display:flex;gap:7px;align-items:center;font:13px var(--f-ui);color:var(--ink);cursor:pointer}
+.mknote{color:#A99478}
+.topstrip.head{height:38px;margin-bottom:0;gap:5px;padding:0 26px;align-items:flex-end}
+.topstrip.head.scrolled{background:linear-gradient(transparent 0,transparent 30%,var(--paper) 100%)}
+.topstrip.head.scrolled::after{content:"";position:absolute;left:0;right:0;top:100%;height:18px;background:linear-gradient(var(--paper),transparent);pointer-events:none}
+.htab{pointer-events:auto;display:flex;align-items:center;gap:6px;flex:none;width:138px;height:29px;padding:0 6px 0 13px;border:0;border-radius:7px 7px 0 0;cursor:pointer;
+  background-color:var(--tabpaper);background-image:var(--grainimg);background-size:512px;background-blend-mode:soft-light;color:var(--ink);font:500 12.5px var(--f-ui);
+  box-shadow:0 -1px 0 rgba(0,0,0,.1),1px -2px 5px rgba(0,0,0,.25);transition:height .14s}
+.htab:hover{height:32px}
+.htab.on{background-color:var(--paper);height:35px;font-weight:700;z-index:2}
+.htab .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+.htab .dot{width:6px;height:6px;border-radius:50%;background:var(--detail);flex:none}
+.htab .x{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;flex:none;opacity:0}
+.htab:hover .x{opacity:.7}.htab .x:hover{opacity:1;background:rgba(0,0,0,.12)}
+.htab .x .ic{width:10px;height:10px;stroke-width:2.2}
+@media (max-width:1000px){.build-note{display:none}}
+@media (max-width:900px){.menus,.running{display:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="mockbar" role="toolbar" aria-label="Mockup controls">
+  <span class="tag">Mockup</span>
+  <span class="mk">Screen <span class="seg" id="mk-screen"><button data-v="welcome">Welcome</button><button data-v="workspace">Workspace</button><button data-v="empty">No file open</button></span></span>
+  <span class="mk mknote">The theme builder is in the app: the gear at the foot of the activity bar, or the vault name in the status bar.</span>
+  <button class="mkbtn" id="mk-theme-open">Open the theme builder</button>
+  <span class="mkstatus" id="mk-status"></span>
+</div>
+
+<div class="window" id="win" data-chrome="saddle">
+  <header class="titlebar chrome">
+    <div class="tb-left"><span class="tb-logo" id="tb-logo"></span>
+      <nav class="menus"><button>File</button><button>Edit</button><button>Selection</button><button>View</button><button>Build</button><button>Help</button></nav></div>
+    <button class="running" id="running" title="Go to a file (Ctrl+P)"></button>
+    <div class="tb-right">
+      <span class="tseg" id="viewmode"><button class="tbtn" data-v="live" title="Rendered in place, source under the cursor">Live</button><button class="tbtn" data-v="source" title="Plain LaTeX source">Source</button></span>
+      <button class="tbtn" id="btn-spread" title="Show the PDF beside the book (Ctrl+Alt+V)"></button>
+      <button class="tbtn" id="btn-panel" title="Problems and log (Ctrl+J)"></button>
+      <span class="build-note" id="build-note"></span>
+      <button class="ribbon" id="ribbon" title="Build status. Click to cycle the states."></button>
+      <div class="winctl"><button aria-label="Minimise"><svg class="ic" viewBox="0 0 24 24"><path d="M6 12h12"/></svg></button><button aria-label="Maximise"><svg class="ic" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12"/></svg></button><button class="close" aria-label="Close"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    </div>
+  </header>
+
+  <div class="work" id="work">
+    <nav class="activity chrome" id="activity" aria-label="Views"></nav>
+    <aside class="sidebar" id="sidebar"></aside>
+    <div class="splitter" id="split-side" role="separator" aria-orientation="vertical"></div>
+    <div class="main" id="main">
+      <div class="editors" id="editors">
+      <section class="deskwrap" id="deskwrap">
+        <div class="tabbar" id="tabbar"></div>
+        <div class="desk" id="desk">
+          <div class="desk-in" id="desk-in">
+            <div class="topstrip" id="topstrip" hidden></div>
+            <div class="book" id="book">
+              <div class="board"></div>
+              <div class="rail" id="rail"><div class="ftabs" id="ftabs"></div></div>
+              <div class="thumbs" id="thumbs"></div>
+              <div class="block" id="block">
+                <div class="edge l" hidden></div><div class="edge r"></div><div class="edge b"></div>
+                <div class="leaves" id="leaves"></div>
+              </div>
+              <div class="thumb-hits" id="thumb-hits"></div>
+            </div>
+          </div>
+        </div>
+        <div class="empty-ep" id="empty" hidden></div>
+        <div class="light"></div>
+      </section>
+      <div class="splitter" id="split-pdf" role="separator" aria-orientation="vertical" hidden></div>
+      <section class="pdfpane" id="pdfpane" hidden>
+        <div class="pdfscroll" id="pdfscroll"></div>
+        <div class="pdfbar chrome"><span id="pdf-title"></span><button class="tbtn" id="pdf-zo" title="Zoom out">−</button><button class="tbtn" id="pdf-fit" title="Fit width">Fit</button><button class="tbtn" id="pdf-zi" title="Zoom in">+</button><button class="tbtn" id="pdf-x" title="Close the PDF (Ctrl+Alt+V)">×</button></div>
+        <div class="light"></div>
+      </section>
+      </div>
+      <div class="splitter h" id="split-panel" role="separator" aria-orientation="horizontal"></div>
+      <section class="panel" id="panel">
+        <div class="panel-head"><button class="ptab on" data-p="problems">Problems<span class="n">2</span></button><button class="ptab" data-p="log">Log</button><span style="flex:1"></span><button class="mini" id="panel-close" title="Hide the panel (Ctrl+J)"></button></div>
+        <div class="panel-body" id="panel-body"></div>
+      </section>
+    </div>
+  </div>
+
+  <footer class="statusbar chrome" id="statusbar"></footer>
+  <div class="threshold" id="welcome" hidden></div>
+  <div class="light" id="wlight" style="inset:36px 0 0 0;z-index:10" hidden></div>
+  <div class="pop endpop" id="endpop" hidden></div>
+  <div class="pop qo" id="qo" hidden><input id="qo-in" placeholder="Go to a file in this vault" autocomplete="off"><div class="list" id="qo-list"></div></div>
+  <div class="toast" id="toast"></div>
+  <div class="loading" id="loading">Setting up the bench…</div>
+</div>
+
+<script>
+const THEMES = {
+  "app": "endleaf",
+  "iconSizeTiers": {
+    "full": ">= 96 px",
+    "mid": "24-64 px",
+    "small": "<= 20 px"
+  },
+  "themes": [
+    {
+      "id": "autumn-ember",
+      "name": "Autumn Ember",
+      "modes": {
+        "dark": {
+          "marbling": [
+            "#3E1A14",
+            "#5A2616",
+            "#2A1C1A",
+            "#8A5424",
+            "#4A1E16",
+            "#C89A5A"
+          ],
+          "vein": "#C89A5A",
+          "label": "#17120F",
+          "leafFoil": [
+            {
+              "offset": 0,
+              "color": "#7A5516"
+            },
+            {
+              "offset": 0.2,
+              "color": "#D9B45A"
+            },
+            {
+              "offset": 0.34,
+              "color": "#F7E3A1"
+            },
+            {
+              "offset": 0.5,
+              "color": "#B8913A"
+            },
+            {
+              "offset": 0.68,
+              "color": "#E8C874"
+            },
+            {
+              "offset": 0.85,
+              "color": "#8A6420"
+            },
+            {
+              "offset": 1,
+              "color": "#D2AA50"
+            }
+          ],
+          "icons": {
+            "full": "icons/autumn-ember-dark-full.svg",
+            "mid": "icons/autumn-ember-dark-mid.svg",
+            "small": "icons/autumn-ember-dark-small.svg"
+          }
+        },
+        "light": {
+          "marbling": [
+            "#EAD6BE",
+            "#D9B48A",
+            "#F2E6D2",
+            "#C07A4E",
+            "#E3C7A4",
+            "#9E4A2C"
+          ],
+          "vein": "#9E4A2C",
+          "label": "#FBF6EC",
+          "leafFoil": [
+            {
+              "offset": 0,
+              "color": "#6B2412"
+            },
+            {
+              "offset": 0.25,
+              "color": "#B04A24"
+            },
+            {
+              "offset": 0.4,
+              "color": "#DE8A5A"
+            },
+            {
+              "offset": 0.58,
+              "color": "#A23E1C"
+            },
+            {
+              "offset": 0.8,
+              "color": "#C9683A"
+            },
+            {
+              "offset": 1,
+              "color": "#7A2A14"
+            }
+          ],
+          "icons": {
+            "full": "icons/autumn-ember-light-full.svg",
+            "mid": "icons/autumn-ember-light-mid.svg",
+            "small": "icons/autumn-ember-light-small.svg"
+          }
+        }
+      }
+    },
+    {
+      "id": "bookbinders-blue",
+      "name": "Bookbinder\u2019s Blue",
+      "modes": {
+        "dark": {
+          "marbling": [
+            "#1A2440",
+            "#24345A",
+            "#141B30",
+            "#3E5680",
+            "#1E2A4A",
+            "#D8CBA8"
+          ],
+          "vein": "#D8CBA8",
+          "label": "#0F1424",
+          "leafFoil": [
+            {
+              "offset": 0,
+              "color": "#6E2E10"
+            },
+            {
+              "offset": 0.18,
+              "color": "#C2672F"
+            },
+            {
+              "offset": 0.32,
+              "color": "#F4BC86"
+            },
+            {
+              "offset": 0.45,
+              "color": "#B8592A"
+            },
+            {
+              "offset": 0.62,
+              "color": "#E79A5C"
+            },
+            {
+              "offset": 0.8,
+              "color": "#8E3F17"
+            },
+            {
+              "offset": 1,
+              "color": "#D07A40"
+            }
+          ],
+          "icons": {
+            "full": "icons/bookbinders-blue-dark-full.svg",
+            "mid": "icons/bookbinders-blue-dark-mid.svg",
+            "small": "icons/bookbinders-blue-dark-small.svg"
+          }
+        },
+        "light": {
+          "marbling": [
+            "#DCE3EA",
+            "#B8C6D6",
+            "#EEF1F2",
+            "#7F97B4",
+            "#CCD6E0",
+            "#34507A"
+          ],
+          "vein": "#34507A",
+          "label": "#FBFAF6",
+          "leafFoil": [
+            {
+              "offset": 0,
+              "color": "#5E250C"
+            },
+            {
+              "offset": 0.18,
+              "color": "#A9521F"
+            },
+            {
+              "offset": 0.32,
+              "color": "#E0996A"
+            },
+            {
+              "offset": 0.45,
+              "color": "#9A4418"
+            },
+            {
+              "offset": 0.62,
+              "color": "#C9773F"
+            },
+            {
+              "offset": 0.8,
+              "color": "#6E2E10"
+            },
+            {
+              "offset": 1,
+              "color": "#B0602C"
+            }
+          ],
+          "icons": {
+            "full": "icons/bookbinders-blue-light-full.svg",
+            "mid": "icons/bookbinders-blue-light-mid.svg",
+            "small": "icons/bookbinders-blue-light-small.svg"
+          }
+        }
+      }
+    },
+    {
+      "id": "oxblood-gilt",
+      "name": "Oxblood & Gilt",
+      "modes": {
+        "dark": {
+          "marbling": [
+            "#3A0F12",
+            "#5A1A1E",
+            "#2A0A0D",
+            "#7A2A2A",
+            "#471418",
+            "#D9B45A"
+          ],
+          "vein": "#D9B45A",
+          "label": "#140808",
+          "leafFoil": [
+            {
+              "offset": 0,
+              "color": "#7A5516"
+            },
+            {
+              "offset": 0.2,
+              "color": "#D9B45A"
+            },
+            {
+              "offset": 0.34,
+              "color": "#F7E3A1"
+            },
+            {
+              "offset": 0.5,
+              "color": "#B8913A"
+            },
+            {
+              "offset": 0.68,
+              "color": "#E8C874"
+            },
+            {
+              "offset": 0.85,
+              "color": "#8A6420"
+            },
+            {
+              "offset": 1,
+              "color": "#D2AA50"
+            }
+          ],
+          "icons": {
+            "full": "icons/oxblood-gilt-dark-full.svg",
+            "mid": "icons/oxblood-gilt-dark-mid.svg",
+            "small": "icons/oxblood-gilt-dark-small.svg"
+          }
+        },
+        "light": {
+          "marbling": [
+            "#EFD9D2",
+            "#DDB5AA",
+            "#F7ECE6",
+            "#B7766A",
+            "#E7C8BE",
+            "#B8913A"
+          ],
+          "vein": "#B8913A",
+          "label": "#FCF7F2",
+          "leafFoil": [
+            {
+              "offset": 0,
+              "color": "#4A0E10"
+            },
+            {
+              "offset": 0.3,
+              "color": "#8A2A26"
+            },
+            {
+              "offset": 0.45,
+              "color": "#C0645A"
+            },
+            {
+              "offset": 0.6,
+              "color": "#7A1E1C"
+            },
+            {
+              "offset": 0.85,
+              "color": "#A2403A"
+            },
+            {
+              "offset": 1,
+              "color": "#5A1414"
+            }
+          ],
+          "icons": {
+            "full": "icons/oxblood-gilt-light-full.svg",
+            "mid": "icons/oxblood-gilt-light-mid.svg",
+            "small": "icons/oxblood-gilt-light-small.svg"
+          }
+        }
+      }
+    },
+    {
+      "id": "forest-floor",
+      "name": "Forest Floor",
+      "modes": {
+        "dark": {
+          "marbling": [
+            "#1E2A1C",
+            "#34422A",
+            "#171F16",
+            "#5C5A2E",
+            "#28331F",
+            "#C9973A"
+          ],
+          "vein": "#C9973A",
+          "label": "#11160F",
+          "leafFoil": [
+            {
+              "offset": 0,
+              "color": "#6E2E10"
+            },
+            {
+              "offset": 0.18,
+              "color": "#C2672F"
+            },
+            {
+              "offset": 0.32,
+              "color": "#F4BC86"
+            },
+            {
+              "offset": 0.45,
+              "color": "#B8592A"
+            },
+            {
+              "offset": 0.62,
+              "color": "#E79A5C"
+            },
+            {
+              "offset": 0.8,
+              "color": "#8E3F17"
+            },
+            {
+              "offset": 1,
+              "color": "#D07A40"
+            }
+          ],
+          "icons": {
+            "full": "icons/forest-floor-dark-full.svg",
+            "mid": "icons/forest-floor-dark-mid.svg",
+            "small": "icons/forest-floor-dark-small.svg"
+          }
+        },
+        "light": {
+          "marbling": [
+            "#E6E6D2",
+            "#C8CCA8",
+            "#F1F0E2",
+            "#98A070",
+            "#DADBC0",
+            "#8A5A2A"
+          ],
+          "vein": "#8A5A2A",
+          "label": "#FBFAF2",
+          "leafFoil": [
+            {
+              "offset": 0,
+              "color": "#6B2412"
+            },
+            {
+              "offset": 0.25,
+              "color": "#B04A24"
+            },
+            {
+              "offset": 0.4,
+              "color": "#DE8A5A"
+            },
+            {
+              "offset": 0.58,
+              "color": "#A23E1C"
+            },
+            {
+              "offset": 0.8,
+              "color": "#C9683A"
+            },
+            {
+              "offset": 1,
+              "color": "#7A2A14"
+            }
+          ],
+          "icons": {
+            "full": "icons/forest-floor-light-full.svg",
+            "mid": "icons/forest-floor-light-mid.svg",
+            "small": "icons/forest-floor-light-small.svg"
+          }
+        }
+      }
+    },
+    {
+      "id": "plum-amber",
+      "name": "Plum & Amber",
+      "modes": {
+        "dark": {
+          "marbling": [
+            "#2A1628",
+            "#442240",
+            "#1E1020",
+            "#6A3A58",
+            "#361C33",
+            "#E0A248"
+          ],
+          "vein": "#E0A248",
+          "label": "#140B14",
+          "leafFoil": [
+            {
+              "offset": 0,
+              "color": "#7A5516"
+            },
+            {
+              "offset": 0.2,
+              "color": "#D9B45A"
+            },
+            {
+              "offset": 0.34,
+              "color": "#F7E3A1"
+            },
+            {
+              "offset": 0.5,
+              "color": "#B8913A"
+            },
+            {
+              "offset": 0.68,
+              "color": "#E8C874"
+            },
+            {
+              "offset": 0.85,
+              "color": "#8A6420"
+            },
+            {
+              "offset": 1,
+              "color": "#D2AA50"
+            }
+          ],
+          "icons": {
+            "full": "icons/plum-amber-dark-full.svg",
+            "mid": "icons/plum-amber-dark-mid.svg",
+            "small": "icons/plum-amber-dark-small.svg"
+          }
+        },
+        "light": {
+          "marbling": [
+            "#ECDFE6",
+            "#D4BCCB",
+            "#F6EEF1",
+            "#A77C94",
+            "#E2D0DA",
+            "#C9822E"
+          ],
+          "vein": "#C9822E",
+          "label": "#FCF8F8",
+          "leafFoil": [
+            {
+              "offset": 0,
+              "color": "#5E250C"
+            },
+            {
+              "offset": 0.18,
+              "color": "#A9521F"
+            },
+            {
+              "offset": 0.32,
+              "color": "#E0996A"
+            },
+            {
+              "offset": 0.45,
+              "color": "#9A4418"
+            },
+            {
+              "offset": 0.62,
+              "color": "#C9773F"
+            },
+            {
+              "offset": 0.8,
+              "color": "#6E2E10"
+            },
+            {
+              "offset": 1,
+              "color": "#B0602C"
+            }
+          ],
+          "icons": {
+            "full": "icons/plum-amber-light-full.svg",
+            "mid": "icons/plum-amber-light-mid.svg",
+            "small": "icons/plum-amber-light-small.svg"
+          }
+        }
+      }
+    },
+    {
+      "id": "slate-ember",
+      "name": "Slate & Ember",
+      "modes": {
+        "dark": {
+          "marbling": [
+            "#1E1F22",
+            "#2A2B2F",
+            "#18191B",
+            "#36373C",
+            "#232427",
+            "#C8703A"
+          ],
+          "vein": "#C8703A",
+          "label": "#111113",
+          "leafFoil": [
+            {
+              "offset": 0,
+              "color": "#6E2E10"
+            },
+            {
+              "offset": 0.18,
+              "color": "#C2672F"
+            },
+            {
+              "offset": 0.32,
+              "color": "#F4BC86"
+            },
+            {
+              "offset": 0.45,
+              "color": "#B8592A"
+            },
+            {
+              "offset": 0.62,
+              "color": "#E79A5C"
+            },
+            {
+              "offset": 0.8,
+              "color": "#8E3F17"
+            },
+            {
+              "offset": 1,
+              "color": "#D07A40"
+            }
+          ],
+          "icons": {
+            "full": "icons/slate-ember-dark-full.svg",
+            "mid": "icons/slate-ember-dark-mid.svg",
+            "small": "icons/slate-ember-dark-small.svg"
+          }
+        },
+        "light": {
+          "marbling": [
+            "#E9E6E1",
+            "#D8D4CD",
+            "#F3F1ED",
+            "#BDB7AE",
+            "#E1DDD6",
+            "#A9521F"
+          ],
+          "vein": "#A9521F",
+          "label": "#FCFBF9",
+          "leafFoil": [
+            {
+              "offset": 0,
+              "color": "#5E250C"
+            },
+            {
+              "offset": 0.18,
+              "color": "#A9521F"
+            },
+            {
+              "offset": 0.32,
+              "color": "#E0996A"
+            },
+            {
+              "offset": 0.45,
+              "color": "#9A4418"
+            },
+            {
+              "offset": 0.62,
+              "color": "#C9773F"
+            },
+            {
+              "offset": 0.8,
+              "color": "#6E2E10"
+            },
+            {
+              "offset": 1,
+              "color": "#B0602C"
+            }
+          ],
+          "icons": {
+            "full": "icons/slate-ember-light-full.svg",
+            "mid": "icons/slate-ember-light-mid.svg",
+            "small": "icons/slate-ember-light-small.svg"
+          }
+        }
+      }
+    }
+  ]
+};
+const PATHS = {"leaf":"M 90.1,126.43 C 88.23,125.47 87.72,123.43 88.61,120.44 C 89.14,118.67 89.15,118.02 88.64,117.19 C 88.27,116.59 87.31,116.12 86.4,116.12 C 85.43,116.12 83.19,116.98 79.33,118.84 C 73.23,121.79 70.62,122.55 67.27,122.34 C 62.86,122.06 60.14,119.14 60.9,115.47 C 61.19,114.07 62.23,112.31 64.02,110.19 C 64.79,109.28 65.55,108.24 65.7,107.88 C 66.49,106 65.4,104.45 63.01,104.07 C 61.78,103.87 59.12,104.46 55.11,105.81 C 47.11,108.51 43.63,109.07 39.35,108.32 C 34.01,107.39 30.63,103.95 31.41,100.23 C 31.81,98.33 32.49,97.32 35.11,94.77 C 36.48,93.44 37.7,92.14 37.82,91.9 C 38.23,91.11 38.1,89.73 37.57,89.15 C 36.42,87.91 36.3,87.89 29.55,87.89 L 23.38,87.89 L 21.76,87.33 C 16.93,85.64 14.63,82.08 16,78.4 C 16.53,76.99 17.82,75.55 19.84,74.13 C 22.01,72.6 22.47,72.02 22.47,70.81 C 22.47,69.5 21.93,68.85 18.83,66.39 C 15.23,63.53 14.17,61.96 14.17,59.49 C 14.18,57.18 15.78,55.02 18.49,53.7 C 20.65,52.64 22.19,52.31 24.9,52.32 C 27.78,52.33 29.87,52.84 33.91,54.52 C 36.27,55.5 36.94,55.69 37.98,55.7 C 39.09,55.72 39.3,55.65 39.84,55.14 C 40.61,54.4 40.74,53.62 40.37,51.87 C 39.71,48.73 40.14,46.17 41.61,44.63 C 43.28,42.87 45.36,42.06 48.17,42.06 C 50.64,42.06 51.77,42.33 54.22,43.52 C 56.12,44.43 56.55,44.74 58.39,46.58 C 59.97,48.15 60.92,49.35 62.44,51.67 C 65.87,56.9 67.44,58.1 69.53,57.11 C 70.39,56.7 70.84,55.96 71.53,53.81 C 72.28,51.46 72.87,50.38 73.93,49.4 C 77.35,46.25 82.99,48.75 85.98,54.74 C 87.03,56.84 87.71,59.23 88.33,63.08 C 89.49,70.23 90.06,72.15 91.47,73.6 C 93.27,75.46 95.18,74.81 96.97,71.73 C 98.23,69.56 99.23,68.46 100.51,67.83 C 104.31,65.97 108.95,69 109.99,74.01 C 110.14,74.74 110.36,77.12 110.48,79.29 C 110.76,84.49 111.12,86.04 112.36,87.33 C 113.5,88.52 114.58,88.41 116.54,86.94 C 118.55,85.42 120.37,85.28 121.99,86.52 C 123.41,87.59 124.02,88.98 124.98,93.22 C 126.14,98.42 127.39,101.06 129.81,103.47 C 132.45,106.11 135.9,107.62 139.27,107.62 C 141.61,107.62 142.62,107.16 144.37,105.31 C 145.87,103.72 146.64,103.36 147.85,103.66 C 148.66,103.87 149.54,104.85 149.54,105.56 C 149.54,106.14 148.5,107.7 147.65,108.4 C 147.19,108.79 147.23,109.32 147.78,109.96 L 148.25,110.5 L 150.09,109.77 C 153.24,108.51 156.06,108.44 158.38,109.56 C 159.98,110.33 161.06,111.86 160.49,112.55 C 160.37,112.69 159.88,112.93 159.41,113.07 C 157.99,113.49 154.74,115.25 153.05,116.51 C 150.16,118.66 146.78,122.65 146.1,124.71 C 145.61,126.19 143.95,125.67 142.98,123.73 C 141.79,121.36 142.07,118.02 143.69,115.21 C 144.63,113.58 144.61,113.14 143.59,112.18 L 142.93,111.56 L 140.12,111.55 C 138.18,111.54 136.57,111.4 134.97,111.1 C 129.27,110.05 125.2,110 121.21,110.93 C 115.6,112.24 111.57,114.46 104.42,120.18 C 98.3,125.08 95.5,126.64 92.58,126.79 C 91.22,126.85 90.83,126.8 90.1,126.43 L 90.1,126.43 Z M 89.63,107.69 C 95.42,105.54 100.84,104.33 105.81,104.06 L 108.16,103.94 L 111.9,105.07 C 116.6,106.49 119.74,107.15 123.28,107.45 C 127.3,107.8 127.33,107.49 123.41,106.08 C 122.03,105.58 119.59,104.62 117.97,103.94 C 115.36,102.84 114.93,102.59 114,101.61 C 111.64,99.13 109.58,95.7 107.78,91.29 C 107.21,89.88 106.63,88.69 106.49,88.65 C 106.09,88.52 106.18,91.28 106.63,93.15 C 107.08,95.02 107.86,96.98 109.13,99.42 C 109.62,100.37 110.01,101.14 109.98,101.14 C 109.54,101.14 101.77,97.71 98.35,96 C 91.73,92.68 92.04,92.91 90.21,90.21 C 87.28,85.9 85.12,81.24 82.58,73.74 C 81.79,71.42 81.04,69.39 80.92,69.24 C 80.43,68.65 80.28,69.24 80.41,71.28 C 80.67,75.56 82.6,81.86 85.67,88.45 C 86.07,89.31 86.35,90.02 86.3,90.02 C 85.98,90.02 78.43,85.99 71.09,81.92 L 67.63,80 L 66.16,77.79 C 64.06,74.63 62.45,71.81 59.45,66.04 C 58.01,63.26 56.61,60.76 56.35,60.49 C 55.91,60.04 55.86,60.03 55.73,60.35 C 55.32,61.44 58.58,70.04 61.44,75.39 L 62.55,77.46 L 61.68,77.08 C 61.2,76.87 59.26,75.96 57.37,75.04 C 52.84,72.86 47.53,70.49 43.68,68.95 C 40.3,67.6 34.57,65.65 33.33,65.44 C 32.65,65.32 32.56,65.35 32.62,65.67 C 32.67,65.93 36.48,67.93 45.85,72.61 C 53.08,76.23 59.87,79.64 60.92,80.19 L 62.84,81.19 L 60.81,81.44 C 57.4,81.85 51.42,83.36 50.64,83.99 C 49.79,84.69 50.99,84.7 57.57,84.04 C 59.87,83.82 62.16,83.73 64.45,83.78 L 67.89,83.86 L 72.75,86.46 C 75.42,87.89 78.42,89.52 79.42,90.09 L 81.24,91.13 L 80.03,91.18 C 76.4,91.32 71.8,92.12 67.53,93.35 C 62.92,94.67 58.28,96.66 58.28,97.31 C 58.28,97.68 59.64,97.49 62.79,96.69 C 71.02,94.6 75.54,94 82.5,94.11 L 87.32,94.18 L 92.28,96.61 C 95,97.96 98.43,99.59 99.9,100.25 C 101.37,100.91 102.55,101.46 102.52,101.49 C 102.5,101.51 101.44,101.75 100.16,102.03 C 97.14,102.69 94.89,103.4 92.28,104.53 C 88.41,106.2 84.99,108.33 84.99,109.06 C 84.99,109.37 85.52,109.22 89.63,107.69 L 89.63,107.69 Z","ground":"M 136.18,132.99 C 134.05,132.87 133.15,132.7 133.15,132.43 C 133.15,131.99 134.42,131.54 137.75,130.8 C 142.59,129.72 144.68,129.82 149.56,131.35 C 151.93,132.1 152.27,132.51 150.75,132.76 C 149.75,132.93 138.28,133.11 136.18,132.99 L 136.18,132.99 Z M 101.84,130.76 C 101.47,130.61 101.53,130.12 101.94,129.91 C 103.12,129.29 112.35,127.31 117.16,126.63 C 121.22,126.06 126.63,126.15 129.81,126.83 C 133.72,127.67 138.42,128.86 138.97,129.14 L 139.52,129.43 L 138.71,129.63 C 138.27,129.74 137.27,129.94 136.49,130.08 C 135.71,130.22 134.72,130.46 134.29,130.62 C 133.65,130.84 130.52,130.89 117.8,130.87 C 109.16,130.86 101.97,130.81 101.84,130.76 L 101.84,130.76 Z M 30.8,130.15 C 30.05,129.99 30.36,129.42 31.41,129.03 C 33.3,128.33 43.22,126.49 50.31,125.53 C 57.32,124.57 61.78,124.62 67.4,125.72 C 68.79,125.99 71.37,126.31 73.15,126.42 C 76.29,126.62 79.63,127.13 84.69,128.16 C 87.69,128.77 88.44,128.99 88.95,129.36 C 90.07,130.18 90.24,130.18 60.04,130.21 C 44.22,130.23 31.06,130.2 30.8,130.15 L 30.8,130.15 Z M 165.04,132.78 C 164.53,132.5 164.22,132.5 162.54,132.72 C 157.78,133.35 153.37,132.28 150.2,129.73 C 149,128.77 147.11,126.73 147.11,126.39 C 147.11,126.08 147.75,124.95 148.77,123.47 C 151.23,119.89 156.65,115.69 160.31,114.51 C 161.02,114.28 161.12,114.3 161.78,114.85 C 162.68,115.59 164.55,117.92 165.41,119.37 C 166.42,121.09 167.13,123.02 167.38,124.81 C 167.59,126.27 167.56,126.61 167.15,128.34 L 166.69,130.25 L 167.12,130.85 C 167.59,131.52 167.68,132.5 167.3,132.87 C 166.97,133.21 165.74,133.16 165.04,132.78 L 165.04,132.78 Z","leafSmall":"M 90.1,126.43 C 88.23,125.47 87.72,123.43 88.61,120.44 C 89.14,118.67 89.15,118.02 88.64,117.19 C 88.27,116.59 87.31,116.12 86.4,116.12 C 85.43,116.12 83.19,116.98 79.33,118.84 C 73.23,121.79 70.62,122.55 67.27,122.34 C 62.86,122.06 60.14,119.14 60.9,115.47 C 61.19,114.07 62.23,112.31 64.02,110.19 C 64.79,109.28 65.55,108.24 65.7,107.88 C 66.49,106 65.4,104.45 63.01,104.07 C 61.78,103.87 59.12,104.46 55.11,105.81 C 47.11,108.51 43.63,109.07 39.35,108.32 C 34.01,107.39 30.63,103.95 31.41,100.23 C 31.81,98.33 32.49,97.32 35.11,94.77 C 36.48,93.44 37.7,92.14 37.82,91.9 C 38.23,91.11 38.1,89.73 37.57,89.15 C 36.42,87.91 36.3,87.89 29.55,87.89 L 23.38,87.89 L 21.76,87.33 C 16.93,85.64 14.63,82.08 16,78.4 C 16.53,76.99 17.82,75.55 19.84,74.13 C 22.01,72.6 22.47,72.02 22.47,70.81 C 22.47,69.5 21.93,68.85 18.83,66.39 C 15.23,63.53 14.17,61.96 14.17,59.49 C 14.18,57.18 15.78,55.02 18.49,53.7 C 20.65,52.64 22.19,52.31 24.9,52.32 C 27.78,52.33 29.87,52.84 33.91,54.52 C 36.27,55.5 36.94,55.69 37.98,55.7 C 39.09,55.72 39.3,55.65 39.84,55.14 C 40.61,54.4 40.74,53.62 40.37,51.87 C 39.71,48.73 40.14,46.17 41.61,44.63 C 43.28,42.87 45.36,42.06 48.17,42.06 C 50.64,42.06 51.77,42.33 54.22,43.52 C 56.12,44.43 56.55,44.74 58.39,46.58 C 59.97,48.15 60.92,49.35 62.44,51.67 C 65.87,56.9 67.44,58.1 69.53,57.11 C 70.39,56.7 70.84,55.96 71.53,53.81 C 72.28,51.46 72.87,50.38 73.93,49.4 C 77.35,46.25 82.99,48.75 85.98,54.74 C 87.03,56.84 87.71,59.23 88.33,63.08 C 89.49,70.23 90.06,72.15 91.47,73.6 C 93.27,75.46 95.18,74.81 96.97,71.73 C 98.23,69.56 99.23,68.46 100.51,67.83 C 104.31,65.97 108.95,69 109.99,74.01 C 110.14,74.74 110.36,77.12 110.48,79.29 C 110.76,84.49 111.12,86.04 112.36,87.33 C 113.5,88.52 114.58,88.41 116.54,86.94 C 118.55,85.42 120.37,85.28 121.99,86.52 C 123.41,87.59 124.02,88.98 124.98,93.22 C 126.14,98.42 127.39,101.06 129.81,103.47 C 132.45,106.11 135.9,107.62 139.27,107.62 C 141.61,107.62 142.62,107.16 144.37,105.31 C 145.87,103.72 146.64,103.36 147.85,103.66 C 148.66,103.87 149.54,104.85 149.54,105.56 C 149.54,106.14 148.5,107.7 147.65,108.4 C 147.19,108.79 147.23,109.32 147.78,109.96 L 148.25,110.5 L 150.09,109.77 C 153.24,108.51 156.06,108.44 158.38,109.56 C 159.98,110.33 161.06,111.86 160.49,112.55 C 160.37,112.69 159.88,112.93 159.41,113.07 C 157.99,113.49 154.74,115.25 153.05,116.51 C 150.16,118.66 146.78,122.65 146.1,124.71 C 145.61,126.19 143.95,125.67 142.98,123.73 C 141.79,121.36 142.07,118.02 143.69,115.21 C 144.63,113.58 144.61,113.14 143.59,112.18 L 142.93,111.56 L 140.12,111.55 C 138.18,111.54 136.57,111.4 134.97,111.1 C 129.27,110.05 125.2,110 121.21,110.93 C 115.6,112.24 111.57,114.46 104.42,120.18 C 98.3,125.08 95.5,126.64 92.58,126.79 C 91.22,126.85 90.83,126.8 90.1,126.43 L 90.1,126.43 Z"};
+
+/* ================= helpers ================= */
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const TH = Object.fromEntries(THEMES.themes.map(t => [t.id, t]));
+let uidN = 0; const uid = p => p + (++uidN);
+const hexRGB = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const toHex = a => '#' + a.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+const mix = (a, b, t) => { const A = hexRGB(a), B = hexRGB(b); return toHex(A.map((v, i) => v + (B[i] - v) * t)); };
+const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const frame = () => new Promise(r => setTimeout(r, 30));
+const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+/* Per-palette paper stock and printing accents, chosen the way you'd choose paper for an edition. */
+const STOCK = {
+  'autumn-ember':     { name: 'Cream wove',   paper: '#F5EDDD', ink: '#2A2119', detail: '#9A3F22', dark: '#1E1915' },
+  'bookbinders-blue': { name: 'Bright white', paper: '#FBFAF7', ink: '#1C2230', detail: '#2F4E7E', dark: '#141821' },
+  'oxblood-gilt':     { name: 'Ivory laid',   paper: '#F6EFE3', ink: '#281C1B', detail: '#7E2226', dark: '#1C1416' },
+  'forest-floor':     { name: 'Natural',      paper: '#F3EFE2', ink: '#212518', detail: '#46602F', dark: '#151A15' },
+  'plum-amber':       { name: 'Soft white',   paper: '#F8F4F1', ink: '#261E25', detail: '#6E3160', dark: '#1A1420' },
+  'slate-ember':      { name: 'Cool white',   paper: '#F4F4F1', ink: '#212226', detail: '#A24E1E', dark: '#17181A' },
+};
+
+const I = {
+  files: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/>',
+  search: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
+  symbols: '<path d="M17.5 5H7l5.5 7L7 19h10.5"/>',
+  cite: '<path d="M5 8h5v5c0 3-1.7 4.6-4.5 5.5M14 8h5v5c0 3-1.7 4.6-4.5 5.5"/>',
+  multi: '<rect x="8.5" y="3" width="11.5" height="14.5" rx="1.5"/><path d="M5 7v12a2 2 0 0 0 2 2h9"/><path d="M11.5 8h5M11.5 11.5h5"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  book: '<path d="M2.5 5h6.5a3 3 0 0 1 3 3v12a2.5 2.5 0 0 0-2.5-2.5h-7z"/><path d="M21.5 5H15a3 3 0 0 0-3 3v12a2.5 2.5 0 0 1 2.5-2.5h7z"/>',
+  panel: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 14.5h18"/>',
+  x: '<path d="M6 6l12 12M18 6 6 18"/>', chev: '<path d="m9 6 6 6-6 6"/>', down: '<path d="m6 9 6 6 6-6"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  newfile: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 11v6M9 14h6"/>',
+  collapse: '<path d="m7 15 5-5 5 5"/><path d="M5 20h14"/>',
+  folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  warn: '<path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.2v.1"/>',
+  check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>', alert: '<path d="M12 6v8M12 18v.1"/>',
+  branch: '<circle cx="6" cy="6" r="2.2"/><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="8" r="2.2"/><path d="M6 8.2v7.6M18 10.2c0 4-6 3-10.3 6"/>',
+  eraser: '<path d="m7 21-4-4 11-11 6 6-9 9z"/><path d="M21 21H7"/>',
+};
+const ic = (n, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" aria-hidden="true">${I[n]}</svg>`;
+
+/* ================= procedural materials ================= */
+function makeNoise(seed) {
+  const R = rng(seed), P = new Uint8Array(512), G = new Float32Array(256);
+  for (let i = 0; i < 256; i++) { P[i] = i; G[i] = R(); }
+  for (let i = 255; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [P[i], P[j]] = [P[j], P[i]]; }
+  for (let i = 0; i < 256; i++) P[i + 256] = P[i];
+  return (x, y, px = 256, py = 256) => {
+    const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+    const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+    const x0 = ((xi % px) + px) % px, x1 = (x0 + 1) % px, y0 = ((yi % py) + py) % py, y1 = (y0 + 1) % py;
+    const a = G[P[P[x0] + y0]], b = G[P[P[x1] + y0]], c = G[P[P[x0] + y1]], d = G[P[P[x1] + y1]];
+    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+  };
+}
+function fbm(n, x, y, oct, p) { let s = 0, a = 1, t = 0; for (let i = 0; i < oct; i++) { s += a * n(x, y, p, p); t += a; x *= 2; y *= 2; p *= 2; a *= .5; } return s / t; }
+function canvasOf(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+const clamp8 = v => v < 0 ? 0 : v > 255 ? 255 : v;
+/* A neutral grain tile, blended soft-light over any paper colour: mid-grey means "no change". */
+function grainTile() {
+  const S = 512, c = canvasOf(S, S), ctx = c.getContext('2d'), img = ctx.createImageData(S, S), d = img.data;
+  const n = makeNoise(7), g = makeNoise(21), f = makeNoise(33);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const u = x / S, v = y / S;
+    const val = 128 + (fbm(n, u * 4, v * 4, 4, 4) - .5) * 26 + (g(u * 128, v * 128, 128, 128) - .5) * 16 + (f(u * 96, v * 10, 96, 10) - .5) * 8;
+    const i = (y * S + x) * 4; d[i] = d[i + 1] = d[i + 2] = clamp8(val); d[i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  const R = rng(4);
+  for (let i = 0; i < 40; i++) { const x = R() * S, y = R() * S; for (const ox of [-S, 0, S]) for (const oy of [-S, 0, S]) { ctx.fillStyle = `rgba(60,60,60,${.25 + R() * .3})`; ctx.beginPath(); ctx.arc(x + ox, y + oy, .4 + R() * .6, 0, 7); ctx.fill(); } }
+  return c.toDataURL('image/png');
+}
+function leatherTile(base, seed) {
+  const S = 256, c = canvasOf(S, S), ctx = c.getContext('2d'), img = ctx.createImageData(S, S), d = img.data;
+  const n = makeNoise(seed), n2 = makeNoise(seed + 4), n3 = makeNoise(seed + 12);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const u = x / S, v = y / S;
+    const low = fbm(n, u * 4, v * 4, 3, 4) - .5, peb = n2(u * 48, v * 48, 48, 48) - .5, peb2 = n2(u * 96 + 7, v * 96, 96, 96) - .5;
+    const cr = Math.abs(n3(u * 10, v * 10, 10, 10) - .5);
+    let k = .94 + low * .2 + peb * .1 + peb2 * .05; if (cr < .02) k *= .9 + cr * 5;
+    const i = (y * S + x) * 4; d[i] = clamp8(base[0] * k); d[i + 1] = clamp8(base[1] * k); d[i + 2] = clamp8(base[2] * k); d[i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0); return c.toDataURL('image/jpeg', .9);
+}
+function linenTile() {
+  const S = 256, c = canvasOf(S, S), ctx = c.getContext('2d'), img = ctx.createImageData(S, S), d = img.data;
+  const n = makeNoise(41), base = [205, 198, 180];
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const u = x / S, v = y / S, w = ((x >> 1) + (y >> 1)) & 1;
+    const slub = (n(u * 256, v * 6, 256, 6) - .5) * .09 + (n(u * 6, v * 256, 6, 256) - .5) * .09;
+    const k = .95 + w * .04 + (n(u * 16, v * 16, 16, 16) - .5) * .06 + slub;
+    const i = (y * S + x) * 4; d[i] = clamp8(base[0] * k); d[i + 1] = clamp8(base[1] * k); d[i + 2] = clamp8(base[2] * k); d[i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0); return c.toDataURL('image/jpeg', .9);
+}
+function feltTile(base, seed) {
+  const S = 256, c = canvasOf(S, S), ctx = c.getContext('2d'), img = ctx.createImageData(S, S), d = img.data;
+  const n = makeNoise(seed), g = makeNoise(seed + 3), f = makeNoise(seed + 9);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const u = x / S, v = y / S;
+    const k = 1 + (fbm(n, u * 6, v * 6, 3, 6) - .5) * .09 + (g(u * 128, v * 128, 128, 128) - .5) * .1 + (f(u * 256, v * 256, 256, 256) - .5) * .06;
+    const i = (y * S + x) * 4; d[i] = clamp8(base[0] * k); d[i + 1] = clamp8(base[1] * k); d[i + 2] = clamp8(base[2] * k); d[i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0); return c.toDataURL('image/jpeg', .9);
+}
+/* Desk surfaces: quiet materials that sit back behind the book. */
+const DESKS = {
+  felt: { make: () => feltTile([96, 90, 83], 51), size: '256px' },
+  baize: { make: () => feltTile([48, 78, 60], 61), size: '256px' },
+  pad: { make: () => leatherTile([92, 56, 38], 71), size: '256px' },
+  oak: { make: () => woodImage('oak', true), size: '1400px 1000px' },
+};
+const STAINS = { oak: [[200, 156, 104], [150, 104, 60]], walnut: [[124, 84, 54], [72, 45, 27]], ebony: [[68, 50, 38], [32, 23, 17]] };
+/* Tiles in both directions: planks fill the height exactly and every plank has an end joint at x = 0. */
+function woodImage(stain, quiet) {
+  const W = 1400, H = 1000, c = canvasOf(W, H), ctx = c.getContext('2d'), img = ctx.createImageData(W, H), d = img.data;
+  const n = makeNoise(3), f = makeNoise(11), R = rng(stain.length * 17);
+  const [light, dark] = STAINS[stain];
+  const hs = [200, 240, 190, 220, 150]; const planks = []; let y0 = 0;
+  hs.forEach(h => { planks.push({ y0, h, off: R() * 50, tint: .92 + R() * .16, joint: 300 + R() * 800 }); y0 += h; });
+  let p = 0;
+  for (let y = 0; y < H; y++) {
+    while (planks[p].y0 + planks[p].h <= y) p++;
+    const pl = planks[p], ly = y - pl.y0;
+    for (let x = 0; x < W; x++) {
+      const warp = fbm(n, x * .0022 + pl.off, ly * .018 + pl.off, 3, 256) * 7;
+      const t = (ly * .065 + warp + pl.off) % 1;
+      const ring = Math.pow(Math.sin(t * Math.PI), 6);
+      const fib = f(x * .5, ly * .05 + pl.off * 9, 256, 256) - .5;
+      let m = quiet ? Math.max(0, Math.min(1, .62 - ring * .12 + fib * .05)) : Math.max(0, Math.min(1, .55 - ring * .4 + fib * .14));
+      let k = quiet ? 1 : pl.tint;
+      if (ly < 1.5 || ly > pl.h - 1.2) k *= quiet ? .86 : .5;
+      if (x < 1.2 || Math.abs(x - pl.joint) < 1.1) k *= quiet ? .88 : .55;
+      const i = (y * W + x) * 4;
+      for (let ch = 0; ch < 3; ch++) d[i + ch] = clamp8((dark[ch] + (light[ch] - dark[ch]) * m) * k);
+      d[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0); return c.toDataURL('image/jpeg', .88);
+}
+
+/* ================= marbling engine (runs in a worker) =================
+   Jaffer's mathematical marbling: ink drops displace what is already on the bath, tines drag it. Each pixel is traced
+   backwards through the operations to find its colour. These functions are serialised into the worker as-is. */
+function bandsFn(dir, minW, maxW, cols, vein, R, k) {
+  const list = []; let pos = 0, last = -1;
+  while (pos < 700 * k) {
+    const isVein = R() < .13 && last !== 99;
+    let ci; do { ci = Math.floor(R() * 5); } while (ci === last);
+    const w = isVein ? Math.max(1.2, 1.4 * k) : (minW + R() * (maxW - minW)) * k;
+    list.push([pos, pos + w, isVein ? vein : cols[ci]]); last = isVein ? 99 : ci; pos += w;
+  }
+  const period = pos, lut = new Array(Math.ceil(period) + 1);
+  let j = 0; for (let t = 0; t < lut.length; t++) { while (j < list.length - 1 && list[j][1] <= t) j++; lut[t] = list[j][2]; }
+  return (x, y) => { const t = dir === 'h' ? y : x; const m = ((t % period) + period) % period; return lut[m | 0]; };
+}
+function marbleOps(pattern, pal, W, H, seed) {
+  const hx = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const R = rng(seed * 131 + 7), k = W / 960, cols = pal.marbling.map(hx), vein = hx(pal.vein), ops = [];
+  let base = () => cols[0];
+  const drop = (x, y, r, c) => ops.push({ t: 0, x, y, r2: r * r, c });
+  const ring = (x, y, r, c) => { drop(x, y, r, vein); drop(x, y, r * .9, c); };
+  const comb = (nx, ny, mx, my, s, a, l, off = 0) => ops.push({ t: 1, ax: nx * off, ay: ny * off, nx, ny, mx, my, s: s * k, a: a * k, l: l * k });
+  const gelgit = (s, a, l) => { comb(1, 0, 0, 1, s, a, l, 0); comb(1, 0, 0, -1, s, a, l, s * k / 2); };
+  const nonpareil = (s, a, l) => comb(0, 1, 1, 0, s, a, l);
+  if (pattern === 'stone' || pattern === 'spanish') {
+    const sites = pattern === 'stone' ? 170 : 90;
+    for (let i = 0; i < sites; i++) {
+      const r = (pattern === 'stone' ? 14 + R() * R() * 58 : 26 + R() * 70) * k;
+      const c = cols[1 + Math.floor(R() * 4)], x = R() * W, y = R() * H;
+      ring(x, y, r, c);
+      if (R() < .22) drop(x + (R() - .5) * r * .3, y + (R() - .5) * r * .3, r * .45, cols[Math.floor(R() * 5)]);
+    }
+    if (pattern === 'spanish') {
+      ops.push({ t: 2, axis: 0, A: 20 * k, f: 2 * Math.PI / (300 * k), ph: R() * 6, mf: 0 });
+      ops.push({ t: 2, axis: 0, A: 3.4 * k, f: 2 * Math.PI / (9 * k), ph: 0, mf: 2 * Math.PI / (95 * k) });
+    }
+  } else {
+    if (pattern === 'fan') base = bandsFn('v', 2.4, 6.5, cols, vein, R, k);
+    else base = bandsFn('h', pattern === 'combed' ? 5 : 3, pattern === 'combed' ? 15 : 8, cols, vein, R, k);
+    if (pattern === 'combed') { gelgit(64, 72, 12); nonpareil(12, 30, 2.4); }
+    else if (pattern === 'fan') { nonpareil(13, 6, 3); ops.push({ t: 4, Rf: 76 * k, Hf: 44 * k, Wf: 138 * k, span: 190 * k, edge: 1.3 * k, vein }); }
+    else { gelgit(32, 40, 8); nonpareil(6.5, 12, 1.5); }
+    if (pattern === 'bouquet') {
+      const s = 108 * k; let sign = 1;
+      for (let y = s / 2; y < H + s; y += s * .86) { for (let x = (Math.round(y / s) % 2) * s / 2; x < W + s; x += s) { ops.push({ t: 3, x, y, a: 2.6 * sign, l: 24 * k }); sign = -sign; } }
+    }
+    if (pattern === 'peacock') ops.push({ t: 2, axis: 1, A: 15 * k, f: 2 * Math.PI / (44 * k), ph: 0, mf: 0 });
+  }
+  return { ops, base };
+}
+/* 2x2 supersampling: the sample grid is twice as fine and averaged, which smooths the hard ink edges. */
+function renderMarble(pal, pattern, W, H, seed) {
+  const { ops, base } = marbleOps(pattern, pal, W, H, seed), n = ops.length, out = new Uint8ClampedArray(W * H * 4), R = rng(seed);
+  const OFF = [[.25, .25], [.75, .25], [.25, .75], [.75, .75]];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    let r = 0, g = 0, b = 0;
+    for (const [ox, oy] of OFF) {
+      let px = x + ox, py = y + oy, col = null;
+      for (let i = n - 1; i >= 0; i--) {
+        const o = ops[i];
+        if (o.t === 0) {
+          const dx = px - o.x, dy = py - o.y, d2 = dx * dx + dy * dy;
+          if (d2 < o.r2) { col = o.c; break; }
+          const f = Math.sqrt(1 - o.r2 / d2); px = o.x + dx * f; py = o.y + dy * f;
+        } else if (o.t === 1) {
+          const t = (px - o.ax) * o.nx + (py - o.ay) * o.ny; let dd;
+          if (o.s) { const m = ((t % o.s) + o.s) % o.s; dd = Math.min(m, o.s - m); } else dd = Math.abs(t);
+          const disp = o.a * o.l / (dd + o.l); px -= o.mx * disp; py -= o.my * disp;
+        } else if (o.t === 2) {
+          const mod = o.mf ? Math.max(0, Math.sin(o.mf * (o.axis ? px : py))) : 1;
+          if (o.axis === 0) px -= o.A * mod * Math.sin(o.f * py + o.ph); else py -= o.A * mod * Math.sin(o.f * px + o.ph);
+        } else if (o.t === 3) {
+          const dx = px - o.x, dy = py - o.y, rr = Math.sqrt(dx * dx + dy * dy); if (rr > o.l * 6) continue;
+          const th = -o.a * Math.exp(-rr / o.l), cs = Math.cos(th), sn = Math.sin(th); px = o.x + dx * cs - dy * sn; py = o.y + dx * sn + dy * cs;
+        } else if (o.t === 4) {
+          const kmax = Math.floor((py + o.Rf) / o.Hf), kmin = Math.ceil(py / o.Hf);
+          for (let kk = kmax; kk >= kmin; kk--) {
+            const cy = kk * o.Hf, off = (kk & 1) ? o.Wf / 2 : 0, j = Math.round((px - off) / o.Wf), cx = off + j * o.Wf;
+            const dx = px - cx, dy = cy - py, r2 = dx * dx + dy * dy;
+            if (dy >= 0 && r2 < o.Rf * o.Rf) {
+              const rr = Math.sqrt(r2);
+              if (rr > o.Rf - o.edge) { col = o.vein; break; }
+              px = j * 173.3 + kk * 71.7 + (Math.atan2(dy, dx) / Math.PI) * o.span; py = kk * 37.1 + rr;
+              break;
+            }
+          }
+          if (col) break;
+        }
+      }
+      const cc = col || base(px, py); r += cc[0]; g += cc[1]; b += cc[2];
+    }
+    const i4 = (y * W + x) * 4, gr = (R() - .5) * 6;
+    out[i4] = r / 4 + gr; out[i4 + 1] = g / 4 + gr; out[i4 + 2] = b / 4 + gr; out[i4 + 3] = 255;
+  }
+  return out;
+}
+let worker = null; const pending = new Map(); let reqId = 0;
+try {
+  const src = [rng, bandsFn, marbleOps, renderMarble].map(f => f.toString()).join('\n') +
+    '\nonmessage = e => { const { id, pal, pattern, W, H, seed } = e.data; const buf = renderMarble(pal, pattern, W, H, seed); postMessage({ id, buf, W, H }, [buf.buffer]); };';
+  worker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+  worker.onmessage = e => { const { id, buf, W, H } = e.data; const done = pending.get(id); pending.delete(id); done(buf, W, H); };
+  worker.onerror = () => { worker = null; };
+} catch (e) { worker = null; }
+function genMarble(pal, pattern, W, H, seed) {
+  return new Promise(res => {
+    const finish = (buf, w, h) => { const c = canvasOf(w, h); c.getContext('2d').putImageData(new ImageData(buf, w, h), 0, 0); res(c.toDataURL('image/jpeg', .92)); };
+    if (worker) { const id = ++reqId; pending.set(id, finish); worker.postMessage({ id, pal, pattern, W, H, seed }); }
+    else setTimeout(() => finish(renderMarble(pal, pattern, W, H, seed), W, H), 0);
+  });
+}
+const MCACHE = new Map(), MREQ = new Set(); let refreshT;
+function marbleCSS(themeId, pattern, seed, size = 'big') {
+  const key = [themeId, state.tone, pattern, seed, size].join('|');
+  if (MCACHE.has(key)) return `url(${MCACHE.get(key)})`;
+  if (!MREQ.has(key)) {
+    MREQ.add(key); updateMarbleStatus();
+    const [W, H] = size === 'big' ? (pattern === 'stone' ? [1500, 1000] : [1800, 1200]) : [240, 150];
+    genMarble(TH[themeId].modes[state.tone], pattern, W, H, seed).then(url => {
+      MCACHE.set(key, url); MREQ.delete(key); updateMarbleStatus();
+      clearTimeout(refreshT); refreshT = setTimeout(refreshMarbles, 60);
+    });
+  }
+  const m = TH[themeId].modes[state.tone].marbling;
+  return `linear-gradient(115deg,${m[0]},${m[1]} 30%,${m[3]} 50%,${m[4]} 70%,${m[2]})`;
+}
+function updateMarbleStatus() { const el = $('#mk-status'); if (!el) return; const n = MREQ.size; el.textContent = n ? `marbling ${n} sheet${n === 1 ? '' : 's'}…` : ''; }
+function refreshMarbles() {
+  const v = vault();
+  document.documentElement.style.setProperty('--marbleimg', marbleCSS(v.theme, v.pattern, v.seed));
+  renderStatus();
+  if (state.screen === 'welcome') { const pv = VAULTS.find(x => x.id === $('#welcome').dataset.preview) || v; $('#welcome').style.backgroundImage = marbleCSS(pv.theme, pv.pattern, pv.seed); $$('#welcome .vault').forEach(b => { const x = VAULTS.find(q => q.id === b.dataset.v); $('.chip', b).style.backgroundImage = marbleCSS(x.theme, x.pattern, x.seed, 'small'); }); }
+  if (!$('#endpop').hidden) renderEndpop();
+  if (state.sideOpen && state.view === 'theme') renderThemePanel();
+}
+
+/* the logo, built the same way as the icon files */
+const BANDS = [8, 5, 7, 3, 6, 1.2];
+function stripes(m, id) { let y = 0, r = ''; m.forEach((c, i) => { r += `<rect y="${y}" width="60" height="${BANDS[i] + .4}" fill="${c}"/>`; y += BANDS[i]; }); return `<pattern id="${id}" width="60" height="30.2" patternUnits="userSpaceOnUse" patternTransform="rotate(-24)">${r}</pattern>`; }
+function logo(themeId, tone, tier = 'small') {
+  const md = TH[themeId].modes[tone], id = uid('l');
+  const foil = `<linearGradient id="${id}f" gradientUnits="userSpaceOnUse" x1="20" y1="45" x2="160" y2="135">${md.leafFoil.map(s => `<stop offset="${s.offset}" stop-color="${s.color}"/>`).join('')}</linearGradient>`;
+  const flt = `<filter id="${id}m" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.008 0.02" numOctaves="2" seed="11" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="40" xChannelSelector="R" yChannelSelector="G" result="a"/><feTurbulence type="turbulence" baseFrequency="0.035" numOctaves="1" seed="3" result="n2"/><feDisplacementMap in="a" in2="n2" scale="4" xChannelSelector="G" yChannelSelector="R"/></filter>`;
+  let inner;
+  if (tier === 'full') inner = `<rect x="18" y="34" width="144" height="112" rx="10" fill="${md.label}"/><rect x="23" y="39" width="134" height="102" rx="7" fill="none" stroke="url(#${id}f)" stroke-width="1.1"/><g transform="translate(90 92) scale(.7) translate(-91 -87.5)" fill="url(#${id}f)"><path d="${PATHS.leaf}" fill-rule="evenodd"/><path d="${PATHS.ground}"/></g>`;
+  else if (tier === 'mid') inner = `<rect x="16" y="16" width="148" height="148" rx="24" fill="${md.label}"/><g transform="translate(90 90) scale(.84) translate(-87.4 -84.4)" fill="url(#${id}f)"><path d="${PATHS.leaf}" fill-rule="evenodd"/></g>`;
+  else inner = `<rect x="13" y="13" width="154" height="154" rx="27" fill="${md.label}"/><g transform="translate(90 90) scale(.95) translate(-87.4 -84.4)" fill="url(#${id}f)"><path d="${PATHS.leafSmall}"/></g>`;
+  return `<svg viewBox="0 0 180 180" aria-hidden="true"><defs>${foil}${stripes(md.marbling, id + 's')}${flt}<clipPath id="${id}k"><rect width="180" height="180" rx="38"/></clipPath></defs><g clip-path="url(#${id}k)"><rect x="-40" y="-40" width="260" height="260" fill="url(#${id}s)" filter="url(#${id}m)"/>${inner}</g></svg>`;
+}
+
+/* ================= sample vault ================= */
+const VAULTS = [
+  { id: 'phys', name: 'Physics 2 — Spring 2027', short: 'Physics 2', path: '~/Teaching/phys1210', when: 'open now', theme: 'bookbinders-blue', pattern: 'combed', seed: 3 },
+  { id: 'ang', name: 'Angular statistics (RevTeX)', short: 'Angular statistics', path: '~/Research/ang-stats', when: 'yesterday', theme: 'autumn-ember', pattern: 'stone', seed: 5 },
+  { id: 'bank', name: 'Problem bank', short: 'Problem bank', path: '~/Teaching/problem-bank', when: '3 days ago', theme: 'forest-floor', pattern: 'fan', seed: 2 },
+  { id: 'thesis', name: 'Thesis', short: 'Thesis', path: '~/Writing/thesis', when: 'last week', theme: 'oxblood-gilt', pattern: 'nonpareil', seed: 4 },
+  { id: 'sem', name: 'Seminar notes', short: 'Seminar notes', path: '~/Notes/seminar', when: 'September 2', theme: 'plum-amber', pattern: 'bouquet', seed: 6 },
+  { id: 'letters', name: 'Letters of recommendation', short: 'Letters', path: '~/Admin/letters', when: 'August 18', theme: 'slate-ember', pattern: 'spanish', seed: 8 },
+];
+const TREE = [
+  { n: 'hw', open: true, c: [{ n: 'hw03.tex' }, { n: 'hw04.tex' }, { n: 'hw05.tex' }] },
+  { n: 'exams', c: [{ n: 'midterm1.tex' }, { n: 'midterm1-key.tex' }] },
+  { n: 'problems', open: true, c: [{ n: 'p-incline.tex' }, { n: 'p-yoyo.tex' }] },
+  { n: 'figs', c: [{ n: 'incline.tikz' }] },
+  { n: 'pdf', c: [{ n: 'hw04.pdf' }] },
+  { n: 'physics.cls' }, { n: 'refs.bib' }, { n: 'words.txt' },
+];
+const FILES = {
+  'refs.bib': String.raw`@book{taylor2005,
+  author    = {Taylor, John R.},
+  title     = {Classical Mechanics},
+  publisher = {University Science Books},
+  year      = {2005}
+}
+
+@book{kleppner2013,
+  author    = {Kleppner, Daniel and Kolenkow, Robert},
+  title     = {An Introduction to Mechanics},
+  edition   = {2},
+  publisher = {Cambridge University Press},
+  year      = {2013}
+}
+
+@book{morin2008,
+  author    = {Morin, David},
+  title     = {Introduction to Classical Mechanics},
+  publisher = {Cambridge University Press},
+  year      = {2008}
+}`,
+  'words.txt': 'yo-yo\nbooktabs\nKleppner\nKolenkow\nMorin\nnonpareil',
+  'physics.cls': String.raw`\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{physics}[2027/01/10 PHYS 1210 handouts]
+\LoadClass[11pt]{article}
+\RequirePackage{amsmath,siunitx,booktabs,tikz}
+\newcommand\course[2]{\def\@course{#1 \textperiodcentered\ #2}}
+\newcommand\due[1]{\def\@due{#1}}`,
+  'incline.tikz': String.raw`\begin{tikzpicture}[>=stealth, scale=0.9]
+  \draw[thick] (0,0) -- (6,0) -- (0,2.2) -- cycle;
+  \draw (2.6,1.25) circle (0.5);
+  \draw[->] (2.6,1.25) -- ++(0,-1.1) node[below] {$Mg$};
+  \draw[->] (2.6,1.25) -- ++(0.35,0.95) node[above] {$N$};
+  \draw[->] (2.42,0.78) -- ++(-0.8,0.3) node[left] {$f$};
+\end{tikzpicture}`,
+};
+const FIG = `<svg viewBox="0 0 380 190" role="img" aria-label="A cylinder on a ramp, with weight, normal force and friction drawn as arrows">
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="currentColor"/></marker></defs>
+<g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round">
+<path d="M20 170H360L20 42Z"/><circle cx="164" cy="68" r="27"/><circle cx="164" cy="68" r="2" fill="currentColor"/>
+<path d="M164 68v64" marker-end="url(#ah)"/><path d="M164 68l20.5-54.5" marker-end="url(#ah)"/><path d="M154.5 93.3l-44 -16.5" marker-end="url(#ah)"/><path d="M318 170a42 42 0 0 0-3-15.6"/></g>
+<g fill="currentColor" font-family="Crimson Pro, Georgia, serif" font-style="italic" font-size="18"><text x="172" y="140">Mg</text><text x="190" y="18">N</text><text x="92" y="74">f</text><text x="292" y="162">θ</text></g></svg>`;
+const M = {
+  g: '<math><mi>g</mi><mo>=</mo><mn>9.81</mn><mspace width="0.2em"/><mi mathvariant="normal">m</mi><mo>/</mo><msup><mi mathvariant="normal">s</mi><mn>2</mn></msup></math>',
+  eq1: '<math display="block"><mi>a</mi><mo>=</mo><mfrac><mrow><mi>g</mi><mspace width="0.17em"/><mi>sin</mi><mo>&#x2061;</mo><mi>θ</mi></mrow><mrow><mn>1</mn><mo>+</mo><mi>I</mi><mo>/</mo><mo stretchy="false">(</mo><mi>M</mi><msup><mi>R</mi><mn>2</mn></msup><mo stretchy="false">)</mo></mrow></mfrac></math>',
+  eq2: '<math display="block"><mi>T</mi><mo>=</mo><mfrac><mrow><mi>m</mi><mi>g</mi></mrow><mrow><mn>1</mn><mo>+</mo><mi>m</mi><msup><mi>r</mi><mn>2</mn></msup><mo>/</mo><mi>I</mi></mrow></mfrac></math>',
+  half: '<math><mfrac><mn>1</mn><mn>2</mn></mfrac><mi>M</mi><msup><mi>R</mi><mn>2</mn></msup></math>',
+  twothirds: '<math><mi>a</mi><mo>=</mo><mfrac><mn>2</mn><mn>3</mn></mfrac><mi>g</mi><mspace width="0.17em"/><mi>sin</mi><mo>&#x2061;</mo><mi>θ</mi></math>',
+  inertia: '<math><mi>I</mi><mo>=</mo><mn>3.20</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>5</mn></mrow></msup><mspace width="0.2em"/><mi mathvariant="normal">kg</mi><mspace width="0.17em"/><msup><mi mathvariant="normal">m</mi><mn>2</mn></msup></math>',
+};
+const BLOCKS = [
+  { html: `<p class="course">PHYS 1210 · Spring 2027</p><h1>Homework 4: Rotation and rolling</h1><p class="due">Due Friday, February 19, at the start of class</p>`,
+    src: String.raw`\course{PHYS 1210}{Spring 2027}
+\title{Homework 4: Rotation and rolling}
+\due{Friday, February 19, at the start of class}
+\maketitle` },
+  { html: `<p>Show every step. Give numerical answers to three significant figures, with units, and take ${M.g} unless a problem says otherwise. Problems marked <span class="star">★</span> are optional, for extra credit.</p>`,
+    src: String.raw`Show every step. Give numerical answers to three significant figures,
+with units, and take $g = \qty{9.81}{m/s^2}$ unless a problem says
+otherwise. Problems marked \extra{} are optional, for extra credit.` },
+  { sec: 'A cylinder rolling down a ramp', no: 1, html: `<h2><span class="no">1</span>A cylinder rolling down a ramp</h2>`, src: String.raw`\section{A cylinder rolling down a ramp}` },
+  { html: `<p>A solid cylinder of mass <span class="v">M</span> and radius <span class="v">R</span> is released from rest at the top of a ramp inclined at angle <span class="v">θ</span> to the horizontal (<a class="ref" data-go="6">Figure 1</a>). The ramp is 2.40&thinsp;m long, and the cylinder rolls without slipping the whole way down. For any round object with moment of inertia <span class="v">I</span> about its axis, the acceleration of its centre is</p>`,
+    src: String.raw`A solid cylinder of mass $M$ and radius $R$ is released from rest at the
+top of a ramp inclined at angle $\theta$ to the horizontal
+(Figure~\ref{fig:incline})‸. The ramp is \qty{2.40}{m} long, and the
+cylinder rolls without slipping the whole way down. For any round object
+with moment of inertia $I$ about its axis, the acceleration of its
+centre is` },
+  { html: `<div class="eq">${M.eq1}<span class="eqno">(1)</span></div>`,
+    src: String.raw`\begin{equation}
+  a = \frac{g\sin\theta}{1 + I/(MR^2)} \label{eq:roll}
+\end{equation}` },
+  { html: `<ol class="parts"><li>Draw a free-body diagram for the cylinder and label every force.</li><li>Starting from Newton’s second law for translation and for rotation, derive equation (<a class="ref" data-go="4">1</a>).</li><li>Show that a solid cylinder, with <span class="v">I</span> = ${M.half}, has ${M.twothirds}. Find its speed at the bottom when <span class="v">θ</span> = 18.0°.</li><li>What is the smallest coefficient of static friction <span class="v">μ</span><sub>s</sub> that keeps the cylinder from slipping?</li></ol>`,
+    src: String.raw`\begin{parts}
+  \part Draw a free-body diagram for the cylinder and label every force.
+  \part Starting from Newton's second law for translation and for
+        rotation, derive equation~(\ref{eq:roll}).
+  \part Show that a solid cylinder, with $I = \tfrac12 MR^2$, has
+        $a = \tfrac23 g\sin\theta$. Find its speed at the bottom when
+        $\theta = \ang{18.0}$.
+  \part What is the smallest coefficient of static friction $\mu_s$
+        that keeps the cylinder from slipping?
+\end{parts}` },
+  { html: `<figure>${FIG}<figcaption><b>Figure 1.</b> The cylinder on the ramp, with the forces acting on it.</figcaption></figure>`,
+    src: String.raw`\begin{figure}[h]
+  \centering
+  \input{figs/incline.tikz}
+  \caption{The cylinder on the ramp, with the forces acting on it.}
+  \label{fig:incline}
+\end{figure}` },
+  { sec: 'Racing shapes', no: 2, html: `<h2><span class="no">2</span>Racing shapes</h2>`, src: String.raw`\section{Racing shapes}` },
+  { html: `<p>Four objects with the same mass and radius are released together from the top of the same ramp. Use equation (<a class="ref" data-go="4">1</a>) to complete <span class="undef">Table ??</span>, then rank the objects by the order in which they reach the bottom.</p>`,
+    src: String.raw`Four objects with the same mass and radius are released together from
+the top of the same ramp. Use equation~(\ref{eq:roll}) to complete
+Table~\ref{tab:shapes}, then rank the objects by the order in which they
+reach the bottom.` },
+  { wide: true, html: `<div class="tablewrap"><table class="bk"><thead><tr><th>Object</th><th><span class="v">I</span>&thinsp;/&thinsp;<span class="v">MR</span><sup>2</sup></th><th><span class="v">a</span>&thinsp;/&thinsp;(<span class="v">g</span> sin <span class="v">θ</span>)</th><th>Time to the bottom (s)</th><th>Finish</th></tr></thead><tbody>
+<tr><td>Hoop</td><td>1.000</td><td>0.500</td><td>1.59</td><td class="blank">______</td></tr>
+<tr><td>Hollow sphere</td><td>0.667</td><td>0.600</td><td>1.45</td><td class="blank">______</td></tr>
+<tr><td>Solid cylinder</td><td>0.500</td><td>0.667</td><td>1.37</td><td class="blank">______</td></tr>
+<tr><td>Solid sphere</td><td>0.400</td><td>0.714</td><td>1.33</td><td class="blank">______</td></tr></tbody></table></div>
+<p class="tcap"><b>Table 1.</b> Four shapes on a 2.40&thinsp;m ramp at 18.0°. The table is wider than the text, so it runs into the outer margin.</p>`,
+    src: String.raw`\begin{table}[h]
+  \centering
+  \begin{tabular}{l S[table-format=1.3] S[table-format=1.3] S c}
+    \toprule
+    Object & {$I/MR^2$} & {$a/(g\sin\theta)$} & {Time to the bottom (\unit{s})} & Finish \\
+    \midrule
+    Hoop           & 1.000 & 0.500 & 1.59 & \blank \\
+    Hollow sphere  & 0.667 & 0.600 & 1.45 & \blank \\
+    Solid cylinder & 0.500 & 0.667 & 1.37 & \blank \\
+    Solid sphere   & 0.400 & 0.714 & 1.33 & \blank \\
+    \bottomrule
+  \end{tabular}
+  \caption{Four shapes on a \qty{2.40}{m} ramp at \ang{18.0}.}
+\end{table}` },
+  { html: `<p>Explain in one or two sentences why the hoop always finishes last. Use energy rather than forces: where does the gravitational potential energy go?</p>`,
+    src: String.raw`Explain in one or two sentences why the hoop always finishes last. Use
+energy rather than forces: where does the gravitational potential
+energy go? % TODO: move to the question bank` },
+  { sec: 'A yo-yo', no: 3, html: `<h2><span class="no">3</span>A yo-yo <span class="star">★</span></h2>`, src: String.raw`\section{A yo-yo \extra}` },
+  { html: `<p>A yo-yo of mass <span class="v">m</span> = 0.120&thinsp;kg has its string wound around an axle of radius <span class="v">r</span> = 4.00&thinsp;mm. Its moment of inertia about the axle is ${M.inertia}. You hold the end of the string still and let the yo-yo fall. Show that the tension in the string is</p>`,
+    src: String.raw`A yo-yo of mass $m = \qty{0.120}{kg}$ has its string wound around an
+axle of radius $r = \qty{4.00}{mm}$. Its moment of inertia about the
+axle is $I = \qty{3.20e-5}{kg.m^2}$. You hold the end of the string still
+and let the yo-yo fall. Show that the tension in the string is` },
+  { html: `<div class="eq">${M.eq2}<span class="eqno">(2)</span></div>`,
+    src: String.raw`\begin{equation}
+  T = \frac{mg}{1 + mr^2/I} \label{eq:yoyo}
+\end{equation}` },
+  { html: `<ol class="parts"><li>Find the tension and the acceleration of the yo-yo.</li><li>The string is 0.800&thinsp;m long. How long does the yo-yo take to reach the bottom, and how fast is it spinning when it gets there, in revolutions per second?</li></ol>`,
+    src: String.raw`\begin{parts}
+  \part Find the tension and the acceleration of the yo-yo.
+  \part The string is \qty{0.800}{m} long. How long does the yo-yo take to
+        reach the bottom, and how fast is it spinning when it gets there,
+        in revolutions per second?
+\end{parts}` },
+];
+{ let ln = 14; BLOCKS.forEach(b => { b.line = ln; ln += b.src.split('\n').length + 1; }); }
+const PROBLEMS = [
+  { msg: 'Reference <code>tab:shapes</code> is undefined; the table has no <code>\\label</code>.', block: 8 },
+  { msg: 'Overfull <code>\\hbox</code> (6.3 pt too wide) in the table.', block: 9 },
+];
+
+/* ================= state ================= */
+const viewerDark = () => document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+const state = {
+  screen: 'workspace', vault: 'phys', tone: 'dark', wood: 'felt', light: 'day', pageTone: 'dark',
+  chrome: 'saddle', tabstyle: 'foreedge', tabpos: 'left', look: 'plain', pdfZoom: 0,
+  cpl: 82, size: 19, font: 'Crimson Pro', guides: false,
+  view: 'files', sideOpen: true, sw: 272, spread: false, ratio: .6, panelOpen: true, ph: 150, ptab: 'problems',
+  active: 3, viewmode: 'live', build: 'ok', scrolls: {},
+  tabs: [{ n: 'hw04.tex', p: 'hw/hw04.tex', dirty: true }, { n: 'p-incline.tex', p: 'problems/p-incline.tex' }, { n: 'refs.bib', p: 'refs.bib' }, { n: 'physics.cls', p: 'physics.cls' }],
+  tab: 'hw/hw04.tex', openSecs: { tree: true, outline: true },
+};
+const PREFS = ['tone', 'wood', 'pageTone', 'chrome', 'look', 'tabpos', 'cpl', 'size', 'font'];
+const DEFAULTS = { look: 'plain', pageTone: 'dark', tone: 'dark', wood: 'felt', chrome: 'saddle', cpl: 82, size: 19, font: 'Crimson Pro', theme: 'bookbinders-blue', pattern: 'combed' };
+try {
+  const s = JSON.parse(localStorage.getItem('endleaf-theme-6') || 'null');
+  if (s) { for (const k of PREFS) if (k in s) state[k] = s[k]; for (const v of VAULTS) if (s.vaults && s.vaults[v.id]) Object.assign(v, s.vaults[v.id]); }
+} catch (e) {}
+if (!['saddle', 'linen'].includes(state.chrome)) state.chrome = 'saddle';
+if (!['felt', 'pad'].includes(state.wood)) state.wood = 'felt';
+const save = () => { try { localStorage.setItem('endleaf-theme-6', JSON.stringify({ ...Object.fromEntries(PREFS.map(k => [k, state[k]])), vaults: Object.fromEntries(VAULTS.map(v => [v.id, { theme: v.theme, pattern: v.pattern, seed: v.seed }])) })); } catch (e) {} };
+const vault = () => VAULTS.find(v => v.id === state.vault);
+const currentFile = () => state.tabs.find(t => t.p === state.tab);
+const ext = n => n.split('.').pop();
+const root = document.documentElement.style;
+const WOOD = {};
+
+/* ================= theme ================= */
+const LIGHTS = {
+  day: 'none',
+  evening: 'radial-gradient(ellipse 140% 120% at 50% 15%,#fffaf1 0%,#f7ecdc 55%,#eadac4 100%)',
+  night: 'radial-gradient(ellipse 140% 120% at 50% 20%,#ece5da 0%,#d6cbbd 55%,#bdb0a0 100%)',
+};
+const DIM = { day: 'none', evening: 'sepia(.05)', night: 'brightness(.93)' };
+function applyTheme() {
+  const v = vault(), st = STOCK[v.theme], dark = TH[v.theme].modes.dark;
+  const gilt = dark.leafFoil.reduce((a, s) => (Math.abs(s.offset - .34) < Math.abs(a.offset - .34) ? s : a)).color;
+  const set = (k, val) => root.setProperty('--' + k, val);
+  set('gilt', gilt);
+  set('foil', `linear-gradient(115deg,${dark.leafFoil.map(s => `${s.color} ${Math.round(s.offset * 100)}%`).join(',')})`);
+  set('detail-chrome', st.detail);
+  if (state.pageTone === 'light') {
+    set('paper', st.paper); set('ink', st.ink); set('ink-soft', mix(st.ink, st.paper, .42)); set('pencil', mix(st.ink, st.paper, .55));
+    set('detail', st.detail); set('srcbg', mix(st.paper, st.detail, .05)); set('math', mix(st.ink, '#3D5A8A', .55));
+    set('side', mix(st.paper, '#C9BFAE', .22)); set('tabpaper', mix(st.paper, '#9C8F7A', .2));
+  } else {
+    const ink = '#E2DED6';
+    set('paper', st.dark); set('ink', ink); set('ink-soft', mix(ink, st.dark, .38)); set('pencil', mix(ink, st.dark, .55));
+    set('detail', gilt); set('srcbg', mix(st.dark, '#ffffff', .05)); set('math', '#A9C1E0');
+    set('side', mix(st.dark, '#ffffff', .05)); set('tabpaper', mix(st.dark, '#ffffff', .1));
+  }
+  const plain = state.look === 'plain';
+  if (plain) {
+    const t = plainTokens(v.theme, state.pageTone);
+    for (const [k, val] of Object.entries(t)) set('p-' + k, val);
+    set('paper', t.page); set('ink', t.text); set('ink-soft', t.muted); set('pencil', t.faint); set('detail', t.accent);
+    set('srcbg', t.srcbg); set('math', t.math); set('side', t.side); set('tabpaper', t.chrome);
+  }
+  $('#win').dataset.look = state.look;
+  set('marbleimg', marbleCSS(v.theme, v.pattern, v.seed));
+  const dk = DESKS[state.wood];
+  set('woodimg', `url(${WOOD[state.wood] || (WOOD[state.wood] = dk.make())})`);
+  set('desksize', dk.size);
+  set('lightgrad', plain ? 'none' : LIGHTS[state.light]);
+  $('#sidebar').style.filter = $('#panel').style.filter = plain ? 'none' : DIM[state.light];
+  $('#win').dataset.chrome = plain ? 'plain' : state.pageTone === 'dark' ? 'dark' : state.chrome;
+  $('#tb-logo').innerHTML = logo(v.theme, 'dark', 'small');
+  renderStatus(); renderActivity();
+  if (state.screen === 'welcome') renderWelcome();
+  if (!$('#endpop').hidden) renderEndpop();
+  renderEmpty(); syncMock();
+}
+
+/* The plain look's flat palette, derived from the logo palettes (as in the first mockup). */
+function plainTokens(themeId, mode) {
+  const md = TH[themeId].modes[mode], m = md.marbling, v = md.vein, L = md.label;
+  if (mode === 'dark') {
+    const page = mix(m[2], '#ffffff', .045), text = mix('#EDE5D8', v, .1), side = mix(L, m[2], .6);
+    return { bar: L, chrome: mix(L, m[2], .35), side, desk: mix(L, m[0], .42), page, text, muted: mix(text, page, .38), faint: mix(text, page, .66),
+      accent: v, line: mix(side, text, .12), sel: mix(side, v, .2), srcbg: mix(page, v, .07), math: mix(text, m[3], .38) };
+  }
+  const page = L, text = mix('#211C18', m[5], .14), side = mix(m[2], L, .4);
+  return { bar: mix(m[4], m[1], .45), chrome: mix(m[2], m[0], .55), side, desk: mix(m[0], m[4], .5), page, text, muted: mix(text, page, .44), faint: mix(text, page, .68),
+    accent: v, line: mix(side, text, .14), sel: mix(side, m[3], .22), srcbg: mix(page, m[0], .45), math: mix(m[3], text, .35) };
+}
+
+/* ================= activity bar + sidebar ================= */
+const VIEWS = [
+  { id: 'files', icon: 'files', tip: 'Files and contents (Ctrl+Shift+E)' },
+  { id: 'search', icon: 'search', tip: 'Search the vault (Ctrl+Shift+F)' },
+  { id: 'symbols', icon: 'symbols', tip: 'Symbols (Ctrl+Shift+Y)' },
+];
+const CTX = [
+  { id: 'cite', icon: 'cite', tip: 'Citations. Shown because this vault has refs.bib' },
+  { id: 'multi', icon: 'multi', tip: 'Document parts. Shown because hw04.tex uses \\input' },
+];
+function renderActivity() {
+  const b = v => `<button class="act ${state.sideOpen && state.view === v.id ? 'on' : ''}" data-view="${v.id}" title="${v.tip}" aria-label="${v.tip}">${ic(v.icon)}</button>`;
+  $('#activity').innerHTML = VIEWS.map(b).join('') + `<div class="act-sep"></div><div class="act-label" title="Tools that appear only when this vault needs them">tools</div>` + CTX.map(b).join('') +
+    `<div class="act-spacer"></div><button class="act" id="act-endpaper" title="This vault’s endpaper and paper" aria-label="Endpaper"><span class="swatch">${logo(vault().theme, 'dark', 'small')}</span></button><button class="act ${state.sideOpen && state.view === 'theme' ? 'on' : ''}" data-view="theme" title="Appearance" aria-label="Appearance">${ic('gear')}</button>`;
+}
+$('#activity').addEventListener('click', e => {
+  const b = e.target.closest('.act'); if (!b) return;
+  if (b.id === 'act-endpaper') return openTheme();
+  const v = b.dataset.view; if (!v) return toast('Settings would open as a leaf of their own.');
+  if (state.sideOpen && state.view === v) state.sideOpen = false; else { state.view = v; state.sideOpen = true; }
+  renderSidebar(); layout();
+});
+function flatFiles(nodes = TREE, pre = '') { return nodes.flatMap(n => n.c ? flatFiles(n.c, pre + n.n + '/') : [{ n: n.n, p: pre + n.n }]); }
+function ftBadge(n) { const e = ext(n); return `<span class="ft ${e}">${{ tex: '§', bib: '@', cls: '¶', tikz: '△', pdf: '▤', txt: '≡' }[e] || '·'}</span>`; }
+function treeHTML(nodes, depth = 0, pre = '') {
+  return nodes.map(n => {
+    const pad = 8 + depth * 16;
+    if (n.c) return `<button class="row" data-folder="${pre + n.n}" style="padding-left:${pad}px">${ic(n.open ? 'down' : 'chev')}<span class="nm">${n.n}</span></button>` + (n.open ? treeHTML(n.c, depth + 1, pre + n.n + '/') : '');
+    const p = pre + n.n, tab = state.tabs.find(t => t.p === p);
+    return `<button class="row ${state.tab === p && state.tabs.length ? 'on' : ''}" data-file="${p}" style="padding-left:${pad + 16}px">${ftBadge(n.n)}<span class="nm">${n.n}</span>${tab && tab.dirty ? '<span class="dot" title="Unsaved changes"></span>' : ''}</button>`;
+  }).join('');
+}
+function findNode(path, nodes = TREE, pre = '') { for (const n of nodes) { if (pre + n.n === path) return n; if (n.c) { const r = findNode(path, n.c, pre + n.n + '/'); if (r) return r; } } }
+function outlineHTML() {
+  const cur = BLOCKS.slice(0, state.active + 1).filter(b => b.sec).pop();
+  return BLOCKS.map((b, i) => b.sec ? `<button class="row out ${b === cur ? 'on' : ''}" data-go="${i}"><span class="n">${b.no}</span><span class="nm">${b.sec}</span></button>` : '').join('') +
+    `<button class="row out sub" data-go="6"><span class="nm">Figure 1 · The cylinder on the ramp</span></button><button class="row out sub" data-go="9"><span class="nm">Table 1 · Four shapes</span></button>`;
+}
+function openTheme() { state.view = 'theme'; state.sideOpen = true; renderSidebar(); layout(); }
+/* The theme builder: global choices first, then this vault's endpaper, then type. */
+function renderThemePanel() {
+  const sb = $('#sidebar'), prev = $('#themepanel'), top = prev ? prev.scrollTop : 0, v = vault(), bench = state.look === 'bench', black = state.pageTone === 'dark';
+  const choice = (k, opts, cur, dis) => '<div class="tchoices" data-k="' + k + '">' + opts.map(([val, label]) => '<button data-v="' + val + '" class="' + (String(val) === String(cur) ? 'on' : '') + '"' + (dis ? ' disabled' : '') + '>' + label + '</button>').join('') + '</div>';
+  sb.innerHTML = '<div class="sec grow open"><div class="sec-h"><span class="t">Appearance</span><button class="tbtn2" id="th-reset" title="Return every setting to its default" style="padding:2px 8px;font-size:12px">Defaults</button></div><div class="sec-b" id="themepanel">'
+    + '<div class="tgroup"><div class="tlabel">Look</div>' + choice('look', [['plain', 'Plain'], ['bench', 'Bench']], state.look)
+    + '<p class="thint">' + (bench ? 'A book on a desk, bound in this vault’s endpapers.' : 'A flat editor with marbled accents.') + '</p></div>'
+    + '<div class="tgroup"><div class="tlabel">Page</div>' + choice('pageTone', [['light', STOCK[v.theme].name], ['dark', 'Black']], state.pageTone) + '</div>'
+    + (bench ? '<div class="tgroup"><div class="tlabel">File tabs</div>' + choice('tabpos', [['left', 'Left edge'], ['top', 'Top edge']], state.tabpos) + '</div>'
+      + '<div class="tgroup"><div class="tlabel">Desk</div>' + choice('wood', [['felt', 'Felt'], ['pad', 'Leather pad']], state.wood) + '</div>'
+      + '<div class="tgroup"><div class="tlabel">Binding</div>' + choice('chrome', [['saddle', 'Saddle leather'], ['linen', 'Linen']], state.chrome, black)
+      + (black ? '<p class="thint">Black pages are bound in dark leather.</p>' : '') + '</div>' : '')
+    + '<div class="tsec">This vault · ' + esc(v.short) + '</div>'
+    + '<div class="tgroup"><div class="tlabel">Palette</div><div class="swatches tsw" data-k="theme">' + THEMES.themes.map(t => '<button class="sw ' + (t.id === v.theme ? 'on' : '') + '" data-v="' + t.id + '"><span class="m" style="background-image:' + marbleCSS(t.id, v.pattern, v.seed, 'small') + '"><span class="lg">' + logo(t.id, 'dark', 'small') + '</span></span><span>' + t.name + '</span></button>').join('') + '</div></div>'
+    + '<div class="tgroup"><div class="tlabel">Marbling</div><div class="swatches tsw" data-k="pattern">' + PATTERNS.map(([id, name]) => '<button class="sw ' + (id === v.pattern ? 'on' : '') + '" data-v="' + id + '"><span class="m" style="background-image:' + marbleCSS(v.theme, id, v.seed, 'small') + '"></span><span>' + name + '</span></button>').join('') + '</div>'
+    + '<div class="trow">' + choice('tone', [['dark', 'Rich'], ['light', 'Pale']], state.tone) + '<button class="tbtn2" id="th-seed" title="Marble a fresh sheet in the same pattern">Remarble</button></div></div>'
+    + '<div class="tsec">Type</div>'
+    + '<div class="tgroup"><div class="tlabel">Line length <output id="cpl-out"></output></div><input type="range" id="th-cpl" min="60" max="96" step="1" value="' + state.cpl + '" aria-label="Line length in characters"></div>'
+    + '<div class="tgroup"><div class="tlabel">Text size</div>' + choice('size', [17, 18, 19, 20, 21].map(n => [n, n + ' px']), state.size) + '</div>'
+    + '<div class="tgroup"><div class="tlabel">Typeface</div>' + choice('font', ['Crimson Pro', 'Libre Caslon Text', 'Old Standard TT', 'EB Garamond'].map(f => [f, f]), state.font) + '</div>'
+    + '<div class="tgroup"><label class="tcheck"><input type="checkbox" id="th-guides"' + (state.guides ? ' checked' : '') + '> Show the text column</label></div>'
+    + '</div></div>';
+  $('#themepanel').scrollTop = top; measureNow();
+}
+function setThemeOpt(k, val) {
+  if (k === 'theme' || k === 'pattern') vault()[k] = val;
+  else state[k] = k === 'size' ? +val : val;
+  save(); applyTheme();
+  if (k === 'size' || k === 'font') { document.fonts.load('400 ' + state.size + 'px "' + state.font + '"').then(computeMeasure); computeMeasure(); }
+  if (k === 'look' || k === 'pageTone' || k === 'tabpos') renderBook(); else sizeBook();
+  renderThemePanel();
+}
+$('#sidebar').addEventListener('input', e => { if (e.target.id === 'th-cpl') { state.cpl = +e.target.value; save(); computeMeasure(); } });
+$('#sidebar').addEventListener('change', e => { if (e.target.id === 'th-guides') { state.guides = e.target.checked; renderBook(); } });
+function renderSidebar() {
+  const sb = $('#sidebar'), v = vault();
+  if (state.view === 'theme') { renderThemePanel(); return; }
+  if (state.view === 'files') {
+    sb.innerHTML = `<div class="sec grow ${state.openSecs.tree ? 'open' : ''}" data-sec="tree"><div class="sec-h fold">${ic('chev')}<span class="t">${esc(v.short)}</span><button class="mini" title="New file">${ic('newfile')}</button><button class="mini" title="New folder">${ic('folder')}</button><button class="mini" title="Collapse folders" data-act="collapse">${ic('collapse')}</button></div><div class="sec-b" id="tree">${treeHTML(TREE)}</div></div>
+      <div class="sec ${state.openSecs.outline ? 'open' : ''}" data-sec="outline" style="max-height:44%"><div class="sec-h fold">${ic('chev')}<span class="t">Contents</span></div><div class="sec-b" id="outline">${outlineHTML()}</div></div>`;
+  } else if (state.view === 'search') {
+    sb.innerHTML = `<div class="sec grow open"><div class="sec-h"><span class="t">Search the vault</span></div>
+      <div class="field"><input id="q" value="${esc(state.q ?? 'ramp')}" aria-label="Search the vault"><button class="opt" title="Match case">Aa</button><button class="opt" title="Whole word">ab</button><button class="opt" title="Regular expression">.*</button><button class="opt on" title="Skip comments">%</button></div>
+      <div class="field"><input placeholder="Replace with" aria-label="Replace with"></div>
+      <div class="sec-b" id="results"></div></div>`;
+    runSearch(); $('#q').addEventListener('input', e => { state.q = e.target.value; runSearch(); });
+  } else if (state.view === 'symbols') {
+    sb.innerHTML = `<div class="sec grow open"><div class="sec-h"><span class="t">Symbols</span><button class="mini" id="pad-clear" title="Clear the drawing">${ic('eraser')}</button></div>
+      <div class="pad"><canvas id="pad" aria-label="Draw a symbol"></canvas><div class="ph" id="pad-ph">Draw a symbol here with a mouse, pen or trackpad</div></div>
+      <div class="guesses" id="guesses"></div>
+      <div class="field"><input id="symq" placeholder="Or search by name" aria-label="Search symbols"></div>
+      <div class="sec-b"><div class="symgrid" id="symgrid"></div></div></div>`;
+    renderSyms(''); setupPad(); $('#symq').addEventListener('input', e => renderSyms(e.target.value));
+  } else if (state.view === 'cite') {
+    sb.innerHTML = `<div class="sec grow open"><div class="sec-h"><span class="t">Citations</span><button class="mini" title="Add an entry">${ic('plus')}</button></div>
+      <p class="ctxnote">Here because the vault has refs.bib. Click an entry to cite it at the cursor.</p>
+      <div class="sec-b">
+      <button class="bibcard" data-key="taylor2005"><b>taylor2005</b>Taylor, <i>Classical Mechanics</i>, 2005</button>
+      <button class="bibcard" data-key="kleppner2013"><b>kleppner2013</b>Kleppner and Kolenkow, <i>An Introduction to Mechanics</i>, 2nd ed., 2013</button>
+      <button class="bibcard" data-key="morin2008"><b>morin2008</b>Morin, <i>Introduction to Classical Mechanics</i>, 2008</button></div></div>`;
+  } else if (state.view === 'multi') {
+    sb.innerHTML = `<div class="sec grow open"><div class="sec-h"><span class="t">Document parts</span></div>
+      <p class="ctxnote">Here because hw04.tex pulls in other files. Builds always start from the root.</p>
+      <div class="sec-b">
+      <button class="row" data-file="hw/hw04.tex" style="padding-left:12px">${ftBadge('x.tex')}<span class="nm"><b>hw04.tex</b></span><span style="margin-left:auto;font-size:12px;color:var(--ink-soft)">root</span></button>
+      <button class="row" data-file="physics.cls" style="padding-left:30px">${ftBadge('x.cls')}<span class="nm">physics.cls</span></button>
+      <button class="row" data-file="problems/p-incline.tex" style="padding-left:30px">${ftBadge('x.tex')}<span class="nm">p-incline.tex</span></button>
+      <button class="row" data-file="figs/incline.tikz" style="padding-left:48px">${ftBadge('x.tikz')}<span class="nm">incline.tikz</span></button>
+      <button class="row" data-file="problems/p-yoyo.tex" style="padding-left:30px">${ftBadge('x.tex')}<span class="nm">p-yoyo.tex</span></button></div></div>`;
+  }
+}
+$('#sidebar').addEventListener('click', e => {
+  const t = e.target;
+  if (t.closest('#th-reset')) { Object.assign(state, { look: DEFAULTS.look, pageTone: DEFAULTS.pageTone, tone: DEFAULTS.tone, wood: DEFAULTS.wood, chrome: DEFAULTS.chrome, cpl: DEFAULTS.cpl, size: DEFAULTS.size, font: DEFAULTS.font }); Object.assign(vault(), { theme: DEFAULTS.theme, pattern: DEFAULTS.pattern }); save(); applyTheme(); computeMeasure(); renderBook(); renderThemePanel(); return; }
+  if (t.closest('#th-seed')) { vault().seed = Math.floor(Math.random() * 1e6); save(); applyTheme(); renderThemePanel(); return; }
+  const tb = t.closest('#themepanel button[data-v]'); if (tb) { if (!tb.disabled) setThemeOpt(tb.closest('[data-k]').dataset.k, tb.dataset.v); return; }
+  if (t.closest('.mini')) { if (t.closest('[data-act=collapse]')) { (function c(ns) { ns.forEach(n => { if (n.c) { n.open = false; c(n.c); } }); })(TREE); $('#tree').innerHTML = treeHTML(TREE); } return; }
+  const sh = t.closest('.sec-h.fold'); if (sh) { const s = sh.parentElement; s.classList.toggle('open'); state.openSecs[s.dataset.sec] = s.classList.contains('open'); return; }
+  const fo = t.closest('[data-folder]'); if (fo) { const n = findNode(fo.dataset.folder); n.open = !n.open; $('#tree').innerHTML = treeHTML(TREE); return; }
+  const fi = t.closest('[data-file]'); if (fi) return openFile(fi.dataset.file);
+  const go = t.closest('[data-go]'); if (go) return goBlock(+go.dataset.go, false);
+  const r = t.closest('.res'); if (r) { if (r.dataset.block) goBlock(+r.dataset.block, true); else openFile(r.dataset.path); return; }
+  const o = t.closest('.opt'); if (o) { o.classList.toggle('on'); return; }
+  const sy = t.closest('.sym'); if (sy) { toast(`Inserted ${sy.title}`); return; }
+  const ci = t.closest('.bibcard'); if (ci) { toast(`Inserted \\cite{${ci.dataset.key}}`); return; }
+});
+const plain = h => h.replace(/<math[\s\S]*?<\/math>/g, '…').replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<[^>]+>/g, '').replace(/&thinsp;/g, ' ').replace(/\s+/g, ' ').trim();
+const OTHER = {
+  'hw/hw03.tex': ['A block slides down a frictionless ramp of length 1.80 m.', 'Compare this with the rolling case in Homework 4.'],
+  'exams/midterm1.tex': ['A sphere rolls without slipping down a ramp inclined at 25.0°.'],
+  'problems/p-incline.tex': ['A solid cylinder of mass $M$ and radius $R$ is released from rest at the top of a ramp'],
+};
+function runSearch() {
+  const q = (state.q ?? 'ramp').trim(), box = $('#results'); if (!box) return;
+  if (!q) { box.innerHTML = '<p class="hint">Type to search every file in the vault.</p>'; return; }
+  const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+  const snip = s => { const i = s.search(re); const a = Math.max(0, i - 18); return (a ? '…' : '') + esc(s.slice(a, a + 90)).replace(re, m => `<mark>${m}</mark>`); };
+  let out = '', total = 0, files = 0;
+  const hits = BLOCKS.map((b, i) => [plain(b.html), i]).filter(([s]) => { re.lastIndex = 0; return re.test(s); });
+  if (hits.length) { files++; total += hits.length; out += `<div class="res-file">${ftBadge('x.tex')}hw04.tex<span class="c">${hits.length}</span></div>` + hits.map(([s, i]) => `<button class="res" data-block="${i}">${snip(s)}</button>`).join(''); }
+  for (const [p, lines] of Object.entries(OTHER)) {
+    const h = lines.filter(s => { re.lastIndex = 0; return re.test(s); }); if (!h.length) continue;
+    files++; total += h.length;
+    out += `<div class="res-file">${ftBadge('x.tex')}${p.split('/').pop()}<span class="c">${h.length}</span></div>` + h.map(s => `<button class="res" data-path="${p}">${snip(s)}</button>`).join('');
+  }
+  box.innerHTML = `<p class="hint">${total} result${total === 1 ? '' : 's'} in ${files} file${files === 1 ? '' : 's'}</p>` + out;
+}
+const SYMS = [['α', '\\alpha'], ['β', '\\beta'], ['γ', '\\gamma'], ['δ', '\\delta'], ['ε', '\\varepsilon'], ['θ', '\\theta'], ['λ', '\\lambda'], ['μ', '\\mu'], ['ρ', '\\rho'], ['σ', '\\sigma'], ['τ', '\\tau'], ['φ', '\\varphi'], ['ω', '\\omega'], ['Γ', '\\Gamma'], ['Δ', '\\Delta'], ['Ω', '\\Omega'], ['∇', '\\nabla'], ['∂', '\\partial'], ['∫', '\\int'], ['∮', '\\oint'], ['∑', '\\sum'], ['∏', '\\prod'], ['√', '\\sqrt{}'], ['∞', '\\infty'], ['≈', '\\approx'], ['≠', '\\neq'], ['≤', '\\leq'], ['≥', '\\geq'], ['±', '\\pm'], ['×', '\\times'], ['·', '\\cdot'], ['→', '\\to'], ['⇒', '\\Rightarrow'], ['ℏ', '\\hbar'], ['⊗', '\\otimes'], ['∝', '\\propto'], ['∈', '\\in'], ['∀', '\\forall']];
+const NAMES = { '\\int': 'integral', '\\oint': 'contour integral', '\\sum': 'sum sigma', '\\nabla': 'del gradient nabla', '\\partial': 'partial derivative', '\\hbar': 'h bar planck', '\\to': 'arrow', '\\Rightarrow': 'arrow implies' };
+function renderSyms(q) {
+  q = q.toLowerCase();
+  const list = SYMS.filter(([, c]) => !q || c.toLowerCase().includes(q) || (NAMES[c] || '').includes(q));
+  $('#symgrid').innerHTML = list.map(([g, c]) => `<button class="sym" title="${c}">${g}</button>`).join('') || '<p class="hint">No symbol has that name. Try drawing it.</p>';
+}
+function setupPad() {
+  const cv = $('#pad'), ctx = cv.getContext('2d'); let drawing = false, drew = false;
+  const r0 = cv.getBoundingClientRect(), dp = devicePixelRatio || 1; cv.width = r0.width * dp; cv.height = r0.height * dp; ctx.scale(dp, dp);
+  ctx.lineWidth = 2.4; ctx.lineCap = ctx.lineJoin = 'round'; ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--ink');
+  const pt = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  cv.addEventListener('pointerdown', e => { drawing = true; cv.setPointerCapture(e.pointerId); ctx.beginPath(); ctx.moveTo(...pt(e)); $('#pad-ph').hidden = true; });
+  cv.addEventListener('pointermove', e => { if (!drawing) return; ctx.lineTo(...pt(e)); ctx.stroke(); drew = true; });
+  cv.addEventListener('pointerup', () => { drawing = false; if (drew) $('#guesses').innerHTML = '<span class="hint" style="padding:0;width:100%">Best matches</span>' + [['∮', '\\oint'], ['∫', '\\int'], ['∂', '\\partial'], ['σ', '\\sigma']].map(([g, c]) => `<button class="sym" style="width:40px" title="${c}">${g}</button>`).join(''); });
+  $('#pad-clear').onclick = () => { ctx.clearRect(0, 0, cv.width, cv.height); $('#pad-ph').hidden = false; $('#guesses').innerHTML = ''; drew = false; };
+  $('#guesses').onclick = e => { const s = e.target.closest('.sym'); if (s) toast(`Inserted ${s.title}`); };
+}
+
+/* ================= the book ================= */
+function highlight(src) {
+  let out = ''; const re = /(%[^\n]*)|(\$[^$]*\$)|(\\[a-zA-Z@]+\*?|\\.)|([{}[\]])|‸/g; let last = 0, m;
+  while ((m = re.exec(src))) {
+    out += esc(src.slice(last, m.index)); last = re.lastIndex;
+    if (m[0] === '‸') out += '<span class="caret"></span>';
+    else if (m[1]) out += `<span class="t-com">${esc(m[1])}</span>`;
+    else if (m[2]) out += `<span class="t-math">${esc(m[2])}</span>`;
+    else if (m[3]) out += `<span class="t-cmd">${esc(m[3])}</span>`;
+    else out += `<span class="t-br">${esc(m[4])}</span>`;
+  }
+  return out + esc(src.slice(last));
+}
+function srcHTML(src, start, caret) {
+  if (caret && !src.includes('‸')) src += '‸';
+  if (!caret) src = src.replace('‸', '');
+  return highlight(src).split('\n').map((l, k) => `<div class="line"><span class="ln">${start + k}</span>${l || ' '}</div>`).join('');
+}
+function blockHTML(b, i) {
+  const isSrc = state.viewmode === 'source' || i === state.active;
+  return `<div class="blk${isSrc ? ' src' : ''}${b.wide && !isSrc ? ' wide' : ''}" data-i="${i}">${isSrc ? srcHTML(b.src, b.line, i === state.active) : b.html}</div>`;
+}
+function docBlocks() {
+  if (state.tab === 'problems/p-incline.tex') return [2, 3, 4, 5, 6];
+  if (state.tab === 'problems/p-yoyo.tex') return [11, 12, 13, 14];
+  return BLOCKS.map((_, i) => i);
+}
+function renderBook() {
+  const empty = !state.tabs.length, open = state.look === 'bench' && state.spread && !empty;
+  $('#desk-in').hidden = empty; $('#empty').hidden = !empty;
+  $('#block').classList.toggle('spread', open);
+  $('.edge.l').hidden = !open;
+  $$('#viewmode .tbtn').forEach(b => { const tex = !empty && ext(currentFile().n) === 'tex'; b.disabled = !tex; b.classList.toggle('on', tex ? b.dataset.v === state.viewmode : b.dataset.v === 'source'); });
+  $('#btn-spread').classList.toggle('on', state.spread);
+  if (empty) { renderTabs(); renderPdf(); return; }
+  const f = currentFile(), e = ext(f.n);
+  const guide = state.guides ? '<div class="guide-label" id="guide-label"></div>' : '';
+  const liveInner = e === 'tex' ? docBlocks().map(i => blockHTML(BLOCKS[i], i)).join('')
+    : '<div class="blk src" style="margin:0;background:none;box-shadow:none;padding:0">' + srcHTML(FILES[f.n] ?? '% This file is not in the sample.', 1, false) + '</div>';
+  $('#leaves').innerHTML = '<div class="leaf paper ' + (open ? 'verso' : 'recto') + '" id="leaf-live"><div class="col' + (state.guides ? ' guides' : '') + '" id="col">' + guide + liveInner + '</div></div>'
+    + (open ? '<div class="gutter" id="gutter"></div><div class="ep-recto" id="ep-recto"><div class="ep-sticky" id="ep-sticky"><div class="ep-scroll" id="ep-scroll"></div></div></div>' : '');
+  if (open) drag($('#gutter'), ev => { const r = $('#leaves').getBoundingClientRect(); state.ratio = Math.min(.75, Math.max(.35, (ev.clientX - r.left) / r.width)); sizeBook(); });
+  sizeBook(); renderTabs(); renderPdf();
+}
+/* The PDF: in the bench look it lies on the back endpaper of the open book; in the plain look it has its own pane. */
+function pdfSheets() {
+  const f = currentFile(), ids = f && ext(f.n) === 'tex' ? docBlocks() : [];
+  const pages = [ids.filter(i => i < 9), ids.filter(i => i >= 9)].filter(l => l.length);
+  const sheet = list => '<div class="pdfsheet"><div class="pdfdoc">' + list.map(i => '<div class="blk' + (BLOCKS[i].wide ? ' wide' : '') + '">' + BLOCKS[i].html + '</div>').join('') + '</div></div>';
+  $('#pdf-title').textContent = f ? f.n.replace(/\.[^.]+$/, '.pdf') + ' · ' + pages.length + ' page' + (pages.length === 1 ? '' : 's') : 'No PDF';
+  return pages.length ? pages.map(sheet).join('') : '<div class="pdfsheet" style="min-height:160px"><p style="font:italic 15px var(--f-page);opacity:.6">Nothing to typeset for ' + esc(f ? f.n : 'this file') + '.</p></div>';
+}
+function pdfHost() { return state.look === 'bench' ? $('#ep-scroll') : $('#pdfscroll'); }
+function renderPdf() {
+  const pane = state.spread && state.look === 'plain', ed = $('#editors');
+  $('#pdfpane').hidden = !pane; $('#split-pdf').hidden = !pane;
+  ed.style.setProperty('--pw', pane ? Math.round(ed.clientWidth * (1 - state.ratio)) + 'px' : '0px');
+  const host = pdfHost(); if (!state.spread || !host) return;
+  host.innerHTML = pdfSheets();
+  const bar = $('.pdfbar'); if (state.look === 'bench') $('#ep-sticky').prepend(bar); else $('#pdfpane').appendChild(bar);
+  fitPdf();
+}
+function fitPdf() {
+  const host = pdfHost(); if (!state.spread || !host || !host.offsetParent) return;
+  const z = state.pdfZoom || Math.max(.3, Math.min(1.3, (host.clientWidth - 48) / 612));
+  $$('.pdfsheet', host).forEach(el => el.style.zoom = z);
+}
+function setActive(i) {
+  if (state.viewmode === 'source' || i === state.active) return;
+  const prev = state.active; state.active = i;
+  for (const k of [prev, i]) { const el = $(`#col .blk[data-i="${k}"]`); if (el) el.outerHTML = blockHTML(BLOCKS[k], k); }
+  const o = $('#outline'); if (o) o.innerHTML = outlineHTML();
+  renderStatus();
+}
+function goBlock(i, activate) {
+  if (!state.tabs.length || currentFile().n !== 'hw04.tex') openFile('hw/hw04.tex', true);
+  if (activate) setActive(i);
+  const el = $(`#col .blk[data-i="${i}"]`); if (!el) return;
+  el.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' });
+  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+}
+$('#leaves').addEventListener('click', e => {
+  const r = e.target.closest('a.ref'); if (r) { e.preventDefault(); goBlock(+r.dataset.go, false); return; }
+  const b = e.target.closest('#col .blk[data-i]'); if (b) setActive(+b.dataset.i);
+});
+$('#desk').addEventListener('keydown', e => {
+  if (!['ArrowDown', 'ArrowUp'].includes(e.key) || state.viewmode === 'source' || e.target.closest('input')) return;
+  const ids = docBlocks(), k = ids.indexOf(state.active);
+  const n = ids[Math.max(0, Math.min(ids.length - 1, k + (e.key === 'ArrowDown' ? 1 : -1)))];
+  if (n !== undefined) { e.preventDefault(); setActive(n); $(`#col .blk[data-i="${n}"]`)?.scrollIntoView({ block: 'nearest' }); }
+});
+$('#viewmode').addEventListener('click', e => { const b = e.target.closest('.tbtn'); if (!b || b.disabled) return; state.viewmode = b.dataset.v; renderBook(); });
+
+/* Geometry: the column is sized in characters; margins follow the book canon (inner narrower than outer). */
+let avgChar = 8;
+function computeMeasure() {
+  const c = document.createElement('canvas').getContext('2d');
+  c.font = `400 ${state.size}px "${state.font}"`;
+  const sample = BLOCKS.filter(b => b.html.startsWith('<p>')).map(b => plain(b.html)).join(' ');
+  avgChar = c.measureText(sample).width / sample.length;
+  root.setProperty('--textw', Math.round(avgChar * state.cpl) + 'px');
+  root.setProperty('--page-size', state.size + 'px');
+  root.setProperty('--f-page', `"${state.font}",Georgia,"Times New Roman",serif`);
+  sizeBook();
+}
+function sizeBook() {
+  const desk = $('#desk'), W = desk.clientWidth, narrow = W < 700;
+  const bench = state.look === 'bench', hasTabs = state.tabs.length > 0, open = bench && state.spread && hasTabs;
+  const tabRoom = narrow ? 148 : 156, edge = narrow ? 22 : 50;
+  const sideL = bench && hasTabs && state.tabpos === 'left' ? tabRoom : edge, sideR = edge;
+  const avail = Math.max(300, W - sideL - sideR);
+  const textw = Math.round(avgChar * state.cpl), stack = 6;
+  const margins = w => [Math.round(Math.min(64, Math.max(24, w * .075))), Math.round(Math.min(104, Math.max(30, w * .11)))];
+  root.setProperty('--deskh', Math.max(240, desk.clientHeight - 24) + 'px');
+  const leaf = $('#leaf-live');
+  let bookW, stripW = 0;
+  if (!open) {
+    const natural = Math.round(textw / (1 - .075 - .11));
+    const leafW = Math.max(260, Math.min(natural, avail - stack)); bookW = leafW + stack;
+    const [inn, out] = margins(leafW);
+    if (leaf) { leaf.style.width = leafW + 'px'; leaf.style.setProperty('--pad-l', inn + 'px'); leaf.style.setProperty('--pad-r', out + 'px'); }
+  } else {
+    bookW = Math.max(560, avail);
+    const inner = bookW - stack, lw = Math.round(inner * state.ratio), rw = inner - lw, [inn, out] = margins(lw);
+    if (leaf) { leaf.style.width = lw + 'px'; leaf.style.setProperty('--pad-l', out + 'px'); leaf.style.setProperty('--pad-r', inn + 'px'); }
+    const ep = $('#ep-recto'); if (ep) ep.style.width = rw + 'px';
+    stripW = lw + stack;
+    root.setProperty('--rw', rw + 'px');
+  }
+  let left = Math.round((W - bookW) / 2);
+  if (W - left - bookW < sideR) left = W - sideR - bookW;
+  left = Math.max(sideL, left);
+  root.setProperty('--bookw', bookW + 'px');
+  $('#book').style.marginLeft = left + 'px';
+  $('#topstrip').style.marginLeft = left + 'px'; $('#topstrip').style.width = (stripW || bookW) + 'px';
+  measureNow(); fitPdf();
+}
+function measureNow() {
+  const col = $('#col'), out = $('#cpl-out') || {}, target = Math.round(avgChar * state.cpl);
+  if (!col) { out.textContent = `${state.cpl} characters`; return; }
+  const w = col.clientWidth, now = Math.round(w / avgChar);
+  out.textContent = `${state.cpl} characters${now < state.cpl - 1 ? ` (${now} fit)` : ''}`;
+  const gl = $('#guide-label'); if (gl) gl.textContent = `${now} characters · ${Math.round(w)} px`;
+}
+
+/* ================= file tabs ================= */
+const abbr = n => n.replace(/\.[^.]+$/, '').replace(/^p-/, '').slice(0, 5);
+function renderTabs() {
+  state.tabstyle = state.tabpos === 'top' ? 'head' : 'foreedge';
+  const st = state.tabstyle, has = state.tabs.length > 0, onTop = st === 'slips' || st === 'labels' || st === 'head';
+  $('#rail').classList.toggle('left', state.look === 'bench');
+  $('#rail').hidden = !(st === 'foreedge' && has);
+  $('#thumbs').hidden = $('#thumb-hits').hidden = !(st === 'thumb' && has);
+  $('#topstrip').hidden = !(onTop && has && state.look === 'bench');
+  $('#topstrip').classList.toggle('head', st === 'head');
+  $('#desk-in').classList.toggle('toptabs', onTop && has && state.look === 'bench');
+  const block = $('#block');
+  if (st !== 'thumb' || !has) { block.style.webkitMaskImage = block.style.maskImage = 'none'; }
+  const x = p => `<span class="x" data-x="${p}" title="Close">${ic('x')}</span>`;
+  $('#tabbar').innerHTML = state.tabs.map(t => `<button class="ptb ${t.p === state.tab ? 'on' : ''}" data-p="${t.p}" title="${esc(t.p)}">${ftBadge(t.n)}<span>${esc(t.n)}</span>${t.dirty ? '<span class="dot"></span>' : ''}${x(t.p)}</button>`).join('');
+  if (st === 'foreedge') $('#ftabs').innerHTML = state.tabs.map(t => `<button class="ftab ${t.p === state.tab ? 'on' : ''}" data-p="${t.p}" title="${esc(t.p)}">${t.dirty ? '<span class="dot"></span>' : ''}<span class="nm">${esc(t.n)}</span>${x(t.p)}</button>`).join('');
+  else if (st === 'head') $('#topstrip').innerHTML = state.tabs.map(t => `<button class="htab ${t.p === state.tab ? 'on' : ''}" data-p="${t.p}" title="${esc(t.p)}">${t.dirty ? '<span class="dot"></span>' : ''}<span class="nm">${esc(t.n)}</span>${x(t.p)}</button>`).join('');
+  else if (st === 'slips') $('#topstrip').innerHTML = state.tabs.map((t, i) => `<button class="slip ${t.p === state.tab ? 'on' : ''}" data-p="${t.p}" title="${esc(t.p)}" style="--rot:${[-1.2, .8, -.4, 1.4, -.9][i % 5]}deg">${t.dirty ? '<span class="dot"></span>' : ''}<span class="nm">${esc(t.n)}</span>${x(t.p)}</button>`).join('');
+  else if (st === 'labels') $('#topstrip').innerHTML = state.tabs.map(t => `<button class="slab ${t.p === state.tab ? 'on' : ''}" data-p="${t.p}" title="${esc(t.p)}">${t.dirty ? '<span class="dot"></span>' : ''}<span>${esc(t.n.replace(/\.[^.]+$/, ''))}</span>${x(t.p)}</button>`).join('');
+  else if (st === 'thumb') {
+    $('#thumbs').innerHTML = state.tabs.map(t => `<div class="thumb ${t.p === state.tab ? 'on' : ''}" data-p="${t.p}"><span class="lab">${esc(abbr(t.n))}</span></div>`).join('');
+    $('#thumb-hits').innerHTML = state.tabs.map(t => `<button class="thumb-hit" data-p="${t.p}" aria-label="${esc(t.n)}"><span class="tip">${esc(t.p)}${t.dirty ? ' · unsaved' : ''}</span><span class="x" data-x="${t.p}" title="Close">${ic('x')}</span></button>`).join('');
+    positionThumbs();
+  }
+}
+/* Thumb notches follow the view, so they're always within reach on a tall book. */
+function positionThumbs() {
+  if (state.tabstyle !== 'thumb' || !state.tabs.length) return;
+  const desk = $('#desk'), book = $('#book'), block = $('#block');
+  const bh = block.offsetHeight, top = Math.max(0, Math.min(bh - 120, desk.scrollTop - book.offsetTop + 30));
+  const n = state.tabs.length, sp = Math.min(86, (Math.min(desk.clientHeight, bh) - 140) / Math.max(1, n));
+  const ys = state.tabs.map((_, i) => Math.round(top + 60 + i * Math.max(40, sp)));
+  const mask = ys.map(y => `radial-gradient(circle 40px at 100% ${y}px,transparent 39.4px,#000 40px)`).join(',');
+  block.style.webkitMaskImage = block.style.maskImage = mask; block.style.maskComposite = 'intersect'; block.style.webkitMaskComposite = 'source-in';
+  $$('#thumbs .thumb').forEach((el, i) => el.style.top = (ys[i] - 40) + 'px');
+  $$('#thumb-hits .thumb-hit').forEach((el, i) => el.style.top = (ys[i] - 36) + 'px');
+}
+let scrollRAF = 0;
+$('#desk').addEventListener('scroll', () => { if (!scrollRAF) scrollRAF = requestAnimationFrame(() => { scrollRAF = 0; positionThumbs(); $('#topstrip').classList.toggle('scrolled', $('#desk').scrollTop > $('#book').offsetTop - 30); }); });
+for (const id of ['#ftabs', '#topstrip', '#thumb-hits', '#tabbar']) {
+  $(id).addEventListener('click', e => {
+    const xb = e.target.closest('[data-x]'); if (xb) { e.stopPropagation(); return closeTab(xb.dataset.x); }
+    const t = e.target.closest('[data-p]'); if (t) switchTo(t.dataset.p);
+  });
+  $(id).addEventListener('auxclick', e => { const t = e.target.closest('[data-p]'); if (t && e.button === 1) closeTab(t.dataset.p); });
+}
+
+/* Riffle: a handful of leaves flick over the visible part of the page, then the book lands on the chosen file. */
+let riffling = false;
+function riffle(forward, swap) {
+  const target = $('#leaf-live');
+  if (reduced() || !target || state.look === 'plain') { swap(); return; }
+  riffling = true;
+  const wrap = $('#deskwrap'), wr = wrap.getBoundingClientRect(), lr = target.getBoundingClientRect();
+  const top = Math.max(lr.top, wr.top), bottom = Math.min(lr.bottom, wr.bottom);
+  const host = document.createElement('div'); host.className = 'riffle';
+  Object.assign(host.style, { left: (lr.left - wr.left) + 'px', top: (top - wr.top) + 'px', width: lr.width + 'px', height: Math.max(80, bottom - top) + 'px' });
+  const N = 6, leaves = [];
+  for (let i = 0; i < N; i++) { const d = document.createElement('div'); d.className = 'rl'; host.appendChild(d); leaves.push(d); }
+  wrap.appendChild(host);
+  const dur = 170, gap = 38;
+  if (forward) {
+    swap();
+    leaves.forEach((d, i) => d.animate([{ transform: 'rotateY(0deg)', filter: 'brightness(1)' }, { transform: 'rotateY(-92deg)', filter: 'brightness(.7)' }], { duration: dur, delay: i * gap, easing: 'cubic-bezier(.45,.05,.75,.6)', fill: 'forwards' }));
+  } else {
+    leaves.forEach((d, i) => { d.style.transform = 'rotateY(-92deg)'; d.animate([{ transform: 'rotateY(-92deg)', filter: 'brightness(.7)' }, { transform: 'rotateY(0deg)', filter: 'brightness(1)' }], { duration: dur, delay: i * gap, easing: 'cubic-bezier(.25,.4,.55,.95)', fill: 'forwards' }); });
+    setTimeout(swap, dur);
+    setTimeout(() => host.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 110, fill: 'forwards' }), dur + (N - 1) * gap);
+  }
+  setTimeout(() => { host.remove(); riffling = false; }, dur + (N - 1) * gap + 140);
+}
+function switchTo(p) {
+  if (p === state.tab || riffling) return;
+  const from = state.tabs.findIndex(t => t.p === state.tab), to = state.tabs.findIndex(t => t.p === p);
+  riffle(to > from, () => { state.scrolls[state.tab] = $('#desk').scrollTop; state.tab = p; refreshDoc(); $('#desk').scrollTop = state.scrolls[p] || 0; });
+}
+function closeTab(p) {
+  const i = state.tabs.findIndex(t => t.p === p); state.tabs.splice(i, 1);
+  if (state.tab === p) state.tab = state.tabs[Math.max(0, i - 1)]?.p;
+  state.screen = state.tabs.length ? 'workspace' : 'empty'; refreshDoc(); syncMock();
+}
+function openFile(p, quiet) {
+  if (p.endsWith('.pdf')) { state.spread = true; renderBook(); return; }
+  const had = state.tabs.find(t => t.p === p);
+  if (!had) state.tabs.push({ n: p.split('/').pop(), p });
+  if (had && state.tabs.length > 1 && state.tab && !quiet && state.screen === 'workspace') { switchTo(p); return; }
+  state.tab = p; state.screen = 'workspace'; refreshDoc(); syncMock();
+  if (!quiet && !['hw/hw04.tex', 'problems/p-incline.tex', 'problems/p-yoyo.tex'].includes(p) && p.endsWith('.tex')) toast('The mockup shows Homework 4 for every .tex file.');
+}
+function refreshDoc() {
+  const v = vault(), f = currentFile();
+  $('#running').innerHTML = state.screen === 'welcome' ? '<span class="sc">endleaf</span>' : `<span class="sc">${esc(v.short)}</span>${f ? ` · <i>${esc(f.n)}</i>` : ''}`;
+  renderBook(); renderStatus();
+  const tr = $('#tree'); if (tr) tr.innerHTML = treeHTML(TREE);
+}
+
+
+/* ================= panel, status, ribbon ================= */
+function renderPanel() {
+  $$('.ptab').forEach(b => b.classList.toggle('on', b.dataset.p === state.ptab));
+  const body = $('#panel-body');
+  if (state.ptab === 'problems') body.innerHTML = PROBLEMS.map((p, k) => `<button class="prob" data-k="${k}"><span class="w">${ic('warn')}</span><span>${p.msg}</span><span class="where">hw04.tex:${BLOCKS[p.block].line}</span></button>`).join('') +
+    `<button class="prob" disabled style="cursor:default"><span class="i">${ic('check')}</span><span style="color:var(--ink-soft)">Built 2 pages in 0.8 s from a cached preamble.</span></button>`;
+  else body.innerHTML = `<pre class="log">This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2026)
+(./hw/hw04.tex (./problems/p-incline.tex (./figs/incline.tikz))
+<span class="hl">LaTeX Warning: Reference \`tab:shapes' on page 1 undefined on input line ${BLOCKS[8].line + 2}.</span>
+<span class="hl">Overfull \\hbox (6.3pt too wide) in alignment at lines ${BLOCKS[9].line + 3}--${BLOCKS[9].line + 11}</span>
+(./problems/p-yoyo.tex) [1] [2] )
+Output written on pdf/hw04.pdf (2 pages, 68114 bytes).</pre>`;
+}
+$('.panel-head').addEventListener('click', e => { const b = e.target.closest('.ptab'); if (b) { state.ptab = b.dataset.p; renderPanel(); } });
+$('#panel-body').addEventListener('click', e => { const b = e.target.closest('.prob[data-k]'); if (b) goBlock(PROBLEMS[+b.dataset.k].block, true); });
+function renderStatus() {
+  const v = vault(), b = BLOCKS[state.active], f = currentFile();
+  const sec = BLOCKS.slice(0, state.active + 1).filter(x => x.sec).pop();
+  $('#statusbar').innerHTML = `<button class="sb" id="sb-endpaper" title="Change this vault’s endpaper and paper"><span class="chip" style="background-image:${marbleCSS(v.theme, v.pattern, v.seed, 'small')}"></span>${esc(v.name)}</button>
+    <button class="sb" title="Git branch">${ic('branch')}main*</button>
+    ${f && ext(f.n) === 'tex' && sec ? `<button class="sb">§${sec.no} ${esc(sec.sec)}</button>` : ''}<span class="sb-spacer"></span>
+    ${f ? `<button class="sb">Ln ${b.line + (state.active === 3 ? 2 : 0)}, Col ${state.active === 3 ? 25 : 1}</button><button class="sb">${state.viewmode === 'live' ? 'Live' : 'Source'}</button><button class="sb">Spelling: en-US</button>` : ''}
+    <button class="sb" id="sb-problems" title="Problems (Ctrl+J)">${ic('warn')}2</button><button class="sb">pdfLaTeX</button>`;
+}
+$('#statusbar').addEventListener('click', e => {
+  if (e.target.closest('#sb-endpaper')) openTheme();
+  if (e.target.closest('#sb-problems')) { state.panelOpen = !state.panelOpen; state.ptab = 'problems'; layout(); }
+});
+const BUILD = { ok: { icon: 'check', note: 'Built · 0.8 s', cls: '' }, busy: { icon: '', note: 'Setting type…', cls: 'busy' }, err: { icon: 'alert', note: '1 error · pdf/ unchanged', cls: 'err' } };
+function renderBuild() { const s = BUILD[state.build]; $('#ribbon').className = 'ribbon ' + s.cls; $('#ribbon').innerHTML = s.icon ? ic(s.icon) : ''; $('#build-note').textContent = s.note; }
+$('#ribbon').onclick = () => { state.build = { ok: 'busy', busy: 'err', err: 'ok' }[state.build]; renderBuild(); };
+
+function renderEndpop() {
+  const v = vault();
+  $('#endpop').innerHTML = `<h4>Palette · ${esc(v.short)}</h4><div class="swatches">${THEMES.themes.map(t => `<button class="sw ${t.id === v.theme ? 'on' : ''}" data-t="${t.id}"><span class="m" style="background-image:${marbleCSS(t.id, v.pattern, v.seed, 'small')}"><span class="lg">${logo(t.id, 'dark', 'small')}</span></span><span>${t.name}</span></button>`).join('')}</div>
+    <p class="paperline">Printed on ${STOCK[v.theme].name.toLowerCase()} paper.</p>
+    <h4>Marbling</h4><div class="swatches">${PATTERNS.map(([id, name]) => `<button class="sw ${id === v.pattern ? 'on' : ''}" data-pat="${id}"><span class="m" style="background-image:${marbleCSS(v.theme, id, v.seed, 'small')}"></span><span>${name}</span></button>`).join('')}</div>`;
+}
+function toggleEndpop(force) { const p = $('#endpop'); p.hidden = force !== undefined ? !force : !p.hidden; if (!p.hidden) renderEndpop(); }
+$('#endpop').addEventListener('click', e => {
+  const s = e.target.closest('.sw'); if (!s) return;
+  if (s.dataset.t) vault().theme = s.dataset.t; else vault().pattern = s.dataset.pat;
+  applyTheme();
+});
+const PATTERNS = [['stone', 'Turkish stone'], ['combed', 'Bold comb'], ['nonpareil', 'Nonpareil'], ['fan', 'Fan'], ['bouquet', 'Bouquet'], ['spanish', 'Spanish wave'], ['peacock', 'Peacock']];
+
+/* ================= thresholds ================= */
+function renderWelcome(preview) {
+  const w = $('#welcome'), v = preview || vault();
+  w.style.backgroundImage = marbleCSS(v.theme, v.pattern, v.seed);
+  w.innerHTML = `<div class="plate"><p class="exl">EX · LIBRIS</p>
+    <div class="brand"><span class="lg">${logo(v.theme, 'dark', 'full')}</span><div><h1>endleaf</h1><p>LaTeX vaults, kept on your own disk.</p></div></div>
+    <p class="lbl">Recent vaults</p>
+    <div class="vaults">${VAULTS.map(x => `<button class="vault" data-v="${x.id}"><span class="chip" style="background-image:${marbleCSS(x.theme, x.pattern, x.seed, 'small')}"></span><span><b>${esc(x.name)}</b><small>${esc(x.path)}</small></span><span class="when">${x.when}</span></button>`).join('')}</div>
+    <div class="actions"><button class="btn primary">Open a folder…</button><button class="btn">New vault…</button><button class="btn">Clone from Git…</button></div></div>`;
+}
+let hoverT;
+$('#welcome').addEventListener('pointerover', e => {
+  const b = e.target.closest('.vault'); if (!b || b.dataset.v === $('#welcome').dataset.preview) return;
+  clearTimeout(hoverT); hoverT = setTimeout(() => {
+    const v = VAULTS.find(x => x.id === b.dataset.v); $('#welcome').dataset.preview = v.id;
+    $('#welcome').style.backgroundImage = marbleCSS(v.theme, v.pattern, v.seed);
+    $('#welcome .brand .lg').innerHTML = logo(v.theme, 'dark', 'full');
+  }, 140);
+});
+$('#welcome').addEventListener('click', e => {
+  const b = e.target.closest('.vault'); if (!b) { if (e.target.closest('.btn')) toast('Opens the system folder picker.'); return; }
+  state.vault = b.dataset.v; state.screen = 'workspace'; showScreen();
+});
+function renderEmpty() {
+  const v = vault();
+  $('#empty').innerHTML = `<div class="plate empty-plate"><p class="exl">EX · LIBRIS</p><div class="lg">${logo(v.theme, 'dark', 'mid')}</div><h3>No file open</h3>
+    <div class="keys"><kbd>Ctrl P</kbd><span>Go to a file</span><kbd>Ctrl N</kbd><span>New file from a template</span><kbd>Ctrl Shift F</kbd><span>Search the vault</span><kbd>Ctrl B</kbd><span>Show or hide the sidebar</span></div></div>`;
+}
+function showScreen() {
+  const w = $('#welcome');
+  $('#wlight').hidden = state.screen !== 'welcome';
+  if (state.screen === 'welcome') { delete w.dataset.preview; renderWelcome(); w.hidden = false; $('#running').innerHTML = '<span class="sc">endleaf</span>'; }
+  else {
+    w.hidden = true;
+    if (state.screen === 'empty') { state.tabs = []; state.tab = undefined; }
+    else if (!state.tabs.length) { state.tabs = [{ n: 'hw04.tex', p: 'hw/hw04.tex', dirty: true }, { n: 'p-incline.tex', p: 'problems/p-incline.tex' }, { n: 'refs.bib', p: 'refs.bib' }, { n: 'physics.cls', p: 'physics.cls' }]; state.tab = 'hw/hw04.tex'; }
+    applyTheme(); renderSidebar(); refreshDoc(); layout();
+  }
+  syncMock();
+}
+
+/* ================= quick open ================= */
+let qoSel = 0;
+function renderQO() {
+  const q = $('#qo-in').value.toLowerCase(), list = flatFiles().filter(f => f.p.toLowerCase().includes(q));
+  qoSel = Math.min(qoSel, Math.max(0, list.length - 1));
+  $('#qo-list').innerHTML = list.map((f, i) => `<button class="row ${i === qoSel ? 'on' : ''}" data-file="${f.p}">${ftBadge(f.n)}<span class="nm">${esc(f.n)}</span><small>${esc(f.p.includes('/') ? f.p.slice(0, f.p.lastIndexOf('/')) : '')}</small></button>`).join('') || '<p class="hint">No file has that name.</p>';
+}
+function openQO() { if (state.screen === 'welcome') return; $('#qo').hidden = false; $('#qo-in').value = ''; qoSel = 0; renderQO(); $('#qo-in').focus(); }
+$('#running').onclick = openQO;
+$('#qo-in').addEventListener('input', () => { qoSel = 0; renderQO(); });
+$('#qo-in').addEventListener('keydown', e => {
+  const rows = $$('#qo-list .row');
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); qoSel = (qoSel + (e.key === 'ArrowDown' ? 1 : -1) + rows.length) % rows.length; renderQO(); }
+  if (e.key === 'Enter' && rows[qoSel]) { $('#qo').hidden = true; openFile(rows[qoSel].dataset.file); }
+  if (e.key === 'Escape') $('#qo').hidden = true;
+});
+$('#qo-list').addEventListener('click', e => { const r = e.target.closest('.row'); if (r) { $('#qo').hidden = true; openFile(r.dataset.file); } });
+document.addEventListener('pointerdown', e => {
+  if (!$('#qo').hidden && !e.target.closest('#qo') && !e.target.closest('#running')) $('#qo').hidden = true;
+  if (!$('#endpop').hidden && !e.target.closest('#endpop') && !e.target.closest('#sb-endpaper') && !e.target.closest('#act-endpaper')) $('#endpop').hidden = true;
+});
+
+/* ================= layout ================= */
+function layout() {
+  $('#sidebar').hidden = !state.sideOpen; $('#split-side').hidden = !state.sideOpen;
+  $('#work').style.setProperty('--sw', state.sideOpen ? state.sw + 'px' : '0px');
+  $('#panel').hidden = !state.panelOpen; $('#split-panel').hidden = !state.panelOpen;
+  $('#main').style.setProperty('--ph', state.panelOpen ? state.ph + 'px' : '0px');
+  $('#btn-panel').classList.toggle('on', state.panelOpen);
+  renderActivity(); renderPanel(); sizeBook();
+}
+function drag(el, move) {
+  el.addEventListener('pointerdown', e => {
+    e.preventDefault(); el.setPointerCapture(e.pointerId); document.body.classList.add('dragging');
+    const mv = ev => move(ev);
+    const up = () => { document.body.classList.remove('dragging'); el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); };
+    el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up);
+  });
+}
+drag($('#split-side'), e => {
+  const x = e.clientX - $('#work').getBoundingClientRect().left - 52;
+  if (x < 140) state.sideOpen = false; else { state.sideOpen = true; state.sw = Math.min(520, Math.max(200, x)); }
+  layout();
+});
+drag($('#split-panel'), e => {
+  const r = $('#main').getBoundingClientRect(), h = r.bottom - e.clientY;
+  if (h < 60) state.panelOpen = false; else state.ph = Math.min(r.height - 180, Math.max(90, h));
+  layout();
+});
+new ResizeObserver(() => sizeBook()).observe($('#deskwrap'));
+new ResizeObserver(() => { if (state.spread && state.look === 'plain') { $('#editors').style.setProperty('--pw', Math.round($('#editors').clientWidth * (1 - state.ratio)) + 'px'); fitPdf(); } }).observe($('#editors'));
+const togglePdf = () => { state.spread = !state.spread; renderBook(); };
+$('#btn-spread').onclick = togglePdf;
+$('#pdf-x').onclick = togglePdf;
+$('#pdf-zi').onclick = () => { state.pdfZoom = Math.min(2, (state.pdfZoom || +$('.pdfsheet', pdfHost()).style.zoom) + .1); fitPdf(); };
+$('#pdf-zo').onclick = () => { state.pdfZoom = Math.max(.3, (state.pdfZoom || +$('.pdfsheet', pdfHost()).style.zoom) - .1); fitPdf(); };
+$('#pdf-fit').onclick = () => { state.pdfZoom = 0; fitPdf(); };
+drag($('#split-pdf'), e => {
+  const r = $('#editors').getBoundingClientRect(), w = r.right - e.clientX;
+  if (w < 200) { state.spread = false; renderBook(); return; } else state.ratio = Math.min(.8, Math.max(.3, 1 - w / r.width));
+  renderPdf(); sizeBook();
+});
+$('#btn-panel').onclick = () => { state.panelOpen = !state.panelOpen; layout(); };
+$('#panel-close').onclick = () => { state.panelOpen = false; layout(); };
+document.addEventListener('keydown', e => {
+  const k = e.key.toLowerCase(), mod = e.ctrlKey || e.metaKey;
+  if (mod && !e.shiftKey && k === 'b') { e.preventDefault(); state.sideOpen = !state.sideOpen; renderSidebar(); layout(); }
+  else if (mod && k === 'j') { e.preventDefault(); state.panelOpen = !state.panelOpen; layout(); }
+  else if (mod && !e.shiftKey && k === 'p') { e.preventDefault(); openQO(); }
+  else if (mod && e.altKey && k === 'v') { e.preventDefault(); togglePdf(); }
+  else if (mod && (k === 'pagedown' || k === 'pageup') && state.tabs.length > 1) { e.preventDefault(); const i = state.tabs.findIndex(t => t.p === state.tab), n = state.tabs.length; switchTo(state.tabs[(i + (k === 'pagedown' ? 1 : n - 1)) % n].p); }
+  else if (mod && e.shiftKey && ['e', 'f', 'y'].includes(k)) { e.preventDefault(); state.view = { e: 'files', f: 'search', y: 'symbols' }[k]; state.sideOpen = true; renderSidebar(); layout(); }
+  else if (e.key === 'Escape') { $('#qo').hidden = true; $('#endpop').hidden = true; }
+});
+let toastT;
+function toast(text) { const t = $('#toast'); t.textContent = text; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2200); }
+
+/* ================= mockup controls ================= */
+function syncMock() { $$('#mk-screen button').forEach(b => b.classList.toggle('on', b.dataset.v === state.screen)); }
+$('#mk-screen').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { state.screen = b.dataset.v; showScreen(); syncMock(); } });
+$('#mk-theme-open').onclick = () => { if (state.screen === 'welcome') { state.screen = 'workspace'; showScreen(); } openTheme(); };
+
+/* ================= boot ================= */
+(async () => {
+  $('#btn-spread').innerHTML = ic('book'); $('#btn-panel').innerHTML = ic('panel'); $('#panel-close').innerHTML = ic('x');
+  if (innerWidth < 760) { state.sideOpen = false; state.panelOpen = false; }
+  await frame();
+  root.setProperty('--grainimg', `url(${grainTile()})`);
+  root.setProperty('--saddleimg', `url(${leatherTile([168, 112, 63], 5)})`);
+  root.setProperty('--leatherimg', `url(${leatherTile([78, 44, 27], 15)})`);
+  root.setProperty('--linenimg', `url(${linenTile()})`);
+  await frame();
+  applyTheme(); renderSidebar(); renderBuild(); refreshDoc(); layout(); computeMeasure(); syncMock();
+  $('#loading').hidden = true;
+  document.fonts.ready.then(computeMeasure);
+  // warm the cache for the other vaults' endpapers in the background
+  setTimeout(() => VAULTS.forEach(v => marbleCSS(v.theme, v.pattern, v.seed, 'small')), 400);
+})();
+</script>
+
+</body>
+</html>

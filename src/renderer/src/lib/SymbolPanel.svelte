@@ -423,15 +423,18 @@
     const g = canvas.getContext('2d')!
     g.setTransform(dpr, 0, 0, dpr, 0, 0)
     g.clearRect(0, 0, w, h)
+    const css = getComputedStyle(canvas)
+    const ink = css.getPropertyValue('--ink').trim() || '#1f2328'
+    const detail = css.getPropertyValue('--detail').trim() || '#2f6fdb'
     // Tracing the trackpad itself: its outline is the frame it maps onto.
     const absolute = tracing && mode === 'absolute'
     if (absolute) {
       g.beginPath()
       g.roundRect(frame.x, frame.y, frame.w, frame.h, 6)
-      g.fillStyle = '#f5f8fe'
+      g.fillStyle = css.getPropertyValue('--sel').trim() || '#f5f8fe'
       g.fill()
       g.lineWidth = 1
-      g.strokeStyle = '#b6ccf2'
+      g.strokeStyle = detail
       g.stroke()
     }
     // Zoom out when ink traced by following the cursor (or its pen) runs past the edges.
@@ -451,7 +454,7 @@
     g.lineWidth = 3 / zoom
     g.lineCap = 'round'
     g.lineJoin = 'round'
-    g.strokeStyle = '#1f2328'
+    g.strokeStyle = ink
     for (const s of strokes) {
       g.beginPath()
       s.forEach((p, i) => (i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)))
@@ -465,8 +468,8 @@
       g.beginPath()
       g.arc(pen.x, pen.y, 4 / zoom, 0, 2 * Math.PI)
       g.lineWidth = 1.5 / zoom
-      g.strokeStyle = '#2f6fdb'
-      g.fillStyle = '#2f6fdb'
+      g.strokeStyle = detail
+      g.fillStyle = detail
       if (touching) g.fill()
       else g.stroke()
     }
@@ -624,9 +627,9 @@ Click to copy, double-click to insert, right-click for more"
   .pad {
     position: relative;
     margin: 8px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--line);
     border-radius: 6px;
-    background: var(--bg);
+    background: var(--paper);
   }
   canvas {
     display: block;
@@ -641,22 +644,22 @@ Click to copy, double-click to insert, right-click for more"
     left: 12px;
     right: 12px;
     text-align: center;
-    color: var(--muted);
+    color: var(--ink-soft);
     pointer-events: none;
   }
   .pad.tracing {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px var(--accent-soft);
+    border-color: var(--detail);
+    box-shadow: 0 0 0 2px var(--sel);
   }
   .tracing-note {
-    color: var(--accent);
+    color: var(--detail);
   }
   .pad-bar {
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 3px 6px;
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--line);
     font-size: 11px;
   }
   .pad-bar button {
@@ -667,13 +670,13 @@ Click to copy, double-click to insert, right-click for more"
     position: relative;
   }
   .credit-label {
-    color: var(--muted);
+    color: var(--ink-soft);
     cursor: help;
     outline: none;
   }
   .credit:hover .credit-label,
   .credit-label:focus {
-    color: var(--accent);
+    color: var(--detail);
   }
   /* The card hangs below the label and stays open while the pointer is on
      either (it starts right at the label's edge, so there's no gap to cross). */
@@ -689,9 +692,9 @@ Click to copy, double-click to insert, right-click for more"
     gap: 6px;
     font-size: 12px;
     line-height: 1.4;
-    color: var(--text);
-    background: var(--bg);
-    border: 1px solid var(--border);
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
     border-radius: 6px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
   }
@@ -705,7 +708,7 @@ Click to copy, double-click to insert, right-click for more"
     gap: 2px;
   }
   .credit-card a {
-    color: var(--accent);
+    color: var(--detail);
     text-decoration: none;
   }
   .credit-card a:hover {
@@ -721,7 +724,7 @@ Click to copy, double-click to insert, right-click for more"
     flex: 1;
   }
   .muted {
-    color: var(--muted);
+    color: var(--ink-soft);
   }
   .small {
     font-size: 11px;
@@ -739,15 +742,15 @@ Click to copy, double-click to insert, right-click for more"
     min-width: 0;
     font: inherit;
     padding: 4px 6px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    outline-color: var(--accent);
+    outline-color: var(--detail);
   }
   .filters select {
     width: 92px;
     font: inherit;
     font-size: 12px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--line);
     border-radius: 4px;
   }
   .list {
@@ -757,7 +760,7 @@ Click to copy, double-click to insert, right-click for more"
     padding: 0 8px 8px;
   }
   .heading {
-    color: var(--muted);
+    color: var(--ink-soft);
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -776,8 +779,8 @@ Click to copy, double-click to insert, right-click for more"
     gap: 3px;
     height: 58px;
     padding: 4px 2px;
-    background: var(--bg);
-    border: 1px solid var(--border);
+    background: var(--paper);
+    border: 1px solid var(--line);
     border-radius: 5px;
     min-width: 0;
   }
@@ -789,22 +792,22 @@ Click to copy, double-click to insert, right-click for more"
   .tile .cmd {
     font-family: Consolas, 'Cascadia Mono', monospace;
     font-size: 10px;
-    color: var(--muted);
+    color: var(--ink-soft);
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .tile:hover {
-    border-color: var(--accent);
+    border-color: var(--detail);
   }
   .symbol-menu {
     position: fixed;
     z-index: 200;
     min-width: 230px;
     padding: 4px;
-    background: var(--bg);
-    border: 1px solid var(--border);
+    background: var(--paper);
+    border: 1px solid var(--line);
     border-radius: 6px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
     display: flex;
@@ -815,7 +818,7 @@ Click to copy, double-click to insert, right-click for more"
     align-items: center;
     gap: 10px;
     padding: 6px 8px 8px;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--line);
     margin-bottom: 4px;
   }
   .menu-head img {
@@ -830,11 +833,11 @@ Click to copy, double-click to insert, right-click for more"
     border-radius: 4px;
   }
   .symbol-menu button:hover:not(:disabled) {
-    background: var(--accent-soft);
+    background: var(--sel);
   }
   .symbol-menu hr {
     border: none;
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--line);
     margin: 4px 0;
   }
   code {

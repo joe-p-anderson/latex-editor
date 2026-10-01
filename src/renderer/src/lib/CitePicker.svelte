@@ -152,7 +152,7 @@
     max-height: 80vh;
     display: flex;
     flex-direction: column;
-    background: var(--bg);
+    background: var(--paper);
     border-radius: 8px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
     outline: none;
@@ -162,19 +162,19 @@
     align-items: center;
     gap: 12px;
     padding: 12px 14px;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--line);
   }
   .top input {
     flex: 1;
     font: inherit;
     font-size: 14px;
     padding: 6px 10px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--line);
     border-radius: 5px;
-    outline-color: var(--accent);
+    outline-color: var(--detail);
   }
   .hint {
-    color: var(--muted);
+    color: var(--ink-soft);
     font-size: 12px;
     white-space: nowrap;
   }
@@ -184,8 +184,8 @@
     align-items: center;
     gap: 6px;
     padding: 8px 14px;
-    border-bottom: 1px solid var(--border);
-    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    background: var(--side);
   }
   .pill {
     font-family: Consolas, monospace;
@@ -210,11 +210,11 @@
     cursor: pointer;
   }
   .row.sel {
-    border-color: var(--accent);
-    background: var(--accent-soft);
+    border-color: var(--detail);
+    background: var(--sel);
   }
   .row.marked:not(.sel) {
-    background: var(--panel);
+    background: var(--side);
   }
   .row input {
     margin-top: 3px;
@@ -232,14 +232,14 @@
     font-weight: 500;
   }
   .num {
-    color: #8250df;
+    color: var(--detail);
     font-size: 12px;
   }
   .key {
     margin-left: auto;
     font-family: Consolas, monospace;
     font-size: 11px;
-    color: var(--muted);
+    color: var(--ink-soft);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -257,7 +257,7 @@
     font-size: 12px;
   }
   .venue {
-    color: var(--muted);
+    color: var(--ink-soft);
     font-style: italic;
     margin-right: 4px;
   }
@@ -266,14 +266,14 @@
     padding: 0 7px;
     border-radius: 9px;
     border: none;
-    color: var(--muted);
-    background: rgba(110, 119, 129, 0.12);
+    color: var(--ink-soft);
+    background: var(--sel);
   }
   .tag:hover {
-    color: var(--accent);
+    color: var(--detail);
   }
   .empty {
-    color: var(--muted);
+    color: var(--ink-soft);
     text-align: center;
   }
 </style>

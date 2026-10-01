@@ -100,7 +100,7 @@
     max-height: 80vh;
     display: flex;
     flex-direction: column;
-    background: var(--bg);
+    background: var(--paper);
     border-radius: 8px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
     outline: none;
@@ -110,19 +110,19 @@
     align-items: center;
     gap: 12px;
     padding: 12px 14px;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--line);
   }
   .top input {
     flex: 1;
     font: inherit;
     font-size: 14px;
     padding: 6px 10px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--line);
     border-radius: 5px;
-    outline-color: var(--accent);
+    outline-color: var(--detail);
   }
   .hint {
-    color: var(--muted);
+    color: var(--ink-soft);
     font-size: 12px;
   }
   .grid {
@@ -138,13 +138,13 @@
     padding: 6px;
     border: 2px solid transparent;
     border-radius: 6px;
-    background: var(--panel);
+    background: var(--side);
     text-align: left;
     min-width: 0;
   }
   .card.sel {
-    border-color: var(--accent);
-    background: var(--accent-soft);
+    border-color: var(--detail);
+    background: var(--sel);
   }
   .thumb {
     height: 130px;
@@ -161,7 +161,7 @@
     object-fit: contain;
   }
   .loading {
-    color: var(--muted);
+    color: var(--ink-soft);
     font-size: 12px;
   }
   .label {
@@ -172,11 +172,11 @@
     text-overflow: ellipsis;
   }
   .dir {
-    color: var(--muted);
+    color: var(--ink-soft);
   }
   .empty {
     grid-column: 1 / -1;
-    color: var(--muted);
+    color: var(--ink-soft);
     text-align: center;
   }
 </style>

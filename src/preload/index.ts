@@ -6,6 +6,10 @@ import type { Api, TouchpadEvent, TreeNode, VaultInfo } from '../shared/api'
 const api: Api & { onMenuOpenVault(cb: () => void): () => void } = {
   openVault: () => ipcRenderer.invoke('vault:open'),
   getVault: () => ipcRenderer.invoke('vault:get'),
+  recentVaults: () => ipcRenderer.invoke('vault:recent'),
+  openVaultAt: (root) => ipcRenderer.invoke('vault:open-path', root),
+  newVault: () => ipcRenderer.invoke('vault:new'),
+  closeVault: () => ipcRenderer.invoke('vault:close'),
   readFile: (rel) => ipcRenderer.invoke('file:read', rel),
   writeFile: (rel, text) => ipcRenderer.invoke('file:write', rel, text),
   compile: (rel) => ipcRenderer.invoke('compile', rel),
@@ -52,6 +56,14 @@ const api: Api & { onMenuOpenVault(cb: () => void): () => void } = {
     ipcRenderer.on('tree-changed', listener)
     return () => ipcRenderer.removeListener('tree-changed', listener)
   },
+  getAppearance: () => ipcRenderer.invoke('appearance:get'),
+  setAppearance: (changes) => ipcRenderer.invoke('appearance:set', changes),
+  setVaultAppearance: (changes) => ipcRenderer.invoke('appearance:set-vault', changes),
+  setWindowChrome: (color, symbolColor) => ipcRenderer.invoke('window:chrome', color, symbolColor),
+  popupMenu: (label, x, y) => ipcRenderer.invoke('menu:popup', label, x, y),
+  gitBranch: () => ipcRenderer.invoke('vault:branch'),
+  marbleGet: (key) => ipcRenderer.invoke('marble:get', key),
+  marblePut: (key, bytes) => ipcRenderer.invoke('marble:put', key, bytes),
   onVaultChanged: (cb) => {
     const listener = (_e: unknown, vault: VaultInfo) => cb(vault)
     ipcRenderer.on('vault-changed', listener)

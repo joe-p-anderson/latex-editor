@@ -14,12 +14,22 @@
     pdf,
     version,
     onsyncclick,
-  }: { pdf: string | null; version: number; onsyncclick: (page: number, x: number, y: number) => void } = $props()
+    onclose,
+  }: {
+    pdf: string | null
+    version: number
+    onsyncclick: (page: number, x: number, y: number) => void
+    /** The control label's ×. */
+    onclose: () => void
+  } = $props()
 
   let scroller: HTMLDivElement
   let pages: HTMLDivElement
   let width = $state(0)
   let zoom = $state(1)
+  let pageCount = $state(0)
+  // A sync target asked for before the pages were drawn (e.g. the pane was just opened).
+  let pending: SyncTarget | null = null
   let doc: PDFDocumentProxy | null = null
   let task: PDFDocumentLoadingTask | null = null
   let renderToken = 0
@@ -89,7 +99,13 @@
     }
     pages.replaceChildren(...next)
     pageScale = scales
+    pageCount = doc.numPages
     scroller.scrollTop = ratio * scroller.scrollHeight
+    if (pending) {
+      const target = pending
+      pending = null
+      show(target)
+    }
   }
 
   function ondblclick(ev: MouseEvent): void {
@@ -105,7 +121,10 @@
   export function show(target: SyncTarget): void {
     const wrap = pages.querySelector<HTMLDivElement>(`.page[data-page="${target.page}"]`)
     const scale = pageScale[target.page]
-    if (!wrap || !scale) return
+    if (!wrap || !scale) {
+      pending = target
+      return
+    }
     const top = Math.min(...target.rects.map((r) => r.y))
     scroller.scrollTo({ top: wrap.offsetTop + top * scale - scroller.clientHeight / 3, behavior: 'smooth' })
     for (const r of target.rects) {
@@ -124,11 +143,13 @@
 </script>
 
 <div class="viewer">
+  <!-- The controls sit outside the scrolling area, so they never move. -->
   <div class="bar">
+    {#if pdf}<span class="what" title={pdf}>{pdf.split(/[\\/]/).pop()}{#if pageCount} · {pageCount} {pageCount === 1 ? 'page' : 'pages'}{/if}</span>{/if}
     <button onclick={() => (zoom = Math.max(0.4, zoom - 0.1))} title="Zoom out">−</button>
-    <span>{Math.round(zoom * 100)}%</span>
+    <button onclick={() => (zoom = 1)} title="Fit the width ({Math.round(zoom * 100)}% now)">Fit</button>
     <button onclick={() => (zoom = Math.min(3, zoom + 0.1))} title="Zoom in">+</button>
-    <button onclick={() => (zoom = 1)} title="Fit width">Fit</button>
+    <button onclick={onclose} title="Close the PDF (Ctrl+Alt+V)" aria-label="Close the PDF">×</button>
   </div>
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="scroller" bind:this={scroller} bind:clientWidth={width} {ondblclick} title="Double-click to jump to the source">
@@ -142,39 +163,59 @@
     display: flex;
     flex-direction: column;
     height: 100%;
+    position: relative;
+    /* the PDF lies on the vault's endpaper */
+    background: var(--marbleimg) center / cover, var(--desk);
   }
   .bar {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
     display: flex;
-    gap: 6px;
+    gap: 4px;
     align-items: center;
-    padding: 4px 8px;
-    border-bottom: 1px solid var(--border);
-    background: var(--panel);
+    padding: 3px 4px 3px 12px;
+    border-radius: 16px;
+    font-size: 12.5px;
+    font-weight: 500;
+    white-space: nowrap;
+    max-width: calc(100% - 24px);
+    background: var(--chrome);
+    color: var(--chrome-ink);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
   }
-  .bar span {
-    min-width: 42px;
-    text-align: center;
-    color: var(--muted);
+  .bar .what {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 4px;
+  }
+  .bar button {
+    height: 22px;
+    min-width: 24px;
+    padding: 0 6px;
+    border-radius: 11px;
+    border-color: var(--line);
   }
   .scroller {
     flex: 1;
     overflow: auto;
     position: relative; /* so page offsetTop is measured from here */
-    background: var(--pdf-bg);
   }
   .pages {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 12px;
-    padding: 16px;
+    padding: 52px 16px 30px;
   }
   .pages :global(.page) {
     position: relative;
     line-height: 0;
   }
   .pages :global(canvas) {
-    background: white;
+    background: var(--pdf);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
   }
   .pages :global(.sync-mark) {
@@ -195,8 +236,11 @@
     }
   }
   .empty {
-    color: #ddd;
-    text-align: center;
-    margin-top: 40px;
+    width: fit-content;
+    margin: 56px auto 0;
+    padding: 4px 12px;
+    border-radius: 4px;
+    color: var(--ink-soft);
+    background: var(--side);
   }
 </style>

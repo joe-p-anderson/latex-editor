@@ -75,7 +75,7 @@
     max-height: 70vh;
     display: flex;
     flex-direction: column;
-    background: var(--bg);
+    background: var(--paper);
     border-radius: 8px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
     outline: none;
@@ -86,9 +86,9 @@
     font-size: 14px;
     margin: 10px;
     padding: 7px 10px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--line);
     border-radius: 5px;
-    outline-color: var(--accent);
+    outline-color: var(--detail);
   }
   .list {
     overflow: auto;
@@ -106,17 +106,17 @@
     text-align: left;
   }
   .row.sel {
-    background: var(--accent-soft);
+    background: var(--sel);
   }
   .dir {
-    color: var(--muted);
+    color: var(--ink-soft);
     font-size: 12px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .empty {
-    color: var(--muted);
+    color: var(--ink-soft);
     text-align: center;
   }
 </style>

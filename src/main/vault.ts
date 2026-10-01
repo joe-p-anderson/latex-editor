@@ -1,8 +1,9 @@
-import { readdir, readFile, stat } from 'node:fs/promises'
+import { readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { watch, type FSWatcher } from 'chokidar'
 import type { TreeNode, VaultInfo } from '../shared/api'
 import { DEFAULT_LISTS } from '../shared/latexedit'
+import { normalizeVaultAppearance, type VaultAppearance } from '../shared/appearance'
 
 /** Optional per-vault settings, read from <vault>/.vault.json. */
 interface VaultSettings {
@@ -20,6 +21,8 @@ interface VaultSettings {
   mathSnippets?: string
   /** The spelling word list, vault-relative. */
   words?: string
+  /** The vault's endpaper: palette, marbling, tone and seed. */
+  appearance?: Partial<VaultAppearance>
 }
 
 // Where images go when none is configured: the first of these that exists.
@@ -47,6 +50,8 @@ export class Vault {
   mathSnippets = 'math-snippets.txt'
   /** Vault-relative spelling word list (it need not exist). */
   words = 'words.txt'
+  /** The vault's endpaper. */
+  appearance: VaultAppearance
   private watcher: FSWatcher | null = null
 
   /** `globalTemplates` is the per-install template library shared by every vault. */
@@ -55,6 +60,7 @@ export class Vault {
     public globalTemplates: string | null = null,
   ) {
     this.name = basename(root)
+    this.appearance = normalizeVaultAppearance(undefined, this.name)
   }
 
   /** Template libraries in search order: the vault's own, then the global one. */
@@ -63,13 +69,21 @@ export class Vault {
     return [...new Set(dirs)]
   }
 
-  async load(): Promise<void> {
-    let settings: VaultSettings = {}
+  private get settingsPath(): string {
+    return join(this.root, '.vault.json')
+  }
+
+  private async readSettings(): Promise<VaultSettings> {
     try {
-      settings = JSON.parse(await readFile(join(this.root, '.vault.json'), 'utf8'))
+      return JSON.parse(await readFile(this.settingsPath, 'utf8'))
     } catch {
       // No settings file: fine, everything has a default.
+      return {}
     }
+  }
+
+  async load(): Promise<void> {
+    const settings = await this.readSettings()
     this.vaultTemplates = settings.templates ? resolve(this.root, settings.templates) : null
     this.imagesDir = settings.images ?? (await this.firstExistingDir(IMAGE_DIR_CANDIDATES)) ?? 'Images'
     this.lists = { ...DEFAULT_LISTS }
@@ -81,6 +95,19 @@ export class Vault {
     this.fastCompile = settings.fastCompile !== false
     this.mathSnippets = settings.mathSnippets ?? 'math-snippets.txt'
     this.words = settings.words ?? 'words.txt'
+    this.appearance = normalizeVaultAppearance(settings.appearance, this.name)
+  }
+
+  /**
+   * Merges `changes` into the vault's endpaper and writes it to .vault.json,
+   * keeping the file's other settings. Returns the result.
+   */
+  async saveAppearance(changes: Partial<VaultAppearance>): Promise<VaultAppearance> {
+    const settings = await this.readSettings()
+    this.appearance = normalizeVaultAppearance({ ...this.appearance, ...changes }, this.name)
+    settings.appearance = this.appearance
+    await writeFile(this.settingsPath, JSON.stringify(settings, null, 2) + '\n')
+    return this.appearance
   }
 
   private async firstExistingDir(names: string[]): Promise<string | null> {
@@ -101,6 +128,7 @@ export class Vault {
       snippets: this.snippets,
       mathSnippets: this.mathSnippets,
       words: this.words,
+      appearance: this.appearance,
       tree: await this.tree(),
     }
   }

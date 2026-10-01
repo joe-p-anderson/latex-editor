@@ -1,3 +1,4 @@
+import type { AppAppearance, VaultAppearance } from './appearance'
 import type { BibSummary } from './bibtex'
 import type { CommandSig } from './latexedit'
 import type { MacroDefs } from './mathrender'
@@ -31,7 +32,18 @@ export interface VaultInfo {
   mathSnippets: string
   /** Vault-relative path of the spelling word list (which may not exist yet). */
   words: string
+  /** The vault's endpaper (palette, marbling, tone, seed), from .vault.json. */
+  appearance: VaultAppearance
   tree: TreeNode[]
+}
+
+/** A vault opened before, for the welcome screen. */
+export interface RecentVault {
+  root: string
+  name: string
+  /** When it was last opened (ms since the epoch). */
+  opened: number
+  appearance: VaultAppearance
 }
 
 export type Severity = 'error' | 'warning' | 'layout'
@@ -130,6 +142,13 @@ export type TouchpadEvent = { type: 'contact'; id: number; tip: boolean; x: numb
 export interface Api {
   openVault(): Promise<VaultInfo | null>
   getVault(): Promise<VaultInfo | null>
+  /** Vaults opened before that still exist, most recent first. */
+  recentVaults(): Promise<RecentVault[]>
+  openVaultAt(root: string): Promise<VaultInfo>
+  /** Picks or makes a folder and opens it as a new vault; null if cancelled. */
+  newVault(): Promise<VaultInfo | null>
+  /** Closes the vault, back to the welcome screen. */
+  closeVault(): Promise<void>
   readFile(rel: string): Promise<string>
   writeFile(rel: string, text: string): Promise<void>
   compile(rel: string): Promise<CompileResult>
@@ -184,6 +203,21 @@ export interface Api {
   /** The user asked to close the window; the renderer decides, then calls closeWindow. */
   onCloseRequested(cb: () => void): () => void
   onTreeChanged(cb: (tree: TreeNode[]) => void): () => void
+  /** The global appearance (look, page, type), from settings.json. */
+  getAppearance(): Promise<AppAppearance>
+  /** Saves changes to the global appearance; returns the whole of it. */
+  setAppearance(changes: Partial<AppAppearance>): Promise<AppAppearance>
+  /** Saves changes to the open vault's endpaper in its .vault.json; returns the whole of it. */
+  setVaultAppearance(changes: Partial<VaultAppearance>): Promise<VaultAppearance>
+  /** Colours the window controls Windows draws over the title bar. */
+  setWindowChrome(color: string, symbolColor: string): Promise<void>
+  /** Opens one of the app's menus (File, Edit, View, Build) at a point in the window. */
+  popupMenu(label: string, x: number, y: number): Promise<void>
+  /** A cached marbled sheet (JPEG), or null if it hasn't been rendered yet. */
+  marbleGet(key: string): Promise<Uint8Array | null>
+  marblePut(key: string, bytes: Uint8Array): Promise<void>
+  /** The git branch the vault is on, or null if it isn't in a repository. */
+  gitBranch(): Promise<string | null>
   /** The vault's settings changed (e.g. a new global template folder). */
   onVaultChanged(cb: (vault: VaultInfo) => void): () => void
 }

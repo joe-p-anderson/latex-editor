@@ -156,9 +156,9 @@ function previewDom(shown: Shown, display: boolean): HTMLElement {
 
 const theme = EditorView.baseTheme({
   '.cm-tooltip.cm-math-preview': {
-    border: '1px solid #d9dce1',
+    border: '1px solid var(--line)',
     borderRadius: '6px',
-    backgroundColor: '#ffffff',
+    backgroundColor: 'var(--paper)',
     boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
   },
   '.cm-math-preview': {
@@ -167,26 +167,26 @@ const theme = EditorView.baseTheme({
     maxHeight: '320px',
     overflow: 'auto',
     fontSize: '18px', // MathJax sizes its SVG in ex, relative to this
-    color: '#1f2328',
+    color: 'var(--ink)',
   },
   '.cm-math-preview.display .cm-math-rendered': { textAlign: 'center', minWidth: '120px' },
   '.cm-math-rendered svg': { maxWidth: 'none' },
   '.cm-math-rendered.stale': { opacity: '0.45' },
   '.cm-math-error': {
-    fontFamily: "'Segoe UI', system-ui, sans-serif",
+    fontFamily: 'var(--f-ui)',
     fontSize: '13px',
-    color: '#cf222e',
+    color: 'var(--err)',
   },
   '.cm-math-rendered + .cm-math-error': {
     marginTop: '6px',
-    fontFamily: "'Segoe UI', system-ui, sans-serif",
+    fontFamily: 'var(--f-ui)',
     fontSize: '12px',
-    color: '#cf222e',
+    color: 'var(--err)',
   },
   '.cm-math-note': {
     marginTop: '4px',
-    fontFamily: "'Segoe UI', system-ui, sans-serif",
+    fontFamily: 'var(--f-ui)',
     fontSize: '11px',
-    color: '#6a737d',
+    color: 'var(--ink-soft)',
   },
 })

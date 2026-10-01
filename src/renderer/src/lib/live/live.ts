@@ -8,7 +8,8 @@
 // decorations. They come from a StateField rather than a ViewPlugin because
 // CodeMirror only takes block widgets and line-spanning replacements from state.
 import { Prec, StateEffect, StateField, type EditorState, type Extension, type Range } from '@codemirror/state'
-import { Decoration, EditorView, MatchDecorator, ViewPlugin, keymap, type DecorationSet, type ViewUpdate } from '@codemirror/view'
+import { Decoration, EditorView, GutterMarker, MatchDecorator, ViewPlugin, gutterLineClass, keymap, type DecorationSet, type ViewUpdate } from '@codemirror/view'
+import { RangeSet } from '@codemirror/state'
 import { isCite, liveModel, type LiveModel } from '@shared/livemodel'
 import { entryText } from '@shared/bibtex'
 import type { Citations } from '../citations'
@@ -63,6 +64,10 @@ const liveOn = StateField.define<boolean>({
   },
 })
 
+const srcNumber = new (class extends GutterMarker {
+  elementClass = 'cm-live-srcnum'
+})()
+
 /** Indent per list level, and the room a marker takes, in em. */
 const LEVEL_EM = 1.6
 const MARKER_EM = 2
@@ -93,6 +98,14 @@ export function liveMode(hooks: LiveHooks, on: () => boolean): Extension {
     liveOn.init(on),
     model,
     decorations,
+    // The source block's lines are numbered in the margin; other line numbers stay hidden in live mode.
+    gutterLineClass.compute([decorations], (state) => {
+      const marks: Range<GutterMarker>[] = []
+      state.field(decorations).between(0, state.doc.length, (from, _to, deco) => {
+        if (deco.spec.class === 'cm-live-src') marks.push(srcNumber.range(from))
+      })
+      return RangeSet.of(marks, true)
+    }),
     spaces,
     EditorView.editorAttributes.compute([liveOn], (s) => (s.field(liveOn) ? { class: 'cm-live' } : ({} as Record<string, string>))),
     Prec.high(keymap.of([{ key: 'Mod-Shift-l', preventDefault: true, run: toggleLive }])),
