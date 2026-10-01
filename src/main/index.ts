@@ -4,6 +4,7 @@ import { basename, join, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { bibInfo } from './bibliography'
 import { cacheDirFor, compile, compileDraft, resolveRoot } from './compile'
+import { discoverPaperOf, paperInfo } from './project'
 import { importImage, saveImage } from './images'
 import { editorContextFor, macrosFor } from './mathmacros'
 import { appAppearance, globalTemplatesDir, loadSettings, migrateSettings, saveAppAppearance, saveSettings } from './settings'
@@ -237,6 +238,18 @@ ipcMain.handle('bib:info', async (_e, rel: string) => {
   const root = (await resolveRoot(v, rel).catch(() => null)) ?? rel
   return bibInfo(v, root, cacheDirFor(v, root))
 })
+ipcMain.handle('paper:info', async (_e, rel: string) => {
+  const v = requireVault()
+  const root = await resolveRoot(v, rel).catch(() => null)
+  if (root) {
+    const info = await paperInfo(v, root)
+    if (root === rel || info.files.some((f) => f.rel === rel)) return info
+  }
+  // Not part of the document it would build: perhaps of one not marked yet.
+  const found = await discoverPaperOf(v, rel)
+  return found ? paperInfo(v, found) : null
+})
+ipcMain.handle('paper:declare', (_e, root: string, on: boolean) => requireVault().savePaper(root, on))
 
 /** The checked-out branch of the git repository containing `dir`, or null. */
 async function gitBranch(dir: string): Promise<string | null> {

@@ -414,7 +414,7 @@ function readGroup(text: string, open: number): string {
 }
 
 /** Readable text from a line of LaTeX, for outline titles. */
-function plain(tex: string): string {
+export function plain(tex: string): string {
   const s = tex
     .replace(/\\(?:label|ref|vspace|hspace|answerspace|points)\*?\{[^}]*\}/g, '')
     .replace(/\\[A-Za-z@]+\*?(?:\[[^\]]*\])?/g, ' ')

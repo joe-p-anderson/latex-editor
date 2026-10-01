@@ -153,11 +153,21 @@ export class RefWidget extends WidgetType {
     /** Where the (first) label is, for Ctrl+click. */
     readonly target: number | null,
     readonly targetLine: string | null,
+    /** The label is in another file of the paper: there, for Ctrl+click. */
+    readonly elsewhere: OpenLocation | null = null,
   ) {
     super()
   }
   eq(o: RefWidget): boolean {
-    return o.cmd === this.cmd && o.text === this.text && o.target === this.target && o.keys.join() === this.keys.join() && o.targetLine === this.targetLine
+    return (
+      o.cmd === this.cmd &&
+      o.text === this.text &&
+      o.target === this.target &&
+      o.keys.join() === this.keys.join() &&
+      o.targetLine === this.targetLine &&
+      o.elsewhere?.file === this.elsewhere?.file &&
+      o.elsewhere?.line === this.elsewhere?.line
+    )
   }
   toDOM(view: EditorView): HTMLElement {
     const dom = el('span', `cm-live-chip ref${this.text === null ? ' missing' : ''}`)
@@ -165,11 +175,15 @@ export class RefWidget extends WidgetType {
     dom.append(el('span', '', this.text ?? `?? ${this.keys.join(', ')}`))
     dom.title =
       this.text === null
-        ? `No \\label{${this.keys.join(', ')}} in this file`
-        : `\\${this.cmd}{${this.keys.join(', ')}}${this.targetLine ? `\n${this.targetLine}` : ''}${this.target !== null ? '\nCtrl+click to go there' : ''}`
+        ? `No \\label{${this.keys.join(', ')}} found`
+        : `\\${this.cmd}{${this.keys.join(', ')}}${this.elsewhere ? `\nIn ${this.elsewhere.file}, line ${this.elsewhere.line}` : ''}${this.targetLine ? `\n${this.targetLine}` : ''}${this.target !== null || this.elsewhere ? '\nCtrl+click to go there' : ''}`
     dom.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return
       e.preventDefault()
+      if ((e.ctrlKey || e.metaKey) && this.elsewhere) {
+        view.dom.dispatchEvent(new CustomEvent<OpenLocation>(OPEN_LOCATION_EVENT, { bubbles: true, detail: this.elsewhere }))
+        return
+      }
       if ((e.ctrlKey || e.metaKey) && this.target !== null) {
         view.dispatch({ selection: { anchor: this.target }, effects: EditorView.scrollIntoView(this.target, { y: 'center' }) })
       } else view.dispatch({ selection: { anchor: view.posAtDOM(dom) } })
@@ -204,6 +218,59 @@ export class CiteWidget extends WidgetType {
       e.preventDefault()
       if ((e.ctrlKey || e.metaKey) && this.location) {
         view.dom.dispatchEvent(new CustomEvent<OpenLocation>(OPEN_LOCATION_EVENT, { bubbles: true, detail: this.location }))
+        return
+      }
+      view.dispatch({ selection: { anchor: view.posAtDOM(dom) } })
+      view.focus()
+    })
+    return dom
+  }
+}
+
+/** What an \input card shows: the file and the numbered headings in it. */
+export interface IncludeCard {
+  /** The file it brings in, vault-relative (or the argument, when it can't be resolved). */
+  rel: string
+  exists: boolean
+  /** Commented out, so not part of the build. */
+  off: boolean
+  headings: { level: number; number: string | null; title: string }[]
+}
+
+/**
+ * An \input (or \include, \import, …) in a paper's root: a card naming the
+ * file, with its sections and their numbers. Clicking opens the file;
+ * clicking the edge shows the source.
+ */
+export class IncludeWidget extends WidgetType {
+  constructor(readonly card: IncludeCard) {
+    super()
+  }
+  eq(o: IncludeWidget): boolean {
+    return JSON.stringify(o.card) === JSON.stringify(this.card)
+  }
+  toDOM(view: EditorView): HTMLElement {
+    const { rel, exists, off, headings } = this.card
+    const dom = el('div', `cm-live-include${off ? ' off' : ''}${exists ? '' : ' missing'}`)
+    const head = el('div', 'cm-live-include-head')
+    head.append(el('span', 'cm-live-include-icon', '❧'), el('span', 'cm-live-include-file', rel.split('/').pop()!))
+    if (off) head.append(el('span', 'cm-live-include-note', 'switched off'))
+    else if (!exists) head.append(el('span', 'cm-live-include-note', 'not found'))
+    dom.append(head)
+    const top = Math.min(...headings.map((h) => h.level))
+    for (const h of headings.slice(0, 12)) {
+      const row = el('div', `cm-live-include-h l${h.level - top}`)
+      if (h.number) row.append(el('span', 'cm-live-include-num', h.number))
+      row.append(el('span', '', h.title))
+      dom.append(row)
+    }
+    if (headings.length > 12) dom.append(el('div', 'cm-live-include-h more', `and ${headings.length - 12} more`))
+    dom.title = exists ? `${rel}\nClick to open; Alt+click to edit the line` : `${rel} doesn't exist yet`
+    dom.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return
+      e.preventDefault()
+      if (exists && !e.altKey) {
+        view.dom.dispatchEvent(new CustomEvent<OpenLocation>(OPEN_LOCATION_EVENT, { bubbles: true, detail: { file: rel, line: 1 } }))
         return
       }
       view.dispatch({ selection: { anchor: view.posAtDOM(dom) } })

@@ -29,12 +29,16 @@ RegisterHTMLHandler(adaptor)
 
 /** A renderer for one set of macros. Creating one costs a few ms; reuse it. */
 export function createRenderer(macros: MacroDefs = {}): (tex: string, display: boolean) => Rendered {
+  const input = new TeX({ packages: PACKAGES, macros })
   const doc = mathjax.document('', {
-    InputJax: new TeX({ packages: PACKAGES, macros }),
+    InputJax: input,
     OutputJax: new SVG({ fontCache: 'none' }),
   })
   const mathOnly = mathOnlyMacros(macros)
   return (tex, display) => {
+    // Each formula on its own: MathJax otherwise remembers every \label it
+    // has seen, and rendering an equation again (renumbered) would define it twice.
+    input.reset()
     const node = doc.convert(ensureMathInText(expandSiunitx(tex), mathOnly), { display })
     // convert() returns an <mjx-container>; the preview only needs its <svg>.
     const svg = adaptor.firstChild(node) as never

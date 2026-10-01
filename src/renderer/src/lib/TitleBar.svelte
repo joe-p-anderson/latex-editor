@@ -13,6 +13,7 @@
     logo,
     vaultName,
     file,
+    place = null,
     live,
     canLive,
     pdfOpen,
@@ -27,6 +28,8 @@
     logo?: string
     vaultName: string | null
     file: string | null
+    /** Where the file stands in its paper (main §III), when it's part of one. */
+    place?: string | null
     live: boolean
     canLive: boolean
     pdfOpen: boolean
@@ -60,7 +63,7 @@
   </div>
 
   <button class="running" onclick={onrunning} title="Go to a file (Ctrl+P)">
-    {#if vaultName}<span class="sc">{vaultName}</span>{#if fileName} · <i>{fileName}</i>{/if}{:else}endleaf{/if}
+    {#if vaultName}<span class="sc">{vaultName}</span>{#if fileName} · <i>{fileName}</i>{/if}{#if place}<span class="place"> · {place}</span>{/if}{:else}endleaf{/if}
   </button>
 
   <div class="right">
@@ -146,6 +149,10 @@
   }
   .running i {
     font-weight: 500;
+  }
+  .place {
+    font-weight: 500;
+    color: var(--chrome-ink-soft, inherit);
   }
   .right {
     display: flex;

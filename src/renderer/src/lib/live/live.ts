@@ -7,10 +7,11 @@
 // The parsing lives in @shared/livemodel; this file turns it into
 // decorations. They come from a StateField rather than a ViewPlugin because
 // CodeMirror only takes block widgets and line-spanning replacements from state.
-import { Prec, StateEffect, StateField, type EditorState, type Extension, type Range } from '@codemirror/state'
+import { Facet, Prec, StateEffect, StateField, type EditorState, type Extension, type Range } from '@codemirror/state'
 import { Decoration, EditorView, GutterMarker, MatchDecorator, ViewPlugin, gutterLineClass, keymap, type DecorationSet, type ViewUpdate } from '@codemirror/view'
 import { RangeSet } from '@codemirror/state'
-import { isCite, liveModel, type LiveModel } from '@shared/livemodel'
+import { isCite, liveModel, type LiveModel, type LiveOptions } from '@shared/livemodel'
+import { parseIncludes } from '@shared/project'
 import { entryText } from '@shared/bibtex'
 import type { Citations } from '../citations'
 import { resolveImage } from '../imageSupport'
@@ -22,6 +23,8 @@ import {
   FigureWidget,
   HeadingNumberWidget,
   ImageWidget,
+  IncludeWidget,
+  type IncludeCard,
   LabelWidget,
   MarkerWidget,
   MathWidget,
@@ -40,7 +43,20 @@ export interface LiveHooks {
   lists(): Record<string, string>
   /** The document's bibliography, for citation chips (null until loaded). */
   citations(): Citations | null
+  /** For a file of a multi-part paper: where it stands in the paper (null otherwise). */
+  paper(rel: string | null): LivePaper | null
 }
+
+/** A file's place in its paper, for the live view. */
+export interface LivePaper {
+  /** Its starting counters, the paper's numbering style, its includes, labels elsewhere. */
+  options: LiveOptions
+  /** The card for an include in this file. */
+  card(inc: { cmd: string; dir: string; arg: string }, off: boolean): IncludeCard
+}
+
+/** The vault-relative file an editor state holds (set when the state is made). */
+export const liveFile = Facet.define<string, string | null>({ combine: (v) => v[0] ?? null })
 
 /** Turns live mode on or off for one editor state. */
 export const setLive = StateEffect.define<boolean>()
@@ -74,13 +90,15 @@ const MARKER_EM = 2
 
 /** `on` gives a new state's starting mode. */
 export function liveMode(hooks: LiveHooks, on: () => boolean): Extension {
+  const make = (state: EditorState) => liveModel(state.doc.toString(), hooks.lists(), hooks.paper(state.facet(liveFile))?.options ?? {})
   const model = StateField.define<LiveModel | null>({
-    create: (state) => (state.field(liveOn) ? liveModel(state.doc.toString(), hooks.lists()) : null),
+    create: (state) => (state.field(liveOn) ? make(state) : null),
     update(value, tr) {
       const live = tr.state.field(liveOn)
       if (!live) return null
-      if (value && !tr.docChanged) return value
-      return liveModel(tr.state.doc.toString(), hooks.lists())
+      // refreshMath also says the paper (its numbers, its files) changed.
+      if (value && !tr.docChanged && !tr.effects.some((e) => e.is(refreshMath))) return value
+      return make(tr.state)
     },
   })
 
@@ -120,6 +138,7 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
   const sel = state.selection.ranges
   const out: Range<Decoration>[] = []
   const render = hooks.render()
+  const paper = hooks.paper(state.facet(liveFile))
   const touches = (from: number, to: number) => sel.some((r) => r.from <= to && r.to >= from)
   const lineTouched = (pos: number) => {
     const l = doc.lineAt(pos)
@@ -260,9 +279,16 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
           out.push(Decoration.replace({ widget: citeWidget(n.cmd, n.keys, hooks.citations()) }).range(n.from, n.to))
           break
         }
-        const target = model.labels.get(n.keys[0])
-        const targetLine = target ? doc.lineAt(target.pos).text.trim().slice(0, 80) : null
-        out.push(Decoration.replace({ widget: new RefWidget(n.cmd, n.keys, n.text, target?.pos ?? null, targetLine) }).range(n.from, n.to))
+        const local = model.labels.get(n.keys[0])
+        const away = local ? null : paper?.options.label?.(n.keys[0])
+        const targetLine = local ? doc.lineAt(local.pos).text.trim().slice(0, 80) : null
+        const elsewhere = away?.file ? { file: away.file, line: away.line ?? 1 } : null
+        out.push(Decoration.replace({ widget: new RefWidget(n.cmd, n.keys, n.text, local?.pos ?? null, targetLine, elsewhere) }).range(n.from, n.to))
+        break
+      }
+      case 'include': {
+        if (!paper || touches(n.from, n.to)) break
+        widget(n.from, n.to, () => new IncludeWidget(paper.card(n, false)))
         break
       }
       case 'symbol': {
@@ -270,6 +296,13 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
         out.push(Decoration.replace({ widget: new SymbolWidget(n.text, n.faint) }).range(n.from, n.to))
         break
       }
+    }
+  }
+  // A commented-out include is a file switched off: a dimmed card.
+  if (paper) {
+    for (const inc of parseIncludes(doc.toString())) {
+      if (!inc.commented || touches(inc.from, inc.to)) continue
+      widget(inc.from, inc.to, () => new IncludeWidget(paper.card(inc, true)))
     }
   }
   return Decoration.set(out, true)

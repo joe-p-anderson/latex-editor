@@ -105,6 +105,11 @@ describe('createRenderer', () => {
     const render = createRenderer({ blank: ['\\underline{\\hspace{#1}}', 1, '1in'] })
     expect(render('x = \\text{a \\blank[1in] b}', false).error).toBeNull()
   })
+  it('renders a labelled equation again (renumbered) without "multiply defined"', () => {
+    const render = createRenderer()
+    expect(render('\\begin{equation} x \\label{a}\\tag{1}\\end{equation}', true).error).toBeNull()
+    expect(render('\\begin{equation} x \\label{a}\\tag{35}\\end{equation}', true).error).toBeNull()
+  })
 })
 
 // Every equation in the real fixture documents must render. Reads the

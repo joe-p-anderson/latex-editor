@@ -52,7 +52,9 @@ Regenerates `fixtures/errors/logs/`. Run it after adding or changing a broken do
 - What gets compiled:
   - a `% !TEX root = ../main.tex` comment names the document to build;
   - otherwise the file itself, if it has a `\documentclass`;
+  - otherwise a multi-part paper (see below) that includes the file;
   - otherwise the document compiled last, so saving an `\input`'ed piece rebuilds its parent.
+- A document in a subfolder finds its `\input` pieces in its own folder, then at the vault root.
 - Classes are found through `TEXINPUTS`, so a vault holds no copies of them. See `spikes/README.md` for how that was tested. The folders searched, in order:
   1. the vault itself;
   2. the vault's own template folder, if `.vault.json` names one;
@@ -187,6 +189,21 @@ The **cite picker** searches the document's bibliography. Open it with Ctrl+Shif
 - ↑/↓ move, and Enter inserts `\cite{key}`. Tab, a tick box or Ctrl+click marks several, and Enter inserts them all as one `\cite{a,b}`. With the cursor inside a `\cite{…}`, the keys are added to it.
 
 Inside `\cite{…}`, completion offers keys the same way: `\cite{kocks` finds `kocksPhysicsPhenomenologyStrain2003`. Each key shows its authors, year and number, with the title and journal beside it. In source view, hovering a cite key shows its reference.
+
+### Multi-part papers
+
+A paper split into files (`main.tex` with `\input{1_Intro}`, `\input{2_methods}`, …) can be marked as a **multi-part paper**. Open any of its files: Contents offers **Mark as paper** when a document brings in other files. Marking records the paper in `.vault.json` (`"papers": ["main.tex"]`) and adds `% !TEX root = main.tex` to the top of each of its files, so other editors build the right document too.
+
+In a marked paper, each file reads as part of the whole:
+
+- Saving any of its files builds the paper, even straight after the app starts.
+- Numbers carry on from the file before: the section file of section III starts at III, its equations carry on from the last one before it, and an appendix's equations start again at A1 (as revtex does). Section and equation numbers follow the class: revtex's I, II, A, B; the standard classes' 1, 1.1.
+- `\ref` and `\eqref` to a label in another file show its number. Ctrl+click opens that file at the label. Completion inside `\ref{…}` offers the paper's labels, e.g. `eq:closure  Eq. (41) · 3_reduced`.
+- In `main.tex`, each `\input` shows as a card with the file's numbered sections. Click it to open the file; Alt+click edits the line. A commented-out `\input` shows dimmed, as switched off.
+- The title bar shows where you are, e.g. `3_reduced.tex · main §III` or `main §VI–VII`, and the status bar the section under the cursor with its number.
+- The paper's tabs are marked with a band of the detail colour.
+
+`\include`, `\subfile`, `\import` and `\subimport` are read too; `\input` is what the app recommends, since it doesn't force page breaks and every journal and arXiv accept it.
 
 ### Tables
 

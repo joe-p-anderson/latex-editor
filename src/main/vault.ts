@@ -23,6 +23,8 @@ interface VaultSettings {
   words?: string
   /** The vault's endpaper: palette, marbling, tone and seed. */
   appearance?: Partial<VaultAppearance>
+  /** Root documents marked as multi-part papers, vault-relative. */
+  papers?: string[]
 }
 
 // Where images go when none is configured: the first of these that exists.
@@ -52,6 +54,8 @@ export class Vault {
   words = 'words.txt'
   /** The vault's endpaper. */
   appearance: VaultAppearance
+  /** Root documents marked as multi-part papers. */
+  papers: string[] = []
   private watcher: FSWatcher | null = null
 
   /** `globalTemplates` is the per-install template library shared by every vault. */
@@ -96,6 +100,7 @@ export class Vault {
     this.mathSnippets = settings.mathSnippets ?? 'math-snippets.txt'
     this.words = settings.words ?? 'words.txt'
     this.appearance = normalizeVaultAppearance(settings.appearance, this.name)
+    this.papers = Array.isArray(settings.papers) ? settings.papers.filter((p) => typeof p === 'string') : []
   }
 
   /**
@@ -108,6 +113,16 @@ export class Vault {
     settings.appearance = this.appearance
     await writeFile(this.settingsPath, JSON.stringify(settings, null, 2) + '\n')
     return this.appearance
+  }
+
+  /** Marks `root` as a multi-part paper (or not) in .vault.json, keeping its other settings. */
+  async savePaper(root: string, on: boolean): Promise<void> {
+    const settings = await this.readSettings()
+    const papers = this.papers.filter((p) => p !== root)
+    if (on) papers.push(root)
+    this.papers = papers
+    settings.papers = papers
+    await writeFile(this.settingsPath, JSON.stringify(settings, null, 2) + '\n')
   }
 
   private async firstExistingDir(names: string[]): Promise<string | null> {

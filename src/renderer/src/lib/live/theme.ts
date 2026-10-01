@@ -91,6 +91,35 @@ export const liveTheme = EditorView.baseTheme({
   },
   '.cm-live-preamble-title': { fontWeight: '600', color: 'var(--ink)' },
 
+  // An \input'ed file of a paper: its name and numbered headings.
+  '.cm-live-include': {
+    margin: '6px 0',
+    padding: '5px 12px 6px',
+    fontFamily: ui,
+    fontSize: '12px',
+    lineHeight: '1.5',
+    color: muted,
+    background: 'var(--side)',
+    border: '1px solid var(--line)',
+    borderLeft: '3px solid var(--detail)',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    textIndent: '0',
+  },
+  '.cm-live-include:hover': { borderColor: 'var(--detail)' },
+  '.cm-live-include.off': { opacity: '0.55', borderLeftStyle: 'dashed' },
+  '.cm-live-include.missing': { borderLeftColor: 'var(--err)' },
+  '.cm-live-include-head': { display: 'flex', alignItems: 'baseline', gap: '8px' },
+  '.cm-live-include-icon': { color: 'var(--detail)' },
+  '.cm-live-include-file': { fontWeight: '600', color: 'var(--ink)', fontFamily: 'var(--f-mono)', fontSize: '11.5px' },
+  '.cm-live-include-note': { fontStyle: 'italic' },
+  '.cm-live-include.missing .cm-live-include-note': { color: 'var(--err)' },
+  '.cm-live-include-h': { display: 'flex', gap: '8px', paddingLeft: '20px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--ink)' },
+  '.cm-live-include-h.l1': { paddingLeft: '36px', color: muted },
+  '.cm-live-include-h.l2': { paddingLeft: '52px', color: muted },
+  '.cm-live-include-h.more': { fontStyle: 'italic', color: muted },
+  '.cm-live-include-num': { minWidth: '2.2em', fontVariantNumeric: 'tabular-nums', color: 'var(--detail)' },
+
   // The source block under the cursor: set in the mono at 0.74 × the text
   // size, with a rule on its left, running into the outer margin so typical
   // 74–80-character source lines don't wrap. Its line numbers show in the

@@ -8,6 +8,7 @@
     tabs,
     active,
     dirty,
+    papers = new Map(),
     onselect,
     onclose,
     onmove,
@@ -15,6 +16,8 @@
     tabs: string[]
     active: string | null
     dirty: Set<string>
+    /** Files of a multi-part paper, with the paper's name: their tabs share a mark. */
+    papers?: Map<string, string>
     onselect: (rel: string) => void
     onclose: (rel: string) => void
     /** Move the tab at index `from` so it ends up at index `to`. */
@@ -57,12 +60,13 @@
       <div
         class="tab"
         class:active={rel === active}
+        class:paper={papers.has(rel)}
         class:drop-before={dropAt === i && dragging !== i && dragging !== i - 1}
         class:drop-after={dropAt === i + 1 && i === tabs.length - 1 && dragging !== i}
         role="tab"
         tabindex="0"
         aria-selected={rel === active}
-        title={rel}
+        title={papers.has(rel) ? `${rel}\nPart of ${papers.get(rel)}` : rel}
         draggable="true"
         ondragstart={(e) => {
           dragging = i
@@ -127,6 +131,10 @@
   }
   .tab:hover {
     color: var(--ink);
+  }
+  /* a paper's files: a band of the detail colour along the foot */
+  .tab.paper {
+    box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--detail) 60%, transparent);
   }
   .tab.active {
     background: var(--desk);

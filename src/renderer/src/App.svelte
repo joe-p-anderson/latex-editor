@@ -1,6 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import type { BibInfo, CompileResult, EditorContext, Problem, QuickFix, TextEdit, TreeNode, VaultInfo } from '@shared/api'
+  import type { BibInfo, CompileResult, EditorContext, PaperInfo, Problem, QuickFix, TextEdit, TreeNode, VaultInfo } from '@shared/api'
+  import { isDocument, magicRoot, rootComment } from '@shared/project'
+  import { PaperModel } from '@shared/papermodel'
+  import { outline as outlineOf } from '@shared/latexedit'
+  import type { LivePaper } from './lib/live/live'
   import CitePicker from './lib/CitePicker.svelte'
   import { makeCitations, type Citations } from './lib/citations'
   import { OPEN_CITE } from '@shared/bibtex'
@@ -137,7 +141,9 @@
   // Contextual tools: Citations when the vault has a .bib file, Document
   // parts when the open document's root \inputs other files.
   const hasBib = $derived(!!vault && allFiles(vault.tree).some((f) => f.toLowerCase().endsWith('.bib')))
-  let docParts = $state<{ root: string; parts: { rel: string; exists: boolean }[] } | null>(null)
+  // The paper the open file belongs to: its root and the files it pulls in.
+  let paper = $state<PaperInfo | null>(null)
+  const docParts = $derived(paper && paper.files.length > 1 ? { root: paper.root, parts: paper.files.slice(1).map((f) => ({ rel: f.rel, exists: f.exists })) } : null)
   const tools = $derived<ViewButton[]>([
     ...(hasBib ? [{ id: 'cite', icon: 'cite', tip: 'Citations. Shown because this vault has a .bib file' } as ViewButton] : []),
     ...(docParts?.parts.length
@@ -149,25 +155,122 @@
     if ((view === 'cite' && !hasBib) || (view === 'parts' && !docParts?.parts.length)) view = 'files'
   })
 
-  /** The files the open document's root \inputs or \includes, in order. */
-  async function loadParts(rel: string): Promise<void> {
+  /** The paper `rel` belongs to (the main process works out its root). */
+  async function loadPaper(rel: string): Promise<void> {
     if (!rel.endsWith('.tex') || !vault) return
-    const own = normalizeEol((await textOf(rel).catch(() => '')) ?? '')
-    const root = /^[^%\n]*\\documentclass/m.test(own) ? rel : result?.root
-    if (!root) return void (docParts = null)
-    const text = root === rel ? own : normalizeEol((await textOf(root).catch(() => '')) ?? '')
-    const dir = root.includes('/') ? root.slice(0, root.lastIndexOf('/') + 1) : ''
-    const present = new Set(allFiles(vault.tree))
-    const seen = new Set<string>()
-    const parts: { rel: string; exists: boolean }[] = []
-    for (const m of blankComments(text).matchAll(/\\(?:input|include|subfile)\s*\{([^}]+)\}/g)) {
-      let target = (dir + m[1].trim()).replace(/\\/g, '/').replace(/^\.\//, '')
-      if (!/\.\w+$/.test(target)) target += '.tex'
-      if (seen.has(target)) continue
-      seen.add(target)
-      parts.push({ rel: target, exists: present.has(target) })
+    const info = await window.api.paperInfo(rel).catch(() => null)
+    if (rel !== active) return
+    paper = info
+    rebuildPaperModel()
+  }
+
+  // A marked paper read through, as LaTeX would: each file's starting
+  // numbers, headings and labels. Open files count with their unsaved text.
+  let paperModel = $state.raw<PaperModel | null>(null)
+  function rebuildPaperModel(): void {
+    const p = paper
+    if (!p?.declared) paperModel = null
+    else {
+      const text = (rel: string) => {
+        const t = editor?.textOf(rel) ?? p.texts[rel]
+        return t == null ? null : normalizeEol(t)
+      }
+      paperModel = new PaperModel(p.root, p.files, text, vault?.lists ?? {})
     }
-    docParts = { root, parts }
+    editor?.refreshPaper()
+  }
+  const inPaper = (rel: string | null) => !!rel && !!paperModel && !!paper?.files.some((f) => f.rel === rel)
+
+  /** A file's place in the paper, for the live view. */
+  function livePaper(rel: string | null): LivePaper | null {
+    const model = paperModel
+    if (!rel || !model || !inPaper(rel)) return null
+    return {
+      options: model.options(rel),
+      card: (inc, off) => {
+        const child = model.childOf(rel, inc)
+        const file = child ? paper?.files.find((f) => f.rel === child) : null
+        const known = child ? model.files.get(child) : null
+        const headings = known
+          ? known.headings.map((h) => ({ level: h.level, number: h.number, title: h.title }))
+          : child && paper?.texts[child] != null
+            ? outlineOf(normalizeEol(paper.texts[child])).filter((o) => o.kind !== 'question').map((o) => ({ level: o.depth + 1, number: null, title: o.title }))
+            : []
+        return { rel: child ?? inc.arg, exists: !!file?.exists, off: off || !!file?.off, headings }
+      },
+    }
+  }
+
+  // The open paper's files, marked in the tabs. Kept while another file is
+  // showing, so the paper's tabs stay marked.
+  let paperTabs = $state(new Map<string, string>())
+  $effect(() => {
+    if (paper?.declared) paperTabs = new Map(paper.files.map((f) => [f.rel, paper!.name]))
+  })
+
+  /** Where the open file stands in its paper, for the title bar: main §III. */
+  const place = $derived.by(() => {
+    if (!paperModel || !active || !inPaper(active) || !paper) return null
+    if (active === paper.root) return null
+    const s = paperModel.sectionsOf(active)
+    return s ? `${paper.name} §${s}` : paper.name
+  })
+
+  /**
+   * The document the open file belongs to: its paper's root, or the file
+   * itself when it's a document, or the last one built.
+   */
+  async function rootOfActive(): Promise<string | null> {
+    if (!active) return null
+    if (paper && (paper.root === active || paper.files.some((f) => f.rel === active))) return paper.root
+    const own = normalizeEol((await textOf(active).catch(() => '')) ?? '')
+    return isDocument(own) ? active : (result?.root ?? null)
+  }
+
+  /**
+   * Edits `rel` (`changes` are offsets into its text with \n line breaks)
+   * and saves it. An open file changes in its editor, as one undoable change;
+   * one with unsaved changes is left unsaved.
+   */
+  async function editAndSave(rel: string, changes: (text: string) => { from: number; to: number; insert: string }[]): Promise<void> {
+    const open = editor?.textOf(rel)
+    if (open != null && editor) {
+      const wasDirty = dirty.has(rel)
+      await editor.applyChangesTo(rel, changes(normalizeEol(open)))
+      if (!wasDirty) {
+        const text = editor.textOf(rel)!
+        await window.api.writeFile(rel, text)
+        editor.markSaved(rel, text)
+      }
+      return
+    }
+    const disk = await window.api.readFile(rel)
+    let text = normalizeEol(disk)
+    for (const c of [...changes(text)].sort((x, y) => y.from - x.from)) text = text.slice(0, c.from) + c.insert + text.slice(c.to)
+    await window.api.writeFile(rel, disk.includes('\r\n') ? text.replace(/\n/g, '\r\n') : text)
+  }
+
+  /**
+   * Marks the open file's paper as a multi-part paper, so each of its files
+   * builds it; each file gets a % !TEX root line, so other editors agree.
+   * Unmarking keeps those lines.
+   */
+  async function markPaper(on: boolean): Promise<void> {
+    const p = paper
+    if (!p) return
+    await window.api.declarePaper(p.root, on).catch((e: Error) => flash(`Couldn't save .vault.json: ${e.message}`))
+    let marked = 0
+    if (on) {
+      for (const f of p.files) {
+        if (f.rel === p.root || !f.exists || !f.rel.toLowerCase().endsWith('.tex')) continue
+        const text = editor?.textOf(f.rel) ?? p.texts[f.rel] ?? ''
+        if (magicRoot(f.rel, text) || isDocument(text)) continue
+        await editAndSave(f.rel, () => [{ from: 0, to: 0, insert: `${rootComment(f.rel, p.root)}\n` }])
+        marked++
+      }
+    }
+    if (active) await loadPaper(active)
+    flash(on ? `${p.name} is a multi-part paper${marked ? `; added % !TEX root to ${marked} file${marked === 1 ? '' : 's'}` : ''}` : `${p.name} is no longer marked as a paper`)
   }
 
   /** Dragging the sidebar's edge; below 140 px it closes. */
@@ -200,8 +303,14 @@
   // The cursor, and the heading it's under, for the status bar.
   let cursorCol = $state(1)
   const section = $derived.by(() => {
+    // In a paper, with the number LaTeX gives it (and the section an earlier file began).
+    const own = active && inPaper(active) ? paperModel?.files.get(active) : null
+    if (own) {
+      const h = own.headings.findLast((x) => x.line <= cursorLine)
+      if (h) return `§ ${h.ref ? `${h.ref} ` : ''}${h.title}`
+    }
     const at = outlineItems.findLast((it) => it.line <= cursorLine && it.kind !== 'question')
-    return at ? `§ ${at.title}` : null
+    return at ? `§ ${at.title}` : own && active ? (paperModel?.sectionsOf(active) ? `§ ${paperModel.sectionsOf(active)}` : null) : null
   })
 
   let branch = $state<string | null>(null)
@@ -311,6 +420,11 @@
     editTable: (range, grid) => editTable(range, grid),
     citations: () => citations,
     openCitePicker: () => openCitePicker(),
+    paperLabels: () => {
+      const model = paperModel
+      if (!model || !inPaper(active)) return []
+      return [...model.labels].filter(([, t]) => t.file && t.file !== active).map(([key, t]) => ({ key, number: t.number, kind: t.kind, file: t.file! }))
+    },
   }
 
   // The open document's bibliography: `bib` for the picker, `citations`
@@ -509,7 +623,8 @@
     result = null
     pdf = null
     outlineItems = []
-    docParts = null
+    paper = null
+    paperModel = null
     clearSpellingCache() // another vault, another word list
   }
 
@@ -673,7 +788,7 @@
     if (rel !== active) return
     editor?.setMacros(macros)
     if (ctx) context = ctx
-    loadParts(rel)
+    loadPaper(rel)
     await loadBib(rel)
   }
 
@@ -772,10 +887,9 @@
    */
   async function missingPackages(pkgs: PackageSpec[]): Promise<{ root: string; text: string; missing: PackageSpec[] } | null> {
     if (!active) return null
-    const own = normalizeEol((await textOf(active)) ?? '')
-    const root = /^[^%\n]*\\documentclass/m.test(own) ? active : result?.root
+    const root = await rootOfActive()
     if (!root) return null
-    const text = root === active ? own : normalizeEol(await textOf(root))
+    const text = normalizeEol(await textOf(root))
     const log = result?.root === root ? result.log : ''
     const loads = (p: PackageSpec) => {
       if (typeof p !== 'string') {
@@ -824,10 +938,9 @@
    */
   async function loadedPackages(): Promise<{ packages: Set<string>; encodings: Set<string> } | null> {
     if (!active) return null
-    const own = normalizeEol((await textOf(active).catch(() => '')) ?? '')
-    const root = /^[^%\n]*\\documentclass/m.test(own) ? active : result?.root
+    const root = await rootOfActive()
     if (!root) return null
-    const text = root === active ? own : normalizeEol(await textOf(root).catch(() => ''))
+    const text = normalizeEol(await textOf(root).catch(() => ''))
     const log = result?.root === root ? result.log : ''
     const packages = new Set<string>()
     const encodings = new Set<string>()
@@ -932,7 +1045,7 @@
 
   async function save(rel: string, text: string): Promise<void> {
     await window.api.writeFile(rel, text)
-    if (rel === active) loadParts(rel)
+    if (active && (rel === active || paper?.files.some((f) => f.rel === rel))) loadPaper(active)
     searchVersion++
     await reloadIfSettings(rel)
     if (COMPILES.test(rel)) await compile(rel)
@@ -1067,6 +1180,7 @@
     {logo}
     vaultName={vault?.name ?? null}
     file={active}
+    {place}
     {live}
     canLive={!!active}
     {pdfOpen}
@@ -1106,7 +1220,17 @@
               <button class="sec-h" onclick={() => (contentsSection = !contentsSection)}>
                 <Icon name="chev" size={12} /><span class="t">Contents</span>
               </button>
-              {#if contentsSection}<div class="sec-b"><Outline items={outlineItems} {cursorLine} onjump={(line) => editor?.gotoLine(line)} /></div>{/if}
+              {#if contentsSection}
+                <div class="sec-b">
+                  {#if paper && !paper.declared && paper.files.length > 1}
+                    <div class="paper-offer">
+                      <span><strong>{paper.root.split('/').pop()}</strong> brings in {paper.files.length - 1} other file{paper.files.length === 2 ? '' : 's'}. Treat it as a multi-part paper, so each file builds it and numbers as part of it?</span>
+                      <button onclick={() => markPaper(true)}>Mark as paper</button>
+                    </div>
+                  {/if}
+                  <Outline items={outlineItems} {cursorLine} onjump={(line) => editor?.gotoLine(line)} />
+                </div>
+              {/if}
             </section>
           {/if}
         </div>
@@ -1165,10 +1289,10 @@
                 <button onclick={() => (keptInVault = new Set(keptInVault).add(active!))} title="Keep editing it here; asked again next time the app starts">Not now</button>
               </div>
             {/if}
-            {#if appearance.look === 'plain'}<TabBar {tabs} {active} {dirty} onselect={openFile} onclose={closeTab} onmove={moveTab} />{/if}
+            {#if appearance.look === 'plain'}<TabBar {tabs} {active} {dirty} papers={paperTabs} onselect={openFile} onclose={closeTab} onmove={moveTab} />{/if}
             <div class="editor">
               {#if appearance.look === 'bench'}
-                <IndexTabs {tabs} {active} {dirty} edge={appearance.tabs} onselect={openFile} onclose={closeTab} />
+                <IndexTabs {tabs} {active} {dirty} papers={paperTabs} edge={appearance.tabs} onselect={openFile} onclose={closeTab} />
                 <Riffle run={riffle} />
               {/if}
               <Editor
@@ -1183,6 +1307,7 @@
                 oncursor={(line, col) => ((cursorLine = line), (cursorCol = col))}
                 onlivechange={(on) => (live = on)}
                 onedit={schedulePreview}
+                {livePaper}
                 onopenlocation={async (loc) => {
                   await openFile(loc.file)
                   editor?.gotoLine(loc.line)
@@ -1388,6 +1513,20 @@
     overflow: auto;
     display: flex;
     flex-direction: column;
+  }
+
+  .paper-offer {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 4px 8px 8px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--detail) 14%, var(--paper));
   }
 
   .splitter {

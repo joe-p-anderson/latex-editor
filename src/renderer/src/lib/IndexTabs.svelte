@@ -10,12 +10,15 @@
     active,
     dirty,
     edge,
+    papers = new Map(),
     onselect,
     onclose,
   }: {
     tabs: string[]
     active: string | null
     dirty: Set<string>
+    /** Files of a multi-part paper, with the paper's name: their tabs share a mark. */
+    papers?: Map<string, string>
     edge: 'left' | 'top'
     onselect: (rel: string) => void
     onclose: (rel: string) => void
@@ -30,10 +33,11 @@
       <div
         class="itab"
         class:on={rel === active}
+        class:paper={papers.has(rel)}
         role="tab"
         tabindex="0"
         aria-selected={rel === active}
-        title={rel}
+        title={papers.has(rel) ? `${rel}\nPart of ${papers.get(rel)}` : rel}
         onclick={() => onselect(rel)}
         onkeydown={(e) => e.key === 'Enter' && onselect(rel)}
         onauxclick={(e) => {
@@ -180,5 +184,12 @@
   .x:hover:not(:disabled) {
     opacity: 1;
     background: rgba(0, 0, 0, 0.12);
+  }
+  /* a paper's files: a band of the detail colour on the tab's outer edge */
+  .itab.paper {
+    box-shadow: inset 3px 0 0 color-mix(in srgb, var(--detail) 65%, transparent);
+  }
+  .rail.top .itab.paper {
+    box-shadow: inset 0 3px 0 color-mix(in srgb, var(--detail) 65%, transparent);
   }
 </style>

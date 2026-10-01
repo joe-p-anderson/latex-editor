@@ -15,7 +15,7 @@
   import { latexEditing, type EditingHooks } from './editing'
   import { refreshSpelling, spellcheck, type SpellHooks } from './spellcheck'
   import { outline, type OutlineItem } from '@shared/latexedit'
-  import { liveMode, isLive, setLive, toggleLive } from './live/live'
+  import { liveMode, isLive, liveFile, setLive, toggleLive, type LivePaper } from './live/live'
   import { EDIT_TABLE_EVENT } from './live/widgets'
   import { tableRangeAt } from '@shared/tablemodel'
   import { OPEN_LOCATION_EVENT, type OpenLocation } from './citations'
@@ -33,6 +33,7 @@
     onlivechange,
     onedit,
     onopenlocation,
+    livePaper,
   }: {
     onsave: (rel: string, text: string) => void
     ondirtychange: (rel: string, dirty: boolean) => void
@@ -52,8 +53,10 @@
     onlivechange: (live: boolean) => void
     /** The open file's text changed (typing, undo, a quick fix). */
     onedit: (rel: string) => void
-    /** Ctrl+click on a citation: open its entry (a .bib file at a line). */
+    /** Ctrl+click on a citation (open its entry), a ref to another file, or an \input card. */
     onopenlocation: (loc: OpenLocation) => void
+    /** A file's place in its multi-part paper, for the live view's numbers and cards. */
+    livePaper: (rel: string | null) => LivePaper | null
   } = $props()
 
   let host: HTMLDivElement
@@ -94,6 +97,7 @@
     editTable: (range, grid) => editingHooks.editTable(range, grid),
     citations: () => editingHooks.citations(),
     openCitePicker: () => editingHooks.openCitePicker(),
+    paperLabels: () => editingHooks.paperLabels(),
   })
   const spelling = spellcheck({
     // Documents only: not classes, packages or the vault's settings files.
@@ -118,6 +122,7 @@
       images: () => imageHooks.images(),
       lists: () => editingHooks.lists(),
       citations: () => editingHooks.citations(),
+      paper: (rel) => livePaper(rel),
     },
     liveDefault,
   )
@@ -134,7 +139,7 @@
     oncursor(line.number, head - line.from + 1)
   }
 
-  function makeState(text: string): EditorState {
+  function makeState(text: string, rel: string): EditorState {
     // In live mode a file opens past its (folded) preamble. CodeMirror counts
     // a line break as one character, so the offset is taken with \n breaks.
     const body = liveDefault() ? /\\begin\s*\{document\}[^\n]*\n/.exec(text.replace(/\r\n/g, '\n')) : null
@@ -145,6 +150,7 @@
         // Keep the file's own line endings: CodeMirror otherwise joins lines
         // with \n, and saving would rewrite every line of a CRLF file.
         EditorState.lineSeparator.of(text.includes('\r\n') ? '\r\n' : '\n'),
+        liveFile.of(rel),
         basicSetup,
         endleafEditorTheme,
         latex,
@@ -187,7 +193,7 @@
     if (!state) {
       const text = await window.api.readFile(rel)
       saved.set(rel, text)
-      state = makeState(text)
+      state = makeState(text, rel)
       states.set(rel, state)
     }
     return state
@@ -226,6 +232,11 @@
 
   /** Redraws what depends on the bibliography (citation chips) after it was reloaded. */
   export function refreshCitations(): void {
+    view.dispatch({ effects: refreshMath.of(null) })
+  }
+
+  /** Redraws what depends on the paper (numbers carried across files, \input cards) after it changed. */
+  export function refreshPaper(): void {
     view.dispatch({ effects: refreshMath.of(null) })
   }
 

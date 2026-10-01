@@ -16,6 +16,8 @@ import { diagnose, type DiagnoseContext } from './diagnose'
 import { parseLog } from './logparser'
 import { definitionsFor } from './macros'
 import { buildFormat, dropFormat, preambleHash, preambleOf, usableFormat } from './preamble'
+import { declaredPaperOf, paperGraph } from './project'
+import { dirOf, isDocument, magicRoot } from '../shared/project'
 import { unshadow, writeShadow } from './shadow'
 import type { Vault } from './vault'
 
@@ -39,17 +41,18 @@ const badFormats = new Set<string>()
 
 /**
  * Which document to compile when `rel` is saved. In order: a `% !TEX root`
- * magic comment, the file itself if it has a \documentclass, otherwise the
- * last document compiled (so saving an \input'ed piece rebuilds its parent).
- * `text` is the file's unsaved text, when there is some.
+ * magic comment, the file itself if it has a \documentclass, a paper marked
+ * in .vault.json that includes it, otherwise the last document compiled (so
+ * saving an \input'ed piece rebuilds its parent). `text` is the file's
+ * unsaved text, when there is some.
  */
 export async function resolveRoot(vault: Vault, rel: string, text?: string): Promise<string | null> {
   if (!rel.endsWith('.tex')) return lastRoot
   text ??= await readFile(vault.abs(rel), 'utf8')
-  const magic = /^%\s*!TEX root\s*=\s*(.+?)\s*$/im.exec(text)
-  if (magic) return posix.normalize(posix.join(posix.dirname(rel), magic[1].replace(/\\/g, '/')))
-  if (/^[^%\n]*\\documentclass/m.test(text)) return rel
-  return lastRoot
+  const magic = magicRoot(rel, text)
+  if (magic) return magic
+  if (isDocument(text)) return rel
+  return (await declaredPaperOf(vault, rel)) ?? lastRoot
 }
 
 /** Where a document's aux, log, synctex and working PDF live: .texcache/<reldir>/<name>/ */
@@ -105,8 +108,18 @@ async function build(vault: Vault, rel: string, buffers: Record<string, string> 
   const cwd = shadow ?? vault.root
   const env = { ...process.env }
   // '//' searches subfolders; the trailing separator keeps MiKTeX's default path.
-  const dirs = [...(shadow ? [shadow, vault.root] : []), ...vault.templateDirs.map((d) => `${d}//`)]
+  // A document in a subfolder finds its \input pieces in its own folder
+  // (and the shadow's copy of it) before the vault root.
+  const docDirs = relDir ? [...(shadow ? [join(shadow, relDir)] : []), join(vault.root, relDir)] : []
+  const dirs = [...(shadow ? [shadow] : []), ...docDirs, ...(shadow || relDir ? [vault.root] : []), ...vault.templateDirs.map((d) => `${d}//`)]
   if (dirs.length) env.TEXINPUTS = dirs.map((d) => `${d}${delimiter}`).join('')
+  // \include{sections/x} writes sections/x.aux in the aux folder, which must exist.
+  const { files: parts } = await paperGraph(vault, root, buffers ?? undefined).catch(() => ({ files: [] }))
+  for (const f of parts) {
+    if (f.include?.cmd === 'include' && /[\\/]/.test(f.include.arg)) {
+      await mkdir(join(cacheDir, dirOf(f.include.arg.replace(/\\/g, '/'))), { recursive: true }).catch(() => {})
+    }
+  }
 
   // The preamble format, when there is a current one. A preview whose
   // unsaved files include something the format was built from can't use it.

@@ -45,6 +45,8 @@ export type LiveNode =
       /** The title's closing brace. */
       closeFrom: number
       number: string | null
+      /** What a \ref to it prints (II A where the title shows A). */
+      ref: string | null
     }
   | { kind: 'fence'; from: number; to: number; env: string; begin: boolean }
   | { kind: 'item'; from: number; to: number; env: string; depth: number; label: string; style: ItemStyle; points: string | null; correct: boolean }
@@ -57,14 +59,58 @@ export type LiveNode =
   | { kind: 'label'; from: number; to: number; key: string }
   | { kind: 'ref'; from: number; to: number; cmd: string; keys: string[]; text: string | null }
   | { kind: 'symbol'; from: number; to: number; text: string; faint: boolean }
+  /** \input{arg} and its relatives (\import's folder in `dir`). */
+  | { kind: 'include'; from: number; to: number; cmd: string; dir: string; arg: string }
 
 export type LabelKind = 'section' | 'equation' | 'figure' | 'table' | 'question' | 'item'
 
 export interface LabelTarget {
   number: string
   kind: LabelKind
-  /** Offset of the \label. */
+  /** Offset of the \label (in the file it's in). */
   pos: number
+  /** For a label in another file of the paper: that file, and the label's 1-based line. */
+  file?: string
+  line?: number
+}
+
+/**
+ * How a class numbers things. 'revtex': sections I, II; subsections A, B;
+ * appendices A, B with equations (A1), (A2). 'plain': LaTeX's standard
+ * classes, 1, 1.1, 1.1.1, appendices A, A.1.
+ */
+export type NumberStyle = 'plain' | 'revtex'
+
+export const numberStyleOf = (docclass: string | null): NumberStyle => (docclass && /^revtex/i.test(docclass.trim()) ? 'revtex' : 'plain')
+
+/** The counters LaTeX keeps, as they stand at some point of a document. */
+export interface Counters {
+  /** chapter, section, subsection, subsubsection */
+  sec: number[]
+  hasChapters: boolean
+  /** After \appendix. */
+  appendix: boolean
+  equation: number
+  figure: number
+  table: number
+  question: number
+}
+
+export const freshCounters = (): Counters => ({ sec: [0, 0, 0, 0], hasChapters: false, appendix: false, equation: 0, figure: 0, table: 0, question: 0 })
+const copyCounters = (c: Counters): Counters => ({ ...c, sec: [...c.sec] })
+
+export interface LiveOptions {
+  /** The counters where this text starts (a section file of a paper starts where the one before it ended). */
+  start?: Counters
+  /** The numbering style; by default from this text's own \documentclass. */
+  style?: NumberStyle
+  /**
+   * An \input (or relative) at counters `at`: the counters after the file it
+   * brings in, or null to carry on as if it were empty.
+   */
+  include?: (inc: { cmd: string; dir: string; arg: string }, at: Counters) => Counters | null
+  /** A label defined elsewhere (another file of the paper), for refs this text doesn't define. */
+  label?: (key: string) => LabelTarget | null
 }
 
 export interface LiveModel {
@@ -72,6 +118,10 @@ export interface LiveModel {
   /** List environment bodies (between \begin and \end), with how deeply nested they are (1 = outermost). */
   lists: { from: number; to: number; depth: number }[]
   labels: Map<string, LabelTarget>
+  /** The counters at the end. */
+  end: Counters
+  /** The style used. */
+  style: NumberStyle
 }
 
 const SECTION_LEVEL: Record<string, number> = { chapter: 0, section: 1, subsection: 2, subsubsection: 3 }
@@ -90,10 +140,29 @@ const ESCAPES: Record<string, string> = { '%': '%', '&': '&', $: '$', '#': '#', 
 
 const alpha = (n: number) => (n >= 1 && n <= 26 ? String.fromCharCode(96 + n) : String(n))
 const roman = (n: number) => {
-  const r: [number, string][] = [[10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i']]
+  const r: [number, string][] = [[1000, 'm'], [900, 'cm'], [500, 'd'], [400, 'cd'], [100, 'c'], [90, 'xc'], [50, 'l'], [40, 'xl'], [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i']]
   let s = ''
   for (const [v, d] of r) for (; n >= v; n -= v) s += d
   return s
+}
+const INCLUDES = /^(input|include|subfile|import|subimport|inputfrom|includefrom|subinputfrom|subincludefrom)$/
+
+/**
+ * A heading's numbers under `style`: what its title shows (`display`) and
+ * what a \ref to it prints (`ref`).
+ */
+export function headingNumbers(c: Counters, level: number, style: NumberStyle): { display: string; ref: string } {
+  if (style === 'revtex' && level >= 1) {
+    const s = c.appendix ? alpha(c.sec[1]).toUpperCase() : roman(c.sec[1]).toUpperCase()
+    const parts = [s, alpha(c.sec[2]).toUpperCase(), String(c.sec[3])].slice(0, level)
+    if (level === 1) return { display: c.appendix ? `Appendix ${s}` : s, ref: s }
+    return { display: parts[level - 1], ref: parts.join(' ') }
+  }
+  const from = c.hasChapters ? 0 : 1
+  const nums = c.sec.slice(from, level + 1).map(String)
+  if (c.appendix) nums[0] = alpha(Number(nums[0])).toUpperCase()
+  const n = nums.join('.')
+  return { display: n, ref: n }
 }
 
 interface OpenList {
@@ -112,7 +181,7 @@ interface OpenList {
  * The live-mode constructs in `text`. `lists` maps list environments to their
  * item command without the backslash, e.g. { itemize: 'item', questions: 'question' }.
  */
-export function liveModel(text: string, lists: Record<string, string>): LiveModel {
+export function liveModel(text: string, lists: Record<string, string>, opts: LiveOptions = {}): LiveModel {
   const src = blankComments(text)
   const nodes: LiveNode[] = []
   const listBodies: LiveModel['lists'] = []
@@ -121,17 +190,17 @@ export function liveModel(text: string, lists: Record<string, string>): LiveMode
   const tokenAt = new Map<number, EnvToken>(tokens.map((t) => [t.from, t]))
   const math = findMathRegions(text)
   let mi = 0
+  // Math regions already turned into nodes (by offset).
+  const made = new Set<number>()
 
   // The counters LaTeX keeps.
-  const sec = [0, 0, 0, 0] // chapter, section, subsection, subsubsection
-  let hasChapters = false
-  let equation = 0
-  let figure = 0
-  let table = 0
-  let question = 0
+  let c = copyCounters(opts.start ?? freshCounters())
+  let style: NumberStyle = opts.style ?? 'plain'
   /** What a \label here would refer to (LaTeX's \@currentlabel). */
   let current = null as { number: string; kind: LabelKind } | null
   const stack: OpenList[] = []
+  /** The subequations environment being read: its number, rows so far, and where it ends. */
+  let subeq = null as { number: string; count: number; to: number } | null
   const headings: { node: Extract<LiveNode, { kind: 'heading' }>; level: number }[] = []
 
   // The preamble: everything up to \begin{document}.
@@ -144,6 +213,7 @@ export function liveModel(text: string, lists: Record<string, string>): LiveMode
     for (const m of pre.matchAll(/\\(?:usepackage|RequirePackage)\s*(?:\[[^\]]*\])?\s*\{([^}]*)\}/g)) packages += m[1].split(',').filter((s) => s.trim()).length
     const macros = [...pre.matchAll(/\\(?:newcommand|renewcommand|providecommand|def|DeclareMathOperator|newenvironment|DeclareSIUnit)(?![A-Za-z])/g)].length
     nodes.push({ kind: 'preamble', from: 0, to: doc.to, docclass: cls ? cls[1].trim() : null, packages, macros })
+    if (!opts.style) style = numberStyleOf(cls ? cls[1] : null)
     start = doc.to
   }
 
@@ -155,6 +225,12 @@ export function liveModel(text: string, lists: Record<string, string>): LiveMode
     while (mi < math.length && math[mi].to <= p) mi++
     const region = math[mi]
     if (region && region.from <= p && p < region.to) {
+      // Numbered here, in reading order, so headings before it (an appendix
+      // starting its equations over) and \inputs before it count.
+      if (region.closed && region.from >= start && !made.has(region.from)) {
+        made.add(region.from)
+        mathNode(region.from, region.to, region.tex, region.display)
+      }
       re.lastIndex = Math.max(region.to, p + 1)
       continue
     }
@@ -195,7 +271,27 @@ export function liveModel(text: string, lists: Record<string, string>): LiveMode
     }
 
     if (name === 'resetquestions') {
-      question = 0
+      c.question = 0
+      continue
+    }
+
+    if (name === 'appendix') {
+      c.appendix = true
+      c.sec[c.hasChapters ? 0 : 1] = 0
+      continue
+    }
+
+    if (INCLUDES.test(name)) {
+      // \import{dir}{file} and friends take two arguments; the rest one.
+      const two = name !== 'input' && name !== 'include' && name !== 'subfile'
+      const d = two ? group(end) : null
+      const g = group(d ? d.end : end)
+      if (!g || (two && !d)) continue
+      const cmd = /^sub/.test(name) && two ? 'subimport' : two ? 'import' : name
+      nodes.push({ kind: 'include', from: p, to: g.end, cmd, dir: d?.body.trim() ?? '', arg: g.body.trim() })
+      const after = opts.include?.({ cmd, dir: d?.body.trim() ?? '', arg: g.body.trim() }, copyCounters(c))
+      if (after) c = copyCounters(after)
+      re.lastIndex = g.end
       continue
     }
 
@@ -264,13 +360,14 @@ export function liveModel(text: string, lists: Record<string, string>): LiveMode
   // figure's caption, a table cell) or not shown at all (the preamble).
   const opaque = nodes.filter((n) => n.kind === 'preamble' || n.kind === 'figure' || n.kind === 'table' || n.kind === 'verbatim')
   for (const r of math) {
-    if (r.closed && r.from >= start && !opaque.some((o) => o.from <= r.from && r.from < o.to)) mathNode(r.from, r.to, r.tex, r.display)
+    if (r.closed && r.from >= start && !made.has(r.from) && !opaque.some((o) => o.from <= r.from && r.from < o.to)) mathNode(r.from, r.to, r.tex, r.display)
   }
 
   // Refs can point forward, so they're resolved once every label is known.
+  const lookup = (key: string) => labels.get(key) ?? opts.label?.(key) ?? undefined
   for (const n of nodes) {
     if (n.kind !== 'ref') continue
-    n.text = refText(n.cmd, n.keys, labels)
+    n.text = refText(n.cmd, n.keys, lookup)
   }
 
   // Heading sizes: the outermost level the document uses is h1.
@@ -278,7 +375,7 @@ export function liveModel(text: string, lists: Record<string, string>): LiveMode
   for (const h of headings) h.node.level = Math.min(3, h.level - topLevel + 1) as 1 | 2 | 3
 
   nodes.sort((a, b) => a.from - b.from)
-  return { nodes, lists: listBodies, labels }
+  return { nodes, lists: listBodies, labels, end: c, style }
 
   function group(at: number): { body: string; end: number } | null {
     const ws = /^\s*/.exec(src.slice(at, at + 20))![0].length
@@ -297,13 +394,17 @@ export function liveModel(text: string, lists: Record<string, string>): LiveMode
   function heading(kind: string, starred: boolean, p: number, end: number): void {
     const level = SECTION_LEVEL[kind]
     let number: string | null = null
-    if (kind === 'chapter') hasChapters = true
+    let ref: string | null = null
+    if (kind === 'chapter') c.hasChapters = true
     if (!starred) {
-      sec[level]++
-      for (let k = level + 1; k < sec.length; k++) sec[k] = 0
-      const from = hasChapters ? 0 : 1
-      number = sec.slice(from, level + 1).join('.')
-      current = { number, kind: 'section' }
+      c.sec[level]++
+      for (let k = level + 1; k < c.sec.length; k++) c.sec[k] = 0
+      // revtex numbers an appendix's equations A1, A2, … afresh in each.
+      if (style === 'revtex' && c.appendix && level === 1) c.equation = 0
+      const n = headingNumbers(c, level, style)
+      number = n.display
+      ref = n.ref
+      current = { number: n.ref, kind: 'section' }
     }
     let j = end
     const o = optional(j)
@@ -318,6 +419,7 @@ export function liveModel(text: string, lists: Record<string, string>): LiveMode
       openTo: close >= 0 ? open + 1 : -1,
       closeFrom: close,
       number,
+      ref,
     }
     nodes.push(node)
     headings.push({ node, level })
@@ -326,6 +428,14 @@ export function liveModel(text: string, lists: Record<string, string>): LiveMode
 
   function beginEnv(tok: EnvToken): void {
     const env = tok.name
+    if (env === 'subequations') {
+      // One equation number for the lot; its rows are 5a, 5b, …
+      const close = matchEnd(tokens, tok)
+      const number = equationNumber(++c.equation)
+      subeq = { number, count: 0, to: close ? close.from : src.length }
+      current = { number, kind: 'equation' }
+      return
+    }
     const marker = lists[env]
     if (marker) {
       const outer = stack[stack.length - 1]
@@ -370,9 +480,9 @@ export function liveModel(text: string, lists: Record<string, string>): LiveMode
     let refNumber: string
     let kind: LabelKind = 'item'
     if (list.marker === 'question') {
-      question++
-      label = `${question}.`
-      refNumber = String(question)
+      c.question++
+      label = `${c.question}.`
+      refNumber = String(c.question)
       kind = 'question'
       points = o?.body.trim() || null
     } else if (list.marker === 'part') {
@@ -427,7 +537,8 @@ export function liveModel(text: string, lists: Record<string, string>): LiveMode
       const body = tex.slice(r.from, r.to)
       if (!body.trim() || /\\(nonumber|notag)(?![A-Za-z])/.test(body)) continue
       const explicit = /\\tag\*?\s*\{([^}]*)\}/.exec(body)
-      const number = explicit ? explicit[1] : String(++equation)
+      const inSub = subeq && from < subeq.to ? subeq : null
+      const number = explicit ? explicit[1] : inSub ? `${inSub.number}${alpha(++inSub.count)}` : equationNumber(++c.equation)
       for (const l of body.matchAll(/\\label\s*\{([^}]*)\}/g)) labels.set(l[1].trim(), { number, kind: 'equation', pos: from + r.from + l.index! })
       if (!explicit) {
         tagged += tex.slice(last, r.to) + `\\tag{${number}}`
@@ -443,7 +554,7 @@ export function liveModel(text: string, lists: Record<string, string>): LiveMode
     const caption = captionOf(begin.to, close.from)
     let number: string | null = null
     if (caption !== null) {
-      number = String(++figure)
+      number = String(++c.figure)
       current = { number, kind: 'figure' }
     }
     const keys = labelsIn(begin.to, close.from)
@@ -468,7 +579,7 @@ export function liveModel(text: string, lists: Record<string, string>): LiveMode
     if (!TABULARS.test(begin.name)) {
       caption = captionOf(begin.to, close.from)
       if (caption !== null) {
-        number = String(++table)
+        number = style === 'revtex' ? roman(++c.table).toUpperCase() : String(++c.table)
         current = { number, kind: 'table' }
       }
     }
@@ -483,6 +594,10 @@ export function liveModel(text: string, lists: Record<string, string>): LiveMode
     return close < 0 || close > to ? null : text.slice(open + 1, close).trim()
   }
 
+  function equationNumber(n: number): string {
+    return style === 'revtex' && c.appendix && !c.hasChapters ? `${alpha(c.sec[1]).toUpperCase()}${n}` : String(n)
+  }
+
   function labelsIn(from: number, to: number): string[] {
     const keys = [...src.slice(from, to).matchAll(/\\label\s*\{([^}]*)\}/g)].map((l) => l[1].trim())
     for (const k of keys) if (current) labels.set(k, { ...current, pos: from })
@@ -491,11 +606,11 @@ export function liveModel(text: string, lists: Record<string, string>): LiveMode
 }
 
 /** The display text of a \ref-like command, or null when a key isn't defined. */
-function refText(cmd: string, keys: string[], labels: Map<string, LabelTarget>): string | null {
+function refText(cmd: string, keys: string[], labels: (key: string) => LabelTarget | undefined): string | null {
   if (isCite(cmd)) return keys.join(', ')
   const parts: string[] = []
   for (const k of keys) {
-    const t = labels.get(k)
+    const t = labels(k)
     if (!t) return null
     if (cmd === 'pageref') parts.push(`p. ${k}`)
     else if (cmd === 'eqref') parts.push(`(${t.number})`)

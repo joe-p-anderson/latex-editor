@@ -2,6 +2,7 @@ import type { AppAppearance, VaultAppearance } from './appearance'
 import type { BibSummary } from './bibtex'
 import type { CommandSig } from './latexedit'
 import type { MacroDefs } from './mathrender'
+import type { PaperFile } from './project'
 import type { SearchOptions, SearchResult } from './search'
 
 // Types shared by the main process, the preload bridge and the renderer.
@@ -137,6 +138,19 @@ export interface BibInfo {
   labels: Record<string, string>
 }
 
+/** The paper a file belongs to: its root and every file it pulls in, in reading order. */
+export interface PaperInfo {
+  root: string
+  /** Its display name: the root's file name, without .tex. */
+  name: string
+  /** Marked as a multi-part paper (in .vault.json). */
+  declared: boolean
+  /** Root first, then each included file depth first. */
+  files: PaperFile[]
+  /** Each readable file's saved text. */
+  texts: Record<string, string>
+}
+
 export type TouchpadEvent = { type: 'contact'; id: number; tip: boolean; x: number; y: number } | { type: 'button'; down: boolean }
 
 export interface Api {
@@ -165,6 +179,10 @@ export interface Api {
   editorContext(rel: string): Promise<EditorContext>
   /** The bibliography of the document `rel` belongs to. */
   bibInfo(rel: string): Promise<BibInfo>
+  /** The paper `rel` belongs to (its root, which may be `rel` itself); null when there's no document. */
+  paperInfo(rel: string): Promise<PaperInfo | null>
+  /** Marks `root` as a multi-part paper, or unmarks it, in .vault.json. */
+  declarePaper(root: string, on: boolean): Promise<void>
   /** Every image in the vault, vault-relative. */
   listImages(): Promise<string[]>
   /** Copies an image from outside the vault into its image folder (or returns its path if inside). */

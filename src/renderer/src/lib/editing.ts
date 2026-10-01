@@ -71,6 +71,17 @@ export interface EditingHooks {
   citations(): Citations | null
   /** Open the cite picker (typing \cite{, Ctrl+Shift+C). */
   openCitePicker(): void
+  /** Labels in the paper's other files, with what a \ref to them prints. */
+  paperLabels(): PaperLabel[]
+}
+
+/** A label elsewhere in a multi-part paper. */
+export interface PaperLabel {
+  key: string
+  number: string
+  kind: string
+  /** The file it's in, vault-relative. */
+  file: string
 }
 
 export function latexEditing(hooks: EditingHooks): Extension {
@@ -418,6 +429,8 @@ const ENV_TEMPLATES: Record<string, { args?: string; body?: string[] }> = {
   array: { args: '{${1:cc}}' },
 }
 
+const KIND_NAMES: Record<string, string> = { section: 'Sec. ', equation: 'Eq. ', figure: 'Fig. ', table: 'Table ', question: 'Question ', item: 'Item ' }
+
 function complete(ctx: CompletionContext, hooks: EditingHooks): CompletionResult | null {
   const line = ctx.state.doc.lineAt(ctx.pos)
   const before = line.text.slice(0, ctx.pos - line.from)
@@ -432,7 +445,16 @@ function complete(ctx: CompletionContext, hooks: EditingHooks): CompletionResult
   if (ref) {
     return {
       from: ctx.pos - ref[1].length,
-      options: labels(ctx.state.doc.toString()).map((l) => ({ label: l, type: 'constant' })),
+      options: [
+        ...labels(ctx.state.doc.toString()).map((l) => ({ label: l, type: 'constant' })),
+        // The paper's other files: "Eq. (12) · 3_reduced".
+        ...hooks.paperLabels().map((l) => ({
+          label: l.key,
+          type: 'constant',
+          detail: `  ${KIND_NAMES[l.kind] ?? ''}${l.kind === 'equation' ? `(${l.number})` : l.number} · ${l.file.split('/').pop()!.replace(/\.tex$/, '')}`,
+          boost: -1,
+        })),
+      ],
       validFor: /^[^}\s]*$/,
     }
   }
