@@ -9,12 +9,15 @@
 // CodeMirror only takes block widgets and line-spanning replacements from state.
 import { Prec, StateEffect, StateField, type EditorState, type Extension, type Range } from '@codemirror/state'
 import { Decoration, EditorView, MatchDecorator, ViewPlugin, keymap, type DecorationSet, type ViewUpdate } from '@codemirror/view'
-import { liveModel, type LiveModel } from '@shared/livemodel'
+import { isCite, liveModel, type LiveModel } from '@shared/livemodel'
+import { entryText } from '@shared/bibtex'
+import type { Citations } from '../citations'
 import { resolveImage } from '../imageSupport'
 import { refreshMath, type RenderFn } from '../mathPreview'
 import { liveTheme } from './theme'
 import {
   FenceWidget,
+  CiteWidget,
   FigureWidget,
   HeadingNumberWidget,
   ImageWidget,
@@ -34,6 +37,8 @@ export interface LiveHooks {
   images(): string[]
   /** List environment → item command, without the backslash. */
   lists(): Record<string, string>
+  /** The document's bibliography, for citation chips (null until loaded). */
+  citations(): Citations | null
 }
 
 /** Turns live mode on or off for one editor state. */
@@ -238,7 +243,11 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
       }
       case 'ref': {
         if (touches(n.from, n.to)) break
-        const target = n.cmd.startsWith('cite') ? undefined : model.labels.get(n.keys[0])
+        if (isCite(n.cmd)) {
+          out.push(Decoration.replace({ widget: citeWidget(n.cmd, n.keys, hooks.citations()) }).range(n.from, n.to))
+          break
+        }
+        const target = model.labels.get(n.keys[0])
         const targetLine = target ? doc.lineAt(target.pos).text.trim().slice(0, 80) : null
         out.push(Decoration.replace({ widget: new RefWidget(n.cmd, n.keys, n.text, target?.pos ?? null, targetLine) }).range(n.from, n.to))
         break
@@ -251,6 +260,28 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
     }
   }
   return Decoration.set(out, true)
+}
+
+/**
+ * What a citation shows: the labels the last build gave its keys ([3, 12]),
+ * with the authors for \citet / \textcite and alone for \citeauthor, or the
+ * keys themselves until a build has numbered them.
+ */
+function citeWidget(cmd: string, keys: string[], cites: Citations | null): CiteWidget {
+  const entries = keys.map((k) => cites?.byKey.get(k))
+  const labels = keys.map((k) => cites?.info.labels[k])
+  // Only flagged once the bibliography has loaded (and has entries at all).
+  const missing = !!cites?.info.entries.length && entries.some((e) => !e)
+  const tooltip = keys.map((k, i) => (entries[i] ? `${labels[i] ? `[${labels[i]}] ` : ''}${entryText(entries[i]!)}` : `${k}: not in the bibliography`)).join('\n')
+  const bracket = labels.every(Boolean) ? `[${labels.join(', ')}]` : `[${keys.join(', ')}]`
+  let text = bracket
+  const authors = entries.map((e, i) => e?.author || keys[i]).join(', ')
+  if (/^(citet|textcite|Citet|Textcite)$/.test(cmd)) text = `${authors} ${bracket}`
+  else if (/^[Cc]iteauthor$/.test(cmd)) text = authors
+  else if (/^citeyear/.test(cmd)) text = entries.map((e, i) => e?.year || keys[i]).join(', ')
+  else if (cmd === 'nocite') text = `nocite ${keys.join(', ')}`
+  const first = entries.find(Boolean)
+  return new CiteWidget(text, missing, tooltip, first ? { file: first.file, line: first.line } : null)
 }
 
 // Each space gets a faint dot, like an editor's "render whitespace", so the

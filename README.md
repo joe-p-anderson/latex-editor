@@ -57,6 +57,10 @@ Regenerates `fixtures/errors/logs/`. Run it after adding or changing a broken do
   1. the vault itself;
   2. the vault's own template folder, if `.vault.json` names one;
   3. the global template folder, one per install and shared by every vault. It defaults to `%APPDATA%\<app>\templates` and is set in `settings.json` beside it. Use **File → Template Folder** to open it or pick another.
+- **Bibliographies:** when the document has `\bibliography{…}` (BibTeX, as with revtex or natbib) or biblatex's `\addbibresource{…}` (biber), the build runs BibTeX or biber after the first pass, then reruns pdflatex so the citations come out numbered. It only runs when something it depends on changed: the cited keys, the style, or a `.bib` file. Saves that don't touch citations cost nothing extra.
+  - `.bib` files are found next to the document, then at the vault root. Styles (`.bst`) are also found in the template folders.
+  - Saving a `.bib` rebuilds the document compiled last.
+  - BibTeX and biber errors appear in Problems at their line in the `.bib` file. A `\cite` key that isn't in the `.bib` gets a quick fix to the closest key, e.g. a typo, or a Zotero key cut short.
 - Opening a `.cls` file from the vault shows a banner offering to move it to the global template folder. **Not now** hides the banner for that file until the app restarts, so a new template can be worked on inside the vault first.
 
 ## Editing
@@ -69,6 +73,7 @@ Files open in the **live view**, which shows the document as it reads. The sourc
 - List items show their numbers and bullets: `1.`, `(a)`, `•`. Exam questions keep counting across `questions` environments, as in `handout.cls`, until `\resetquestions`. Faint tags mark where each list environment begins and ends.
 - Math, `\SI`/`\qty`, figures (with their images), tables and `\includegraphics` render in place. Equations get the numbers LaTeX would give them.
 - `\label` shows as a tag chip. `\ref`, `\eqref` and `\cref` show as chips with the number they refer to, or in red if the label doesn't exist. Ctrl+click a ref to jump to its label.
+- `\cite` (and `\citep`, `\citet`, `\parencite`, …) shows as a chip with the numbers from the last build, `[3, 12]`, or the keys before the first build. `\citet` adds the authors, and `\citeauthor` shows only them. Hover for the reference. Ctrl+click opens the entry in its `.bib`. A key that isn't in the bibliography is red.
 - `\textbf`, `\emph` and similar show their formatting. `--`, `---`, ` `` '' `, `~` and `\%` show as the characters they produce. Every space has a faint dot.
 - Whatever the cursor is in shows as source again. That is the line for headings and list markers, and the whole construct for math, figures and tables. Click anything rendered to edit it.
 
@@ -93,6 +98,7 @@ While you type math, its preview keeps the last version that rendered, faded, in
 | Ctrl+PageDown / Ctrl+PageUp | The next / previous tab |
 | Ctrl+Alt+S | Save every unsaved file, then compile once |
 | Ctrl+Shift+H | Search the vault, starting from the selected text |
+| Ctrl+Shift+C | Cite: open the cite picker (so does typing `\cite{`) |
 | F2 | On a `\label` or `\ref` key, rename the label and every reference to it across the vault |
 | Ctrl+Alt+T | Edit the table the cursor is in, or insert a new one |
 | Ctrl+Shift+\\ | Jump between a `\begin{…}` and its `\end{…}`, or a `\left` and its `\right`, or matching brackets |
@@ -171,6 +177,17 @@ Recognition runs offline in a background worker, in about 10 ms a drawing. The s
 
 Open the replace field with ▸. You can replace one match, one file (↺), or **All** (Ctrl+Alt+Enter). A regex replacement can use `$1` and so on. Changed files open as unsaved tabs, so each file's change can be undone with Ctrl+Z. Ctrl+Alt+S saves them all.
 
+### Citations
+
+The **cite picker** searches the document's bibliography. Open it with Ctrl+Shift+C, the **Cite** button, or by typing `\cite{` (or `\citep{`, `\parencite{`, …).
+
+- Each reference shows its authors and year, the title, the journal, its keywords as tags (Zotero exports tags there) and its key. The number is shown too, if the document already cites it.
+- Every word you type must match the key, an author, the title, the year, the journal or a tag. `#word` matches tags only; click a tag to add it.
+- With nothing typed, the references the document already cites come first, in order, then the rest by author.
+- ↑/↓ move, and Enter inserts `\cite{key}`. Tab, a tick box or Ctrl+click marks several, and Enter inserts them all as one `\cite{a,b}`. With the cursor inside a `\cite{…}`, the keys are added to it.
+
+Inside `\cite{…}`, completion offers keys the same way: `\cite{kocks` finds `kocksPhysicsPhenomenologyStrain2003`. Each key shows its authors, year and number, with the title and journal beside it. In source view, hovering a cite key shows its reference.
+
 ### Tables
 
 The table editor is a dialog with a grid of cells, each cell holding its LaTeX. Open it in any of these ways:
@@ -196,6 +213,7 @@ In the grid:
   - commands, including the class's and preamble's own, with argument placeholders (Tab moves between them);
   - environment names after `\begin{`;
   - labels inside `\ref{…}`;
+  - bibliography keys inside `\cite{…}` (see Citations);
   - the vault's snippets.
 - Environments, sections and questions fold from the gutter.
 - The **Outline** under the file tree lists the open file's sections and questions. Click one to jump there.
@@ -223,6 +241,7 @@ Per vault, in `.vault.json`:
   - `vault.ts`: file tree and file watching.
   - `compile.ts`: runs pdflatex, both saved builds and previews, and extracts errors.
   - `preamble.ts`: the preamble format cache.
+  - `bibliography.ts`: running BibTeX or biber during a build, and reading a document's `.bib` files for the editor.
   - `shadow.ts`: the shadow folder that previews build from, and the mapping back to vault paths.
   - `search.ts`: vault-wide search.
   - `spell.ts`: the spellchecker (nspell with dictionary-en) and the vault's word list.
@@ -230,12 +249,13 @@ Per vault, in `.vault.json`:
 - `src/preload/`: the bridge that exposes `window.api` to the UI.
 - `src/renderer/`: the UI in Svelte, with a CodeMirror editor and a PDF.js viewer.
   - `lib/editing.ts` wires the LaTeX editing helpers into the editor. `lib/pairs.ts`, `lib/mathShortcuts.ts` and `lib/spellcheck.ts` add brackets and quotes, math shortcuts and spelling.
-  - `TabBar`, `QuickOpen`, `SearchPanel` and `TableEditor` are the components for tabs, quick open, search and the table editor.
+  - `CitePicker` is the cite picker, and `lib/citations.ts` holds the bibliography the editor uses. `TabBar`, `QuickOpen`, `SearchPanel` and `TableEditor` are the components for tabs, quick open, search and the table editor.
 - `src/shared/latexedit.ts`: the text logic behind those helpers (lists, environments, formatting, outline, snippets), unit tested.
+- `src/shared/bibtex.ts`: parses `.bib` files, BibTeX and biber logs, and `\bibcite` labels, and searches entries, as pure text logic.
 - `src/shared/search.ts`: search, replace and label rename, as pure text logic.
 - `src/shared/tablemodel.ts`: parses and writes tables, the grid operations, and reading clipboard data.
 - `src/shared/pairs.ts`, `mathsnippets.ts` and `spellwords.ts`: the text logic for brackets and quotes, math shortcuts (including the built-in list), and finding the prose words to spellcheck.
 - `src/shared/detexify.ts`: handwritten symbol recognition, ported from Detexify. `src/renderer/src/lib/SymbolPanel.svelte` and `detexify.worker.ts` are the panel and its worker, and `src/renderer/src/assets/detexify/` holds the imported library and samples.
 - `docs/IDEAS.md`: the backlog of feature ideas.
 - `src/shared/api.ts`: the types every layer shares.
-- `fixtures/`: sample vaults, the shared template library and real log files for testing.
+- `fixtures/`: sample vaults (`AngStatsRevTex` is a revtex paper with a Zotero `.bib`), the shared template library and real log files for testing.

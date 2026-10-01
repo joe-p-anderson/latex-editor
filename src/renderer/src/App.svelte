@@ -1,6 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import type { CompileResult, EditorContext, Problem, QuickFix, TextEdit, TreeNode, VaultInfo } from '@shared/api'
+  import type { BibInfo, CompileResult, EditorContext, Problem, QuickFix, TextEdit, TreeNode, VaultInfo } from '@shared/api'
+  import CitePicker from './lib/CitePicker.svelte'
+  import { makeCitations, type Citations } from './lib/citations'
+  import { OPEN_CITE } from '@shared/bibtex'
   import FileTree from './lib/FileTree.svelte'
   import Editor from './lib/Editor.svelte'
   import PdfViewer from './lib/PdfViewer.svelte'
@@ -105,6 +108,53 @@
     mathSnippets: () => mathSnippets,
     renameLabel: (key) => (renaming = key),
     editTable: (range, grid) => editTable(range, grid),
+    citations: () => citations,
+    openCitePicker: () => openCitePicker(),
+  }
+
+  // The open document's bibliography: `bib` for the picker, `citations`
+  // (with a key index) for completion, hover cards and the live view.
+  let bib = $state<BibInfo | null>(null)
+  let citations: Citations | null = null
+  let citePicker = $state(false)
+
+  async function loadBib(rel: string): Promise<void> {
+    const info = await window.api.bibInfo(rel).catch(() => null)
+    if (rel !== active) return
+    bib = info
+    citations = info ? makeCitations(info) : null
+    editor?.refreshCitations()
+  }
+
+  function openCitePicker(): void {
+    if (!active?.endsWith('.tex')) return flash('Open a .tex file to cite')
+    if (!bib) return flash('The bibliography is still loading')
+    citePicker = true
+  }
+
+  /**
+   * Cites `keys` at the cursor: into the \cite{…} the cursor is in (with
+   * commas as needed), or as a new \cite{…}.
+   */
+  function insertCitation(keys: string[]): void {
+    citePicker = false
+    if (!editor) return
+    const text = editor.docText()
+    const pos = editor.cursorPos()
+    const lineStart = text.lastIndexOf('\n', pos - 1) + 1
+    const nl = text.indexOf('\n', pos)
+    const lineEnd = nl < 0 ? text.length : nl
+    const inCite = OPEN_CITE.test(text.slice(lineStart, pos)) && /^[^{]*\}/.test(text.slice(pos, lineEnd))
+    if (inCite) {
+      const before = text[pos - 1]
+      const after = text[pos]
+      const lead = before === '{' || before === ',' || before === ' ' ? '' : ','
+      const trail = after === '}' || after === ',' ? '' : ','
+      editor.insertAtCursor(lead + keys.join(',') + trail)
+    } else {
+      editor.insertAtCursor(`\\cite{${keys.join(',')}}`)
+    }
+    editor.focus()
   }
 
   /** Reads the vault's snippet and math shortcut files (none is fine). */
@@ -240,7 +290,8 @@
     return nodes.flatMap((n) => (n.kind === 'dir' ? allFiles(n.children ?? []) : [n.rel]))
   }
 
-  const COMPILES = /\.(tex|cls|sty|cfg)$/i
+  // A .bib rebuilds the document too (the last one compiled).
+  const COMPILES = /\.(tex|cls|sty|cfg|bib)$/i
 
   /** Writes every unsaved file, then compiles once. */
   async function saveAll(): Promise<void> {
@@ -339,6 +390,7 @@
     } else if (key === 'p' && plain) quickOpen = true
     else if (key === 's' && e.altKey && !e.shiftKey) saveAll()
     else if (key === 'h' && e.shiftKey && !e.altKey) openSearch()
+    else if (key === 'c' && e.shiftKey && !e.altKey) openCitePicker()
     else handled = false
     if (handled) {
       e.preventDefault()
@@ -365,6 +417,7 @@
     if (rel !== active) return
     editor?.setMacros(macros)
     if (ctx) context = ctx
+    await loadBib(rel)
   }
 
   // A class file open from the vault gets a banner offering to move it to the
@@ -766,6 +819,7 @@
         >{live ? 'Live' : 'Source'}</button
       >
       <button disabled={!active?.endsWith('.tex')} onclick={() => (picker = { mode: 'insert', initial: '' })} title="Insert an image from the vault (or type ![[ in the editor)">Insert image</button>
+      <button disabled={!active?.endsWith('.tex')} onclick={openCitePicker} title={'Cite a reference from the bibliography (Ctrl+Shift+C, or type \\cite{)'}>Cite</button>
       <button disabled={!pdf || !active} onclick={syncForward} title="Show the cursor's line in the PDF (Ctrl+J)">Show in PDF →</button>
       {#if compiling}
         <span class="status">Compiling…</span>
@@ -841,6 +895,10 @@
             oncursorline={(line) => (cursorLine = line)}
             onlivechange={(on) => (live = on)}
             onedit={schedulePreview}
+            onopenlocation={async (loc) => {
+              await openFile(loc.file)
+              editor?.gotoLine(loc.line)
+            }}
           />
         </div>
         {#if !active}<p class="hint">Pick a file on the left.</p>{/if}
@@ -889,6 +947,17 @@
     }}
     onclose={() => {
       quickOpen = false
+      editor?.focus()
+    }}
+  />
+{/if}
+
+{#if citePicker && bib}
+  <CitePicker
+    info={bib}
+    onpick={insertCitation}
+    onclose={() => {
+      citePicker = false
       editor?.focus()
     }}
   />

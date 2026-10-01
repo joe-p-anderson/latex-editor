@@ -18,6 +18,7 @@
   import { liveMode, isLive, setLive, toggleLive } from './live/live'
   import { EDIT_TABLE_EVENT } from './live/widgets'
   import { tableRangeAt } from '@shared/tablemodel'
+  import { OPEN_LOCATION_EVENT, type OpenLocation } from './citations'
 
   let {
     onsave,
@@ -30,6 +31,7 @@
     oncursorline,
     onlivechange,
     onedit,
+    onopenlocation,
   }: {
     onsave: (rel: string, text: string) => void
     ondirtychange: (rel: string, dirty: boolean) => void
@@ -49,6 +51,8 @@
     onlivechange: (live: boolean) => void
     /** The open file's text changed (typing, undo, a quick fix). */
     onedit: (rel: string) => void
+    /** Ctrl+click on a citation: open its entry (a .bib file at a line). */
+    onopenlocation: (loc: OpenLocation) => void
   } = $props()
 
   let host: HTMLDivElement
@@ -85,6 +89,8 @@
     mathSnippets: () => editingHooks.mathSnippets(),
     renameLabel: (key) => editingHooks.renameLabel(key),
     editTable: (range, grid) => editingHooks.editTable(range, grid),
+    citations: () => editingHooks.citations(),
+    openCitePicker: () => editingHooks.openCitePicker(),
   })
   const spelling = spellcheck({
     // Documents only: not classes, packages or the vault's settings files.
@@ -108,6 +114,7 @@
       render: () => render,
       images: () => imageHooks.images(),
       lists: () => editingHooks.lists(),
+      citations: () => editingHooks.citations(),
     },
     liveDefault,
   )
@@ -199,6 +206,11 @@
     if (key === macrosKey) return
     macrosKey = key
     render = createRenderer(macros)
+    view.dispatch({ effects: refreshMath.of(null) })
+  }
+
+  /** Redraws what depends on the bibliography (citation chips) after it was reloaded. */
+  export function refreshCitations(): void {
     view.dispatch({ effects: refreshMath.of(null) })
   }
 
@@ -421,7 +433,15 @@
       editingHooks.editTable(tableRangeAt(view.state.doc.toString(), Math.min(pos + 1, view.state.doc.length)), null)
     }
     view.dom.addEventListener(EDIT_TABLE_EVENT, onEditTable)
-    return () => (clearTimeout(outlineTimer), view.dom.removeEventListener(EDIT_TABLE_EVENT, onEditTable), view.destroy())
+    // A citation chip's Ctrl+click.
+    const onOpenLocation = (e: Event) => onopenlocation((e as CustomEvent<OpenLocation>).detail)
+    view.dom.addEventListener(OPEN_LOCATION_EVENT, onOpenLocation)
+    return () => (
+      clearTimeout(outlineTimer),
+      view.dom.removeEventListener(EDIT_TABLE_EVENT, onEditTable),
+      view.dom.removeEventListener(OPEN_LOCATION_EVENT, onOpenLocation),
+      view.destroy()
+    )
   })
 </script>
 
@@ -434,6 +454,16 @@
   }
   .host :global(.cm-editor) {
     height: 100%;
+  }
+  .host :global(.cm-cite-card) {
+    max-width: 480px;
+    padding: 4px 8px;
+    font-family: system-ui, sans-serif;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .host :global(.cm-cite-card.missing) {
+    color: #cf222e;
   }
   .host :global(.cm-scroller) {
     font-family: Consolas, 'Cascadia Mono', monospace;

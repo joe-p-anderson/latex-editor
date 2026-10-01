@@ -1,3 +1,4 @@
+import type { BibSummary } from './bibtex'
 import type { CommandSig } from './latexedit'
 import type { MacroDefs } from './mathrender'
 import type { SearchOptions, SearchResult } from './search'
@@ -113,6 +114,17 @@ export interface EditorContext {
   environments: string[]
 }
 
+/** A document's bibliography, for the cite picker, completion and live view. */
+export interface BibInfo {
+  /** The .bib files the document uses, vault-relative (those found). */
+  bibs: string[]
+  /** Names in \bibliography{…} that match no file. */
+  missing: string[]
+  entries: BibSummary[]
+  /** Key → the label the document prints for it (from the last build's .aux). */
+  labels: Record<string, string>
+}
+
 export type TouchpadEvent = { type: 'contact'; id: number; tip: boolean; x: number; y: number } | { type: 'button'; down: boolean }
 
 export interface Api {
@@ -132,6 +144,8 @@ export interface Api {
   mathMacros(rel: string): Promise<{ macros: MacroDefs; sources: string[] }>
   /** Commands (with argument counts) and environments the document `rel` defines, for completion. */
   editorContext(rel: string): Promise<EditorContext>
+  /** The bibliography of the document `rel` belongs to. */
+  bibInfo(rel: string): Promise<BibInfo>
   /** Every image in the vault, vault-relative. */
   listImages(): Promise<string[]>
   /** Copies an image from outside the vault into its image folder (or returns its path if inside). */

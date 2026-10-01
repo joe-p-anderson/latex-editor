@@ -155,3 +155,17 @@ describe('liveModel', () => {
     }
   })
 })
+
+describe('citations', () => {
+  it('finds every cite variant, with optional arguments and stars', () => {
+    const text = '\\begin{document}\nA \\cite{a} B \\citep[see][p.~4]{b, c} C \\parencite*{d} D \\citeauthor{e}\n\\end{document}'
+    const refs = liveModel(text, DEFAULT_LISTS).nodes.filter((n) => n.kind === 'ref') as Extract<LiveNode, { kind: 'ref' }>[]
+    expect(refs.map((r) => [r.cmd, r.keys])).toEqual([
+      ['cite', ['a']],
+      ['citep', ['b', 'c']],
+      ['parencite', ['d']],
+      ['citeauthor', ['e']],
+    ])
+    expect(text.slice(refs[1].from, refs[1].to)).toBe('\\citep[see][p.~4]{b, c}')
+  })
+})

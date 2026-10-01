@@ -15,6 +15,7 @@ const api: Api & { onMenuOpenVault(cb: () => void): () => void } = {
   syncInverse: (pdf, page, x, y) => ipcRenderer.invoke('synctex:inverse', pdf, page, x, y),
   mathMacros: (rel) => ipcRenderer.invoke('math:macros', rel),
   editorContext: (rel) => ipcRenderer.invoke('editor:context', rel),
+  bibInfo: (rel) => ipcRenderer.invoke('bib:info', rel),
   listImages: () => ipcRenderer.invoke('images:list'),
   importImage: (sourcePath) => ipcRenderer.invoke('images:import', sourcePath),
   saveImage: (name, bytes) => ipcRenderer.invoke('images:save', name, bytes),

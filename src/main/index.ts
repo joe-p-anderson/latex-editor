@@ -2,7 +2,8 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, net, protocol, shell } from 
 import { copyFile, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises'
 import { basename, join, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { compile, compileDraft, resolveRoot } from './compile'
+import { bibInfo } from './bibliography'
+import { cacheDirFor, compile, compileDraft, resolveRoot } from './compile'
 import { importImage, saveImage } from './images'
 import { editorContextFor, macrosFor } from './mathmacros'
 import { globalTemplatesDir, loadSettings, saveSettings } from './settings'
@@ -164,6 +165,11 @@ ipcMain.handle('math:macros',async (_e, rel: string) => {
 ipcMain.handle('editor:context', async (_e, rel: string) => {
   const v = requireVault()
   return editorContextFor(v, (await resolveRoot(v, rel).catch(() => null)) ?? rel)
+})
+ipcMain.handle('bib:info', async (_e, rel: string) => {
+  const v = requireVault()
+  const root = (await resolveRoot(v, rel).catch(() => null)) ?? rel
+  return bibInfo(v, root, cacheDirFor(v, root))
 })
 
 function buildMenu(): void {

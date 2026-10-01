@@ -5,6 +5,7 @@ import { EditorView, WidgetType } from '@codemirror/view'
 import { inlineParts, type ItemStyle, type Tabular } from '@shared/livemodel'
 import { cachedRender, type RenderFn } from '../mathPreview'
 import { thumbnail } from '../thumbnails'
+import { OPEN_LOCATION_EVENT, type OpenLocation } from '../citations'
 
 /** Clicking a widget puts the cursor where it is, which shows its source. */
 function revealOnClick(dom: HTMLElement, view: EditorView, offset = 0): void {
@@ -159,10 +160,9 @@ export class RefWidget extends WidgetType {
     return o.cmd === this.cmd && o.text === this.text && o.target === this.target && o.keys.join() === this.keys.join() && o.targetLine === this.targetLine
   }
   toDOM(view: EditorView): HTMLElement {
-    const cite = this.cmd.startsWith('cite')
-    const dom = el('span', `cm-live-chip ${cite ? 'cite' : 'ref'}${this.text === null ? ' missing' : ''}`)
-    if (!cite) dom.innerHTML = LINK_ICON
-    dom.append(el('span', '', cite ? `[${this.text}]` : (this.text ?? `?? ${this.keys.join(', ')}`)))
+    const dom = el('span', `cm-live-chip ref${this.text === null ? ' missing' : ''}`)
+    dom.innerHTML = LINK_ICON
+    dom.append(el('span', '', this.text ?? `?? ${this.keys.join(', ')}`))
     dom.title =
       this.text === null
         ? `No \\label{${this.keys.join(', ')}} in this file`
@@ -173,6 +173,40 @@ export class RefWidget extends WidgetType {
       if ((e.ctrlKey || e.metaKey) && this.target !== null) {
         view.dispatch({ selection: { anchor: this.target }, effects: EditorView.scrollIntoView(this.target, { y: 'center' }) })
       } else view.dispatch({ selection: { anchor: view.posAtDOM(dom) } })
+      view.focus()
+    })
+    return dom
+  }
+}
+
+/**
+ * A citation: the numbers the document prints ([3, 12]), or the keys until
+ * a build has numbered them. Red when a key isn't in the bibliography.
+ * The tooltip gives each entry; Ctrl+click opens the first in its .bib.
+ */
+export class CiteWidget extends WidgetType {
+  constructor(
+    readonly text: string,
+    readonly missing: boolean,
+    readonly tooltip: string,
+    readonly location: OpenLocation | null,
+  ) {
+    super()
+  }
+  eq(o: CiteWidget): boolean {
+    return o.text === this.text && o.missing === this.missing && o.tooltip === this.tooltip && o.location?.file === this.location?.file && o.location?.line === this.location?.line
+  }
+  toDOM(view: EditorView): HTMLElement {
+    const dom = el('span', `cm-live-chip cite${this.missing ? ' missing' : ''}`, this.text)
+    dom.title = this.tooltip + (this.location ? '\nCtrl+click to open the entry' : '')
+    dom.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return
+      e.preventDefault()
+      if ((e.ctrlKey || e.metaKey) && this.location) {
+        view.dom.dispatchEvent(new CustomEvent<OpenLocation>(OPEN_LOCATION_EVENT, { bubbles: true, detail: this.location }))
+        return
+      }
+      view.dispatch({ selection: { anchor: view.posAtDOM(dom) } })
       view.focus()
     })
     return dom

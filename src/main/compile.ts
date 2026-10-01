@@ -10,7 +10,8 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { copyFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { delimiter, isAbsolute, join, posix, resolve } from 'node:path'
-import type { CompileResult } from '../shared/api'
+import type { CompileResult, Problem } from '../shared/api'
+import { bibKeys, bibNeeds, bibStale, dropBibKey, runBib, saveBibKey, type BibJob, type BibTool } from './bibliography'
 import { diagnose, type DiagnoseContext } from './diagnose'
 import { parseLog } from './logparser'
 import { definitionsFor } from './macros'
@@ -21,6 +22,7 @@ import type { Vault } from './vault'
 const MAX_PASSES = 4
 const PASS_TIMEOUT_MS = 120_000
 const RERUN = /Rerun to get|Label\(s\) may have changed|Rerun LaTeX/
+const CITES_CHANGED = /Rerun to get citations|Citation\(s\) may have changed/
 // Any error line, in -file-line-error form (`path:12: ...`) or TeX's own (`! ...`).
 const HAS_ERROR = /^(?:.+?\.[A-Za-z]{1,8}:\d+: |! )/m
 const ERROR_LINES = /^(?:.+?\.[A-Za-z]{1,8}:\d+: |! )/gm
@@ -123,17 +125,44 @@ async function build(vault: Vault, rel: string, buffers: Record<string, string> 
     `-aux-directory=${cacheDir}`, `-output-directory=${cacheDir}`,
   ]
   const logPath = join(cacheDir, `${name}.log`)
+  // The bibliography step runs (at most) once per build, after the first
+  // pass that leaves an .aux asking for it.
+  const bibJob: BibJob = { vault, root, cacheDir, name, shadow, buffers, started }
+  let bibChecked = false
+  let bibRan: BibTool | null = null
+  let bibIssues: Problem[] = []
   const runPasses = async (fmt: string | null) => {
     const args = [...baseArgs, ...(fmt ? [`-fmt=${fmt}`] : []), root]
     let passes = 0
     let log = ''
-    do {
+    // Passes owed to a bibliography that just changed: its .bbl is read on
+    // the next pass, and natbib numbers the citations on the one after.
+    let owed = 0
+    for (;;) {
       passes++
-      await runPdflatex(args, cwd, env)
+      await runTool('pdflatex', args, cwd, env)
       if (gen !== generation) return null
       log = await readFile(logPath, 'utf8').catch(() => '')
-      // Rerunning can't fix an error, so only rerun a clean pass that asks for it.
-    } while (!HAS_ERROR.test(log) && RERUN.test(log) && passes < MAX_PASSES)
+      if (!bibChecked) {
+        bibChecked = true
+        const needs = await bibNeeds(bibJob)
+        if (needs && (await bibStale(bibJob, needs.key))) {
+          bibIssues = await runBib(bibJob, needs, env, runTool)
+          if (gen !== generation) return null
+          bibRan = needs.tool
+          // A failed run is tried again next build rather than trusted.
+          if (bibIssues.some((p) => p.severity === 'error')) await dropBibKey(bibJob)
+          else await saveBibKey(bibJob, needs.key)
+          owed = 1
+        }
+      }
+      // Rerunning can't fix an error, so only rerun a clean pass that asks
+      // for it; citations are the exception, since they don't depend on it.
+      const asks = RERUN.test(log) && (!HAS_ERROR.test(log) || (bibRan !== null && CITES_CHANGED.test(log)))
+      if (owed > 0) owed--
+      else if (!asks) break
+      if (passes >= MAX_PASSES + (bibRan ? 2 : 0)) break
+    }
     return { passes, log }
   }
 
@@ -164,6 +193,7 @@ async function build(vault: Vault, rel: string, buffers: Record<string, string> 
 
   const overrides = buffers ? new Map(Object.entries(buffers).map(([r, t]) => [resolve(vault.abs(r)).toLowerCase(), t])) : undefined
   const problems = await diagnose(parseLog(log), diagnoseContext(vault, root, log, join(cacheDir, `${name}.aux`), overrides))
+  problems.push(...bibIssues)
   const cachePdf = join(cacheDir, `${name}.pdf`)
   const pdfExists = await stat(cachePdf).then(() => true, () => false)
   const ok = pdfExists && !problems.some((p) => p.severity === 'error' && !p.hidden)
@@ -215,14 +245,15 @@ export function diagnoseContext(vault: Vault, doc: string, log: string, auxPath:
       return [...new Set([...text.matchAll(re)].map((m) => m[1]))]
     }),
     definitions: once(() => definitionsFor(log, vault.root)),
+    citeKeys: once(() => bibKeys(vault, doc, overrides).catch(() => [])),
   }
 }
 
-/** Runs one pdflatex pass, cancelling any pass still in flight from an earlier save. */
-function runPdflatex(args: string[], cwd: string, env: NodeJS.ProcessEnv): Promise<void> {
+/** Runs one pass of `cmd` (pdflatex, bibtex, biber), cancelling any still in flight from an earlier save. */
+function runTool(cmd: string, args: string[], cwd: string, env: NodeJS.ProcessEnv): Promise<void> {
   running?.kill()
   return new Promise((resolvePass, reject) => {
-    const child = spawn('pdflatex', args, { cwd, env, windowsHide: true })
+    const child = spawn(cmd, args, { cwd, env, windowsHide: true })
     running = child
     const timer = setTimeout(() => child.kill(), PASS_TIMEOUT_MS)
     child.stdout.resume() // everything we need is in the .log; just drain the pipe

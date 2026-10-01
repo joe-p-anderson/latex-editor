@@ -21,6 +21,8 @@ export interface DiagnoseContext {
   labels(): Promise<string[]>
   /** Commands and environments that exist for this document. */
   definitions(): Promise<Definitions>
+  /** Every key in the document's .bib files. */
+  citeKeys(): Promise<string[]>
 }
 
 // Commands and environments that come from a package, for "add \usepackage".
@@ -359,9 +361,24 @@ async function warning(
       fixes: suggestions.map((s) => ({ label: `Change to ${s}`, edits: [edit(locate(e.file, ctx), e.line, `{${label}}`, `{${s}}`)] })),
     })
   }
-  if ((m = /^Citation `(.+?)' on page \d+ undefined/.exec(msg))) {
-    return base('warning', 'undefined-citation', `No bibliography entry "${m[1]}"`, {
-      explanation: `\\cite{${m[1]}} has no matching entry in the bibliography, so it prints as [?].`,
+  if ((m = /^Citation `(.+?)' (?:on page \d+ )?undefined/.exec(msg))) {
+    const key = m[1]
+    const keys = await ctx.citeKeys()
+    if (keys.includes(key)) {
+      return base('warning', 'undefined-citation', `"${key}" isn't in the bibliography yet`, {
+        explanation: `${key} is in the .bib file, but the last BibTeX run didn't include it. Recompiling should fix this; if not, BibTeX may have stopped at an error in the .bib file (see the Problems list).`,
+      })
+    }
+    // A typo, or a key cut short (Zotero keys run long: kocksPhysicsPhenomenologyStrain2003).
+    let suggestions = closest(key, keys)
+    if (!suggestions.length && key.length >= 4) suggestions = keys.filter((k) => k.toLowerCase().startsWith(key.toLowerCase())).slice(0, 3)
+    return base('warning', 'undefined-citation', `No bibliography entry "${key}"`, {
+      explanation: !keys.length
+        ? `\\cite{${key}} has no matching entry, so it prints as [?]. No .bib file was found: check the name in \\bibliography{…}.`
+        : suggestions.length
+          ? `\\cite{${key}} has no matching entry in the .bib file, so it prints as [?]. Did you mean ${suggestions.join(', ')}?`
+          : `\\cite{${key}} has no matching entry in the .bib file, so it prints as [?]. Add the entry, or pick one with the cite picker (Ctrl+Shift+C).`,
+      fixes: suggestions.map((s) => ({ label: `Change to ${s}`, edits: [edit(locate(e.file, ctx), e.line, key, s)] })),
     })
   }
   if ((m = /^Label `(.+?)' multiply defined/.exec(msg))) {

@@ -76,7 +76,9 @@ export interface LiveModel {
 
 const SECTION_LEVEL: Record<string, number> = { chapter: 0, section: 1, subsection: 2, subsubsection: 3 }
 const FORMAT = /^(textbf|textit|emph|underline|texttt|textsc|textsf|textsl|textup)$/
-const REFS = /^(ref|eqref|cref|Cref|autoref|pageref|nameref|cite|citep|citet)$/
+const REFS = /^(ref|eqref|cref|Cref|autoref|pageref|nameref|[Cc]ite[a-zA-Z]*|parencite|textcite|autocite|footcite|smartcite|supercite|nocite)$/
+/** Whether a ref-like command is a citation (its keys are bibliography keys, not labels). */
+export const isCite = (cmd: string) => /cite/i.test(cmd)
 const SIUNITX: Record<string, number> = { SI: 2, qty: 2, si: 1, unit: 1, num: 1, ang: 1, SIrange: 3, qtyrange: 3, numrange: 2 }
 const VERBATIM = /^(verbatim|Verbatim|lstlisting|minted|comment)\*?$/
 const FIGURES = /^(figure|wrapfigure|SCfigure)\*?$/
@@ -490,7 +492,7 @@ export function liveModel(text: string, lists: Record<string, string>): LiveMode
 
 /** The display text of a \ref-like command, or null when a key isn't defined. */
 function refText(cmd: string, keys: string[], labels: Map<string, LabelTarget>): string | null {
-  if (/^cite/.test(cmd)) return keys.join(', ')
+  if (isCite(cmd)) return keys.join(', ')
   const parts: string[] = []
   for (const k of keys) {
     const t = labels.get(k)

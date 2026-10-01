@@ -1,0 +1,206 @@
+\section{A full description of local dislocation collections \label{sec:2_localcollections}}
+In this section, we present a higher-order continuum theory of
+dislocations along the lines of~\cite{Hochrainer2007}. This framework considers a collection of dislocations at a point in space by means of a
+distribution over an orientation space, taken to be the unit circle in
+the case of pure glide systems. Although the theory itself is agnostic
+to the averaging process used to define a local collection of
+dislocations, we will present this theory in the context of a spatial
+averaging of dislocations (as opposed to ensemble averaging). We make
+this choice because it elucidates the scale dependence of the theory
+that will be the focus of the present work.
+
+When attempting to model the dislocation state of a crystal by means of
+a spatially varying dislocation density field, there is always an
+implicitly associated length scale. This implicit length scale is the
+characteristic length scale of gradients in the field. Even at the level
+of `discrete' dislocations, it is often instructive to think of
+dislocations as a density field. The core region is properly treated by means of a Burgers vector distribution function which smears the singular dislocation by convolution of the discrete line with some kernel
+function determined by the lattice itself~\cite{Po2018,Cai2006}. Such a smearing occurs on distances on the order of a few lattice constants (5-10 \AA). This treatment of the discrete
+dislocation line determines what we might consider the `true' strength of
+gradients in the physical dislocation density field. Any dislocation density
+field which varies on distances \(L\) greater than this fundamental core
+distance can then be thought of as an additional smearing of the
+dislocation with kernels (\(w_{L}\)) of unit norm
+(\(\int w_{L}\left( \boldsymbol{r} \right)d^{3}\boldsymbol{r }=1\)) and range
+\(L.\) This means that the dislocation density field no longer describes
+\emph{discrete} dislocations but rather a \emph{collection} of
+dislocations which are contained in a characteristic volume of
+approximate scale \(L\).
+
+In the above interpretation of a density field, we can discuss several
+characteristics of this collection of dislocations which are implicitly
+described by the density field at each point. To elucidate this fact, let
+us introduce the following notation. The set of
+dislocations\(\mathcal{\ L}\) is a directed line manifold embedded
+within a crystal manifold \(\mathcal{M}\), which for our present
+purposes we take to be equivalent to \(\mathbb{R}^{3}.\ \)Consider at
+present only glide dislocations on a single slip system. For simplicity,
+consider the smearing kernel \(w_{L}(\boldsymbol{r -}\boldsymbol{r}_{0}\)) to be
+of compact support \(\Omega_{\boldsymbol{r}_{0}}^{(L)}\mathcal{\subset M}\).
+Suppose that there is some subset of the dislocation state which
+intersects \(\Omega_{\boldsymbol{r}_{0}}^{(L)}\):
+\begin{equation}\Lambda_{\boldsymbol{r}_{0}}\coloneqq\mathcal{L}\cap\Omega_{\boldsymbol{r}_{0}}^{(L)}\end{equation}
+This is the collection of dislocations described by the density field at
+\(\boldsymbol{r}_{0}\). The smearing kernel, or weight function, allows us
+to define two important concepts, namely the scalar dislocation density
+at a point:
+\begin{equation}\rho( \boldsymbol{r}_{0} )\coloneqq\int_{\Lambda_{\boldsymbol{r}_{0}}^{(L)}}^{}{w_{L}\left( \boldsymbol{r}_{l}-\boldsymbol{r}_{0} \right)dl},\end{equation}
+and local averages of the dislocation system:
+\begin{equation}
+\left\langle A(\boldsymbol{r}_l)\right\rangle \coloneqq \frac{1}{\rho(\boldsymbol{r}_0)}\int_{\Lambda_{\boldsymbol{r}_{0}}^{(L)}}^{}{w_{L}\left( \boldsymbol{r}_{l}-\boldsymbol{r}_{0} \right) A(\boldsymbol{r}_l) dl},\end{equation}
+where \(A\left( \boldsymbol{r}_{l} \right)\) is some local property of a dislocation line. That is, we can treat the weight function once normalized by the total dislocation density as a probability density on the dislocation line.
+
+\subsection{Defining the orientation distribution
+function}
+
+To begin defining the sort of local properties we will be interested in, let us define the orientation of a dislocation line. We will consider the direction of these planar dislocation lines (a consequence of the glide assumption) in several ways. First, we can consider the line orientation as a vector by considering the derivative of the map by which the dislocation line is parametrically defined:
+\begin{subequations}
+\begin{align}
+    \mathcal{L} &\colon\ \mathbb{R}\to\mathcal{M}, & \boldsymbol{r}_l(s) \in \mathcal{L},\\
+    \boldsymbol{l}(\boldsymbol{r}_l)&\coloneqq \frac{\partial_s\boldsymbol{r}_l(s)}{\vert\partial_s\boldsymbol{r}_l(s)\vert}.
+\end{align}
+\end{subequations}
+
+Since line orientation will be of central importance to the remainder of this article, we will also introduce the following interchangeable representations of the orientation. Because this is a planar set of dislocations on a known slip plane with normal \(\hat{\boldsymbol{n}}\) with a fixed Burgers vector  \(b\hat{\boldsymbol{b}}\) lying in that plane, there is a natural coordinate system for the dislocation unit tangent vector. We can define this coordinate representation by a single angular parameter. This angle is defined counter-clockwise around the normal direction with zero at the Burgers vector direction. In this coordinate form, the unit tangent is given by:
+\begin{subequations}
+    \begin{align}
+    \boldsymbol{l}\left( \varphi\left( \boldsymbol{r}_{l} \right) \right)&=\cos{\varphi\left( \boldsymbol{r}_{l} \right)}\hat{\boldsymbol{b}} + \sin{\varphi\left( \boldsymbol{r}_{l} \right)}\hat{\boldsymbol{a}},\label{eq:orientationDef}\\
+    \hat{\boldsymbol{a}}&\coloneqq\hat{\boldsymbol{n}}\times\hat{\boldsymbol{b}}.
+\end{align}
+\end{subequations}
+where \(\hat{\boldsymbol{a}}\) would be the line direction of a positive pure edge dislocation. Due to the nature of orientation averages, it is convenient to deal with the unit complex number corresponding to this angle. In this case, the coordinate representation of the unit tangent is given by
+\begin{subequations}\label{eq:orientationExponential}
+    \begin{align}
+\boldsymbol{l}\left( z\left( \boldsymbol{r}_{l} \right) \right)&=\Re\left[ z\left( \boldsymbol{r}_{l} \right)\left( \hat{\boldsymbol{b}} - i\hat{\boldsymbol{a}} \right) \right] \label{eq:zdir}\\
+z\left( \boldsymbol{r}_{l} \right) &\coloneqq e^{i\varphi\left( \boldsymbol{r}_{l} \right)}.
+\end{align}
+\end{subequations}
+with $\Re$ referring to the real part of $\left[\cdot \right] $. Now that we have a better understanding of the orientation parameter, we can consider the likelihood that a dislocation segment in \(\Lambda_{\boldsymbol{r}_{0}}^{(L)}\) has an orientation falling in some subset $B$ of the unit circle \(S^{1}\). This is inherited from our spatial average in Eq. (1) by:
+\begin{equation}P_{\boldsymbol{r}_{0}}^{(L)}\left( \varphi \in  B  \right) \coloneqq \frac{\int_{\Lambda_{\boldsymbol{r}_{0}}^{(L)}}^{}{1_{B}\left( \varphi\left( \boldsymbol{r}_{l} \right) \right)w_{L}\left( \boldsymbol{r}_{l} - \boldsymbol{r}_{0} \right)dl}}{\rho\left( \boldsymbol{r}_{0} \right)}, \end{equation}
+where $1_{B}$ is the indicator function on the set $B$. Under quite general conditions, this probability measure can be
+represented by a density function which we will call the orientation
+distribution function $g(\varphi)$:
+
+\begin{equation}
+P_{\boldsymbol{r}_{0}}^{(L)}(\varphi \in B) = \int_{B}^{}{g_{\boldsymbol{r}_{0}}^{(L)}(\varphi)d\varphi}.\label{eq:2odfDef}
+\end{equation}
+
+Now the local average (in a neighborhood of size \(L\) around the point \(\boldsymbol{r}_{0}\)) of any orientation dependent line property can be represented by this orientation distribution function instead of the spatial distribution:
+\begin{equation}\left\langle A\left( \varphi\left( \boldsymbol{r}_{l} \right) \right) \right\rangle_{\boldsymbol{r}_{0}}^{(L)} = \int_{S^{1}}^{}{A(\varphi)g_{\boldsymbol{r}_{0}}^{(L)}(\varphi)d\varphi}.\end{equation}
+This orientation distribution function suffers one weakness: the orientation parameter \(\varphi\) is tied to a global coordinate system and is thus not well-suited to comparing local collections of dislocations at different points. We can remedy this by defining a canonical local coordinate system based on the first circular average (which can be performed in terms of \(\boldsymbol{l}(\varphi)\) or \(z(\varphi)\) but not directly in terms of \(\varphi\)):
+\begin{equation}
+{\overline{z}}_{\boldsymbol{r}_{0}}^{(L)} = \left\langle z(\varphi) \right\rangle_{\boldsymbol{r}_{0}}^{(L)}.\label{eq:3zav}
+\end{equation}
+Note that, in general, the magnitude of this average is less than or equal to unity.\footnote{This is responsible for the single-slip statistical storage of dislocation content.} We will refer to this magnitude as the polarization
+\(\beta_{1}\):
+\begin{equation}\beta_{1}^{(L)}\left( \boldsymbol{r}_{0} \right) \coloneqq \left| \left\langle z(\varphi) \right\rangle_{\boldsymbol{r}_{0}}^{(L)} \right| \leq 1\end{equation}
+as it represents the fraction of the total dislocation content which is
+not cancelled by the vector sum of dislocations in the volume   $\Omega_{\boldsymbol{r}_{0}}^{(L)}$. That is, the so-called `geometrically necessary' dislocation content is given by:
+\begin{equation}\rho_\text{GND}\left( \boldsymbol{r} \right)=\beta_{1}\left( \boldsymbol{r} \right)\rho\left( \boldsymbol{r} \right)\end{equation}
+The average orientation, on the other hand, which will define our local coordinate system, is defined by the renormalized circular average so as to retain its quality as a unit vector. This can be defined in equivalent ways:
+\begin{subequations}
+    \label{eq:4avorient}
+    \begin{align}    {\overline{\boldsymbol{l}}}_{\boldsymbol{r}_{0}}^{(L)} &\coloneqq {\frac{1}{\beta_{1}}\left\langle \boldsymbol{l}(\varphi) \right\rangle}_{\boldsymbol{r}_{0}}^{(L)} \\
+    &\coloneqq\frac{1}{\beta_{1}}\Re\left\lbrack {\overline{z}}_{\boldsymbol{r}_{0}}^{(L)}\left( \hat{\boldsymbol{b}}\boldsymbol{-}i\hat{\boldsymbol{a}} \right) \right\rbrack.
+\end{align}
+\end{subequations}
+Similarly, the orthogonal direction in the slip plane can be defined:
+\begin{subequations}
+    \begin{align}
+    {\overline{\boldsymbol{p}}}_{\boldsymbol{r}_{0}}^{(L)} &\coloneqq \hat{\boldsymbol{n}} \times {\overline{\boldsymbol{l}}}_{\boldsymbol{r}_{0}}^{(L)} \\
+    &=-\frac{1}{\beta_{1}}\Im\left\lbrack {\overline{z}}_{\boldsymbol{r}_{0}}^{(L)}\left( \hat{\boldsymbol{b}}\boldsymbol{-}i\hat{\boldsymbol{a}} \right) \right\rbrack\\
+    &=\frac{1}{\beta_{1}}\left\langle \boldsymbol{l}\left( \varphi + \pi/2 \right) \right\rangle_{\boldsymbol{r}_{0}}^{(L)}.
+\end{align}
+\end{subequations}
+Thus, we have a local orthonormal coordinate system \(\overline{\boldsymbol{l}},\overline{\boldsymbol{p}},\hat{\boldsymbol{n}}\) defined in terms of the local dislocation arrangement. Either unit vector can then define an average angle:
+\begin{subequations}
+    \begin{align}
+    \boldsymbol{l}\left( {\overline{\varphi}}_{\boldsymbol{r}_{0}}^{(L)} \right) &\coloneqq {\overline{\boldsymbol{l}}}_{\boldsymbol{r}_{0}}^{(L)},\label{eq:averageangleDef}\\
+    \boldsymbol{l}\left( {\overline{\varphi}}_{\boldsymbol{r}_{0}}^{(L)} + \pi/2 \right) &\coloneqq {\overline{\boldsymbol{p}}}_{\boldsymbol{r}_{0}}^{(L)}.
+\end{align}
+\end{subequations} 
+
+We briefly digress at this point to mention that the first circular average (and therefore our local coordinate system) is a central quantity in defining the internal elastic fields caused by dislocations. The classical continuum theory of dislocations~\cite{DeWit1973} is based on the additive decomposition of the displacement gradient\footnote{Properly speaking, there should be a multiplicative decomposition of the total deformation gradient. This additive decomposition is only appropriate for infinitesimal strains. Cf. \cite{starkeyTotalLagrangeImplementation2022} for a treatment of finite strains using the multiplicative decomposition.} into an elastic and plastic distortion fields, distinguished by the fact that the symmetric portion of the elastic distortion gives rise to stresses in the material:
+\begin{align}
+\nabla\boldsymbol{u}&=\mathbf{D}^{(e)}+\mathbf{D}^{(p)}\\
+\boldsymbol{\sigma} &=\mathbb{C} : \frac{1}{2}\left(\mathbf{D}^{(e)} + \mathbf{D}^{(e)T}\right)\\
+&=\mathbb{C} : \mathbf{D}^{(e)}
+\end{align}
+since the stiffness tensor \(\mathbb{C}\) is symmetric. The curl of each distortion field is given by the incompatibility density (Kr\"{o}ner-Nye) tensor \cite{kroner1981continuum}:
+\begin{equation}\nabla\times\mathbf{D}^{(e)}= - \nabla \times\mathbf{D}^{(p)}= \boldsymbol{\alpha}\end{equation}
+and the incompatibility density tensor itself is determined by the dislocation arrangement (in the case of a single slip system) as:
+\begin{equation}\boldsymbol{\alpha}\left( \boldsymbol{r} \right)\coloneqq\rho\left( \boldsymbol{r} \right)\beta_{1}\left( \boldsymbol{r} \right){\overline{\boldsymbol{l}}}_{r}\boldsymbol{\otimes}b\hat{\boldsymbol{b}}\end{equation}
+Thus, we can see that even in a basic solution to the mechanics, the orientation distribution function has a central place, although only in terms of the first circular average discussed above.
+
+Before moving on to how the orientation distribution function affects the collective dynamics of dislocations, we pause to note that we will, for the remainder of the present work, mostly consider the `mean-centered' distribution (in a circular sense). This distribution, which we will term the orientation fluctuation distribution, will allow us to compare behavior at various points in the crystal. It is given simply by:
+\begin{equation}f_{\boldsymbol{r}_{0}}^{(L)}(\delta) = g_{\boldsymbol{r}_{0}}^{(L)}\left( {\overline{\varphi}}_{\boldsymbol{r}_{0}}^{(L)} + \delta \right).\end{equation}
+While the moments of the orientation distribution \(g_{\boldsymbol{r}_{0}}^{(L)}\) would be given in global coordinates \(\hat{\boldsymbol{b}},\hat{\boldsymbol{a}}\), the moments of the fluctuation distribution \(f\) are given in terms of the local coordinates \({\overline{\boldsymbol{l}}}_{\boldsymbol{r}_{0}},{\overline{\boldsymbol{p}}}_{\boldsymbol{r}_{0}}.\)
+
+Because this now describes deviations from the local average orientation, it is a suitable object to compare across many points in the crystal. For this reason, let us define the global fluctuation distribution for local averages of length \(L\), with points weighted by density:
+\begin{equation}
+f^{(L)}(\delta) \coloneqq \frac{1}{\left| \mathcal{L} \right|}\int_{\mathcal{M}}^{}{f_{\boldsymbol{r}_{0}}^{(L)}(\delta)\rho\left( \boldsymbol{r} \right)d^{3}\boldsymbol{r}} \label{eq:6globFDFdef}
+\end{equation}
+where \(\left| \mathcal{L} \right|\) is the total dislocation line length in the crystal, which is also the integral norm of the density. By examining this global fluctuation distribution, we have removed all dependencies save the coarse-graining length. We can thus examine the behavior of this distribution at various coarse-graining lengths and comment on the various approximations which might be appropriate at various scales. As a result, the behavior of this global distribution can be used to investigate regimes of appropriate kinematic theories of dislocation motion.
+
+\subsection{The role of local line orientation distribution in dislocation transport}
+The line orientation distribution we have just defined has, in general, its own dynamics. Dislocation transport theories such as vector density dislocation dynamics and multipole dislocation dynamics are reduced forms of these more general dynamics, and so our considerations should begin with the evolution of the dislocation distribution over both space and orientation.
+
+Let us begin with the transport of discrete dislocations. At this fundamental level, the transport equation follows mathematically from the evolution of a system of closed lines under a prescribed velocity field\footnote{This represents the Lie derivative of the dislocation density (a two-form) under the action of the velocity vector field. The full Lie derivative also involves \(\boldsymbol{v\ }\nabla\cdot\boldsymbol{\rho}\), but this is omitted as the divergence term is null for closed curves. For a consideration of open curves, which become relevant in the consideration of dislocation networks, cf.~\cite{Starkey2022}.}:
+\begin{align}
+    \frac{\partial}{\partial t}\boldsymbol{\rho}&\coloneqq\nabla\times\left( \boldsymbol{v}\times\boldsymbol{\rho} \right),\\
+    \boldsymbol{\rho}(\boldsymbol{r}) &=\rho\left( \boldsymbol{r} \right)\boldsymbol{l}\left( \boldsymbol{r} \right).
+\end{align}
+Note that in its microscopic form, the orientation field is single-valued: every location has only one orientation at this point. Upon averaging, we obtain:
+\begin{equation}
+\frac{\partial}{\partial t}\left\langle \boldsymbol{\rho} \right\rangle = \nabla \times \left\langle \boldsymbol{v} \times \boldsymbol{\rho} \right\rangle.\label{eq:7AvDynamics}
+\end{equation}
+We cannot express the average slip rate \(\left\langle \boldsymbol{v} \times \boldsymbol{\rho} \right\rangle\) in terms of the average velocity and density vectors unless all dislocation lines crossing the volume  $\Omega_{\boldsymbol{r}}^{(L)}$ have the same orientation ~\cite{Hochrainer2007,Hochrainer2015}. This generally is not the case if single-slip statistical storage occurs. In such a case, it is obvious that the average transport equation is not `kinematically closed'; that is, the transport of the density vector cannot be expressed in terms of the density vector and a velocity field. As a result, we must seek a more general transport equation to average.
+
+The transport of dislocations in space is elegantly extended by a canonical lifting operation, the development of which we owe to Hochrainer~\cite{Hochrainer2007}. By means of the canonical association between an angular coordinate and a vector in space, we can treat a density distribution not only in space alone, but the direct product of space with an orientation space (e.g., the unit circle $S^{1}$). In fact, this is exactly what we have already defined in the local orientation distribution function {[}Eq. (2){]}. This `higher-order density' is given by:
+\begin{equation}\rho_{\text{HO}}\left( \boldsymbol{r},\varphi \right) \coloneqq \rho\left( \boldsymbol{r} \right)g^{(L)}_{\boldsymbol{r}}(\varphi).\label{eq:26_HOdef}\end{equation}
+The higher-order line direction now becomes a four-dimensional vector,
+linking the orientation coordinate to its canonical direction in space
+as well as to the curvature of the lines \(\kappa\). Representing by
+\((\boldsymbol{v},a)\ \)a four-vector with spatial part \(\boldsymbol{v}\) and
+angular part \(a\), the higher-order line direction becomes:
+\begin{equation}
+\boldsymbol{L}\left( \boldsymbol{r},\varphi \right) \coloneqq \Big( \boldsymbol{l}(\varphi),\ \kappa\left( \boldsymbol{r},\varphi \right) \Big)
+\end{equation}
+The higher-order density vector, now including a curvature density $q$, is then given by
+\begin{align}
+    \boldsymbol{\rho}_\text{HO}\left( \boldsymbol{r},\varphi \right)&=\Big( \rho_\text{HO}\left( \boldsymbol{r},\varphi \right)\boldsymbol{l}(\varphi),q\left( \boldsymbol{r},\varphi \right) \Big)\\
+    q\left( \boldsymbol{r},\varphi \right) &\coloneqq \rho_\text{HO}\left( \boldsymbol{r},\varphi \right)\kappa(\boldsymbol{r},\varphi)
+\end{align}
+
+The same lifting operation that links the orientation space with the
+curvature also specifies the angular portion of the velocity field (which can be thought of as rotating the lines) as
+\begin{align}
+    \vartheta\left( \boldsymbol{r},\varphi \right) &= \left( \boldsymbol{L}\cdot\nabla^\text{HO} \right)v\left( \boldsymbol{r},\varphi \right)\\
+    &= (\boldsymbol{l}(\varphi)\cdot\nabla)v\left( \boldsymbol{r},\varphi \right)+\kappa\left( \boldsymbol{r},\varphi \right)\partial_{\varphi}v\left( \boldsymbol{r},\varphi \right)
+\end{align}
+where \(\nabla^\text{HO} = \left( \nabla,\partial_{\varphi} \right)\). The
+resulting total velocity vector is given by:
+\begin{equation}\boldsymbol{V}\left( \boldsymbol{r},\varphi \right) \coloneqq \Big( v\left( \boldsymbol{r},\varphi \right)\boldsymbol{p}(\varphi),\ \vartheta\left( \boldsymbol{r},\varphi \right) \Big).\end{equation}
+The higher-order transport equation then follows again mathematically
+from the transport of closed curves, yielding a similar form to the
+original transport equation:\footnote{The cross product and curl here technically denote, in the language of differential geometry, an exterior product and an exterior derivative followed by a dual operation.}
+\begin{equation}
+\frac{\partial}{\partial t}\boldsymbol{\rho}^\text{HO}=\nabla^\text{HO}\times\left( \boldsymbol{V} \times\boldsymbol{\rho}^\text{HO} \right).
+\end{equation}
+While in this form we can see the analogy to the original transport
+equation, it is often more instructive in the form of coupled equations
+for \(\rho\) and \(q\):
+\begin{subequations}\label{eq:8hdcddev}
+    \begin{align}
+    \partial_{t}\rho &= \left( \boldsymbol{p} \cdot\nabla \right)(\rho v) + \partial_{\varphi}(\rho\vartheta) - qv\\
+    \partial_{t}q &= \left( \boldsymbol{p }\cdot\nabla \right)(qv) - \left( \boldsymbol{l }\cdot\nabla \right)(\rho\vartheta)
+\end{align}
+\end{subequations}
+
+
+In the original transport equation [Eq. \ref{eq:7AvDynamics}] the requirement for kinematic closure was that all dislocation lines crossing the volume share the same direction: a stringent requirement indeed. The kinematic linking of curvature and the orientation space allows us to kick this requirement further down the line. The requirement for kinematic closure in the higher-order transport equation is simply that dislocations at a point in the higher-order space (i.e. dislocations at the same spatial location and sharing an orientation) must all have identical curvatures. This requirement is generally taken to be more realistic in dislocation systems treated significantly above the discrete length scale.
+
+We see that the higher-order transport equation, which must be considered in systems where the orientation distribution is non-trivial, is intimately associated with the orientation distribution function \(g^{(L)}_{\boldsymbol{r}}(\varphi)\) {[}recall Eq. (\ref{eq:26_HOdef}){]}. Both spatial and directional partial derivatives in Eqs. (\ref{eq:8hdcddev}) will contain terms which reflect the spatial variation of the local orientation distribution in space as well as the shape of the distribution in orientation space.
+
+This theory is not without its drawbacks, however. The price paid for this kinematic consistency is having to consider the full orientation space at every point in the crystal. Because of this, numerical solution of this transport is a complicated problem in its own right~\cite{Sandfeld2010}. The way around this problem is a reduced representation of the local orientation distribution. This reduced representation is found by considering the evolution of various moments of the local orientation distribution called alignment tensors. This representation will provide the context for approximations which bridge the discrete and higher-order theories.
+

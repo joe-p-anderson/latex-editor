@@ -1,0 +1,172 @@
+\appendix
+
+\section{Equivalence of moment/Fourier representations of the shape of the distribution}
+The equivalence of the alignment tensor series and the characteristic sequence can be seen by simply expanding the expression of the unit tangent in the local coordinate system defined by the average direction {[}cf. \cref{eq:4avorient}{]}. In this form, it can be clearly seen that
+\begin{subequations}
+\begin{align}
+    \boldsymbol{l}(\delta) &= \cos\delta\overline{\boldsymbol{l}} + \sin\delta\overline{\boldsymbol{p}}\\
+    &=\boldsymbol{L}e^{i\delta} + \boldsymbol{L}^{*}e^{- i\delta}\\
+    \boldsymbol{L} &\coloneqq \frac{1}{2}\left( \overline{\boldsymbol{l}} - i\overline{\boldsymbol{p}} \right)
+\end{align}
+\end{subequations}
+The tensor powers \(\boldsymbol{l}^{\boldsymbol{\otimes}n}(\delta)\) can then be expanded by means of the binomial theorem for either the complex or trigonometric form. In the case of the former, we obtain:
+\begin{equation}
+\boldsymbol{l}^{\boldsymbol{\otimes}n}(\delta) = \sum_{k = 0}^{n}{{n\choose k}\overline{\boldsymbol{L}^{\boldsymbol{\otimes}k}\boldsymbol{L}^{\boldsymbol{* \otimes}n - k}}e^{(2k - n)i\delta}}
+\end{equation}
+Upon taking the average we obtain 
+\begin{equation}
+\left\langle \boldsymbol{l}^{\boldsymbol{\otimes}n}(\delta) \right\rangle_{\boldsymbol{r}}^{(L)} = \sum_{k = 0}^{n}{{n\choose k}\overline{\boldsymbol{L}^{\boldsymbol{\otimes}k}\boldsymbol{L}^{\boldsymbol{* \otimes}n - k}}\beta_{2k - n}}
+\end{equation}
+We have used now twice the symmetrizing operator, which averages over
+all permutations of indices:
+\begin{equation}
+{\overline{A}}_{i_{1}i_{2}\ldots i_{n}} = \text{sym}\left\lbrack A_{i_{1}i_{2}\ldots i_{n}}\  \right\rbrack \coloneqq \frac{1}{n!}\sum_{\pi \in \Pi_{n}}^{}A_{\pi_{1}\pi_{2}\ldots\pi_{n}}\end{equation}
+Equivalently, we may expand the tensor power in terms of the
+trigonometric functions: 
+\begin{equation}
+\boldsymbol{l}^{\boldsymbol{\otimes}n}(\delta) = \sum_{k = 0}^{n}{{n\choose k}\overline{{\overline{\boldsymbol{p}}}^{\boldsymbol{\otimes}k}{\overline{\boldsymbol{l}}}^{\boldsymbol{\otimes}n - k}}\cos^{n - k}\delta\sin^{k}\delta}.
+\end{equation}
+There is clearly a relation between these in terms of the expansion of
+powers of the complex forms of sine and cosine.
+
+From these expressions for the tensor powers, one sees their
+average---the alignment tensors---can be expressed simply as:
+\begin{subequations}
+\begin{align}
+    \left\langle \boldsymbol{l}^{\boldsymbol{\otimes}n}(\delta) \right\rangle &= \sum_{k = 0}^{n}{{n \choose k} \overline{\boldsymbol{L}^{\boldsymbol{\otimes}k}\boldsymbol{L}^{\boldsymbol{* \otimes}n - k}}\beta_{2k - n}}\\
+    &= \sum_{k = 0}^{n}{{n\choose k}\overline{{\overline{\boldsymbol{p}}}^{\boldsymbol{\otimes}k}{\overline{\boldsymbol{l}}}^{\boldsymbol{\otimes}n - k}}M^{'}(n,k)}\\
+    M^{'}(n,k) &= \left\langle \cos^{n - k}\delta\sin^{k}\delta \right\rangle\\
+&=  \begin{dcases}
+\sum_{i = 0}^{j}{{j\choose i}( - 1)^{i}M_{n - 2i}} & k \text{\ even} \\
+\sum_{i = 0}^{\left\lfloor \frac{n - 1}{2} \right\rfloor - j}{{\left\lfloor \frac{n - 1}{2} \right\rfloor - j}\choose i}( - 1)^{i}{\widetilde{M}}_{n - 2i} & k \text{\ odd}
+\end{dcases}.
+\end{align}
+\end{subequations}
+For what we hope are obvious reasons, we choose to work in terms of the
+characteristic sequence \(\beta_{k}\).
+
+\section{Derivation of a general class of line bundle approximations}
+We would like to consider a general class of averages having the form: 
+\begin{equation}
+\left\langle A(\delta)\boldsymbol{l}^{\otimes n}(\delta) \right\rangle \label{eq:MainAv}
+\end{equation}
+where \(A(\delta)\) is some general function of the orientation
+fluctuations. Under what conditions can we remove a factor of
+\(\boldsymbol{l}\) from the average? That is, when do we have
+\begin{equation}
+\left\langle A(\delta)\boldsymbol{l}^{\otimes n}(\delta) \right\rangle\boldsymbol{\approx}\left\langle A(\delta)\ \text{sym}\left\lbrack \overline{\boldsymbol{l}} \otimes \boldsymbol{l}^{\otimes n - 1}(\delta) \right\rbrack \right\rangle \label{eq:LBdef}
+\end{equation}
+We can see that the closure of the alignment tensor hierarchy is a special case of this where \(A\) is a constant unit function.
+
+The only variable available to us with which to define this approximation is the fluctuation distribution \(f(\delta)\) and its characteristic sequence \(\beta_{n}\). As a result, this approximation will be better formulated in Fourier space. The average of interest [\cref{eq:MainAv}] is, in Fourier notation:
+\begin{equation}
+\mathfrak{F}\left\{ f(\delta)l^{\otimes n}(\delta)A(\delta) \right\}_{0} = \sum_{k = - \infty}^{\infty}{\gamma_{k}^{(n)}{\hat{A}}_{- k}}
+\end{equation}
+
+where we have denoted the Fourier transform by \(\mathcal{F}\) or by \(\hat{\cdot}\) and utilized the convolution theorem. Two key
+Fourier series are denoted \(\gamma_{k}^{(n)}\) and \(\lambda_{k}^{(n)}\) and are given by 
+\begin{align}
+\gamma_{k}^{(n)}&\coloneqq\mathfrak{F}\left\{ f(\delta)l^{\otimes n}(\delta) \right\}_{k}\\
+&= \sum_{m = - \infty}^{\infty}{\lambda_{m}^{(n)}\beta_{k - m}}\label{eq:gamma_def}\\
+\lambda_{k}^{(n)}&\coloneqq\mathfrak{F}\left\{ l^{\otimes n}(\delta) \right\}_{k}
+\end{align}
+It should be noted that both \(\gamma_{k}^{(n)}\) and \(\lambda_{k}^{(n)}\) are fully symmetric \(n\)-th rank tensors. Thus the goal of our analysis should be to show a circumstance whereby:
+\begin{equation}
+\gamma_{k}^{(n)} \approx \overline{\boldsymbol{l}} \otimes \gamma_{k}^{(1)}
+\end{equation}
+
+Before proceeding, we should consider the form of \(\lambda_{k}^{(n)}\), as it is fixed by the definition of \(l\) in \cref{eq:orientationDef,eq:orientationExponential}. Especially, the convenient exponential structure of \cref{eq:orientationExponential} is especially suited to defining the Fourier series \(\lambda_{k}^{(n)}\). The series first few \(n\) are as follows:
+\begin{subequations}
+    \begin{align}
+\lambda_{k}^{(0)}&=\mathfrak{F}\left\{ 1 \right\}_{k} = \delta_{k}\\
+\lambda^{(1)}&=\mathfrak{F}\left\{ l(\delta) \right\}_{k}\\
+&= L\delta_{k - 1} + L^{*}\delta_{k + 1}\\
+\lambda^{(2)}&=\mathfrak{ F}\left\{ l(\delta) \otimes l(\delta) \right\}_{k}\\
+&= LL\delta_{k - 2} + \left( LL^{*} + L^{*}L \right)\delta_{k} + L^{*}L^{*}\delta_{k + 2}\\
+&= L\lambda_{k - 1}^{(1)} + L^{*}\lambda_{k + 1}^{(1)}\end{align}
+\end{subequations}
+In fact, due to the repeated multiplication by the complex exponentials
+contained in the definition of \(l\), one can see that in general
+\begin{equation}
+\lambda_{k}^{(n)} = \text{sym}\left\lbrack L\lambda_{k - 1}^{(n - 1)} + L^{*}\lambda_{k + 1\ }^{(n - 1)} \right\rbrack\end{equation}
+Although we will omit the symmetric notation for brevity.
+
+Now that we have a recursion relation for \(\lambda_{k}^{(n)}\), we can use this in the definition of the \(\gamma_{k}^{(n)}\) series [\cref{eq:gamma_def}]:
+\begin{subequations}
+\begin{align}
+\gamma_{k}^{(n)} &= \sum_{m = - \infty}^{\infty}{\left( L\lambda_{m - 1}^{(n - 1)} + L^{*}\lambda_{m + 1\ }^{(n - 1)} \right)\beta_{k - m}}\\
+&= \sum_{m = - \infty}^{\infty}{\left( L\beta_{k - m - 1} + L^{*}\beta_{k - m + 1} \right)\lambda_{m}^{(n - 1)}}\label{eq:19_gamma_int1}
+\end{align}
+\end{subequations}
+where we have simply reindexed the summation to transfer the shift to
+the characteristic sequence. It now becomes clear that our constraint on
+the characteristic function should be in the form of a recursion
+relation for \(\beta_{n}\). Let us denote this relation by the
+ladder operators \(\eta_{k}^{\pm}\), defined such that:
+\begin{equation}
+\eta_{k}^{\pm}\beta_{k} = \beta_{k \pm 1}
+\end{equation}
+\Cref{eq:19_gamma_int1} above then becomes in:
+\begin{equation}
+\gamma_{k}^{(n)} = \sum_{m = - \infty}^{\infty}{\left( L\eta_{k - m}^{-} + L^{*}\eta_{k - m}^{+} \right)\beta_{k - m}\lambda_{m}^{(n - 1)}}\label{eq:19_gamma_int2}
+\end{equation}
+Note that if the quantity in parentheses can be removed from the summation, we find that the remaining summation is equivalent to \(\gamma_{k}^{(n - 1)}\) by definition. We will propose one form of the ladder operators that allows this to be performed.
+
+By malice of forethought, we propose the following ladder operators:
+\begin{equation}
+\eta_{k}^{\pm} = \beta\delta_{k} + \beta^{\pm 1}\theta_{k}^{+} + \beta^{\mp 1}\theta_{k}^{-}
+\end{equation}
+where \(\theta_{k}^{\pm}\) is unity for strictly positive (negative) \(k\) and zero otherwise. These would be the raising and lowering operators that result if the characteristic function is a geometric series:
+\begin{equation}
+{\widetilde{\beta}}_{k} = \beta^{|k|}
+\end{equation}
+where \(\beta < 1\ \)(i.e. \(f\) is Cauchy). The approximation is not that \(\beta_{k} \approx {\widetilde{\beta}}_{k}\) for all \(k\),
+but rather that
+\begin{equation}
+\eta_{k}^{\pm}\beta_{k} \approx \beta_{k \pm 1}.
+\end{equation}
+
+The complex unit vectors in \cref{eq:19_gamma_int2} can be expanded to find that we are interested in the sum and difference of the ladder operators:
+\begin{equation}
+L\eta_{k}^{-} + L^{*}\eta_{k}^{+} = {\overline{\eta}}_{k}\overline{l} + {\widetilde{\eta}}_{k}i\overline{p}
+\end{equation}
+With the form of the ladder operators proposed above, the sum and difference are given by:
+\begin{subequations}
+\begin{align}
+{\overline{\eta}}_{k} &= \frac{1}{2}\left( \eta_{k}^{+} + \eta_{k}^{-} \right) = \overline{\beta} + \widetilde{\beta}\delta_{k}    \\
+{\widetilde{\eta}}_{k} &= \frac{1}{2}\left( \eta_{k}^{+} - \eta_{k}^{-} \right) = \widetilde{\beta}\left( \theta_{k}^{+} - \theta_{k}^{-} \right)
+\end{align}
+\end{subequations}
+where 
+\begin{subequations}
+\begin{align}
+    \overline{\beta} &= \frac{1}{2}\left( \beta + \beta^{- 1} \right)\\
+    \widetilde{\beta} &= \frac{1}{2}\left( \beta - \beta^{- 1} \right)
+\end{align}
+\end{subequations}
+We note that in terms of an expansion in terms of \(\beta = 1 - \epsilon\), these are
+\begin{subequations}
+\begin{align}
+    \overline{\beta} &= 1 + \frac{\epsilon^{2} + \epsilon^{3} + \ldots}{2}\\
+    \widetilde{\beta} &= - \left( \epsilon + \frac{\epsilon^{2} + \epsilon^{3} + \ldots}{2} \right).
+\end{align}
+\end{subequations}
+Returning to \cref{eq:19_gamma_int2}, then, we obtain an expression for \(\gamma_{k}^{(n)}\) in terms of the next lower order:
+\begin{align}
+\gamma_{k}^{(n)} &= \overline{\beta}\ \text{sym}\left\lbrack \overline{l}\gamma_{k}^{(n - 1)} \right\rbrack - \widetilde{\beta}\ \text{sym}\left\lbrack \overline{\boldsymbol{l}}\lambda_{k}^{(n - 1)} - i\overline{\boldsymbol{p}}{\widetilde{\gamma}}_{k}^{(n - 1)} \right\rbrack\\
+{\widetilde{\gamma}}_{k}^{(n - 1)} &\coloneqq \sum_{m = - \infty}^{\infty}{\left( \theta_{k - m}^{-} - \theta_{k - m}^{+} \right)\beta_{k - m}\lambda_{m}^{(n - 1)}}\\
+&= \sum_{m = 1}^{\infty}{\beta_{m}\left( \lambda_{k + m}^{(n - 1)} - \lambda_{k - m}^{(n - 1)} \right)}
+\end{align}
+We do see that the leading order term is the desired result. However,
+there is a first order correction in terms of the antisymmetric portion
+of the average \(\widetilde{\gamma}.\) Thus we can only neglect these
+corrections if the polarization is approximately unity even to first
+order.
+
+The \(\gamma_{k}^{(n)}\ \)expression can be evaluated at \(k = 0\ \)to
+give the alignment tensor closure relation. For \(n = 2,3\) this is as
+follows:
+\begin{align}
+    \gamma_{0}^{(2)} &= \frac{1}{2}\left\lbrack \left( 1 + \beta_{1}^{2} \right)\overline{\boldsymbol{ll}} + \left( 1 - \beta_{1}^{2} \right)\overline{\boldsymbol{pp}} \right\rbrack\\
+    \gamma_{0}^{(3)} &= \frac{\beta_{1}}{4}\left\lbrack \left( 3 + \beta_{2} \right)\overline{\boldsymbol{lll}} + \left( 2\beta_{1}^{- 2} + 1 - \beta_{2} \right)\overline{\boldsymbol{lpp}} \right\rbrack.
+\end{align}

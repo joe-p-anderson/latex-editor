@@ -1,0 +1,55 @@
+\documentclass[reprint,amsmath,amssymb,aps,prb,nofootinbib,longbibliography]{revtex4-2}
+\usepackage{amsmath,amssymb}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{hyperref}
+\usepackage[capitalise]{cleveref}
+\usepackage{mathtools}
+%\bibliographystyle{apsrev4-1}
+\usepackage{siunitx}
+\usepackage[caption=false]{subfig}
+\setcounter{totalnumber}{1}
+
+\captionsetup[subfigure]{labelformat=brace}
+\newcommand{\br}{\boldsymbol{r}}
+\crefrangeformat{equation}{Eqs.~(#3#1#4-#5#2#6)}
+\crefmultiformat{equation}{Eqs.~(#2#1#3}%
+{,~#2#1#3)}{,~#2#1#3}{,~#2#1#3)}
+
+
+
+
+
+\begin{document}
+\preprint{APS/123-QED}
+
+\title{The line bundle regime and the scale-dependence \\of continuum dislocation dynamics}
+
+\author{Joseph Pierre Anderson}\altaffiliation[Currently at: ]{Department of physics and astronomy, Carthage College.}\email{janderson19@carthage.edu}
+ \affiliation{School of materials engineering, Purdue University}%Lines break automatically or can be forced with \\
+\author{Anter El-Azab}
+\affiliation{School of materials engineering, Purdue University}%
+
+\date{\today}% It is always \today, today,
+             %  but any date may be explicitly specified
+
+\begin{abstract}
+
+Continuum dislocation dynamics (CDD) has become the state-of-the-art theoretical approach for mesoscale dislocation plasticity of metals. Within this approach, there are multiple CDD theories that can all be derived from the principles of statistical mechanics. In these theories density-based measures are used to represent dislocation lines. Establishing these density measures requires some level of coarse graining with the result of losing track of some parts of the dislocation population due to cancellation in the tangent vectors of unaligned dislocations. The leading CDD theories either treat dislocations as nearly parallel, as in the line bundle approach [J. P. Anderson and A. El-Azab, Phys. Rev. B \textbf{109} (2024)], or distributed locally over orientation space [Hochrainer, Phil. Mag. \textbf{95}, 1321 (2015)]. The difference between these theories is a matter of the spatial resolution at which the definition of the relevant dislocation density field holds: for fine resolutions, single dislocations are resolved and there is no cancellation; for coarse resolutions, whole dislocation loops could contribute at a single point and there is complete cancellation. In the current work, a formulation of the resolution-dependent transition between these limits is presented in terms of the statistics of dislocation line orientation fluctuations about a local average line direction. From this formulation, a study of the orientation fluctuation behavior in intermediate resolution regimes is conducted. The fluctuation distributions are found to be roughly Cauchy in shape and broaden with increased coarse-graining length. Two possible closure equations for truncating the moment sequence of the fluctuation distributions relating the two theories mentioned above are evaluated from data, the newly introduced line bundle closure and the previous standard maximum entropy closure relations. The line bundle closure relation is shown to be accurate for coarse-graining lengths up to half the dislocation spacing and the maximum entropy closure is found to poorly agree with the data at all coarse-graining lengths.
+
+\end{abstract}
+
+%\keywords{Suggested keywords}%Use showkeys class option if keyword
+                              %display desired
+\maketitle
+
+% Comment any of these out with percent signs 
+\input{1_Intro}
+\input{2_full_description}
+\input{3_reduced}
+\input{4_calculation}
+\input{5_Results}
+\input{67_discussionconclusion}
+\input{A_Appendices}
+
+\bibliography{AngStatsBib}
+\end{document}

@@ -31,7 +31,16 @@ What would make this a better LaTeX editor, roughly in order of payoff. Items ma
 - **Git history for each file.** Show what changed since last year's version and restore old versions. Snapshots on each save would give undo that lasts after you close the file.
 - **Reusing problems.** A question bank: tag `\question` blocks by topic and pull them into a new homework or exam.
 - **Building many documents at once.** Rebuild every document that uses a class after it changes, and report which ones broke.
-- **Other engines and a bibliography.** Support for `latexmk`, XeLaTeX and LuaLaTeX, BibTeX/biber, and `\cite` completion.
+- **A bibliography (done).** BibTeX and biber run as part of a build, only when citations or a `.bib` changed. There's a cite picker (search by author, title, year, journal or tag), `\cite` completion, numbered cite chips in the live view, and a "did you mean" fix for a mistyped key.
+  - Still to do: other engines (XeLaTeX, LuaLaTeX).
+
+## Papers
+
+- **Multi-file documents (next).** A section file should know which document `\input`s it without having been compiled last, and see that document's numbering, labels and macros. Also planned:
+  - a paper map: one outline across the files, with drag-to-reorder and toggling sections in and out;
+  - a section preview: compile only the section being edited, with the numbering restored from the last full build (spiked: about 1.4 s against 2.1 s for the AngStatsRevTex paper).
+- **New paper from a journal template.** Recently used classes, the template folder, and a curated journal list (revtex, elsarticle, IEEEtran, …). Each is marked installed or available, and MiKTeX installs a missing class, with progress shown.
+- **Submission bundle.** Flatten the `\input`s into one file, include the `.bbl`, keep only the figures used, and zip it for arXiv or a journal.
 - **Page checks before printing.** Flag an overfull box as a visible marker in the PDF. Warn when a question splits across a page break, and give a page count.
 
 ## Decided against

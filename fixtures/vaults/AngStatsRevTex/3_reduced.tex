@@ -1,0 +1,247 @@
+\section{Reduced descriptions of local dislocation
+collections\label{sec:3_reduced_descriptions}}
+
+We saw briefly that only the geometrically necessary dislocation content and the average line orientation give rise to long-range mechanical fields in the crystal. It is tempting, then, to consider only the dynamics of the vector density. However, we shall now see that these dynamics are affected by higher moments of the orientation distribution; closure principles for these moments will yield a range of possible approximations between which the global fluctuation distribution can then adjudicate.
+
+The reduced representation can be summarized as follows (cf. \cite{Hochrainer2015,Monavari2016}). Consider the following averages of the density \(\rho\left( \boldsymbol{r},\varphi \right)\)(and similarly, the
+curvature density \(q\left( \boldsymbol{r},\varphi \right)\)) over the
+angular space, let us call these the tensor moments of the higher-order density field:
+\begin{subequations}
+\begin{align}
+    \rho^{(0)}\left( \boldsymbol{r} \right)&\coloneqq\int_{S^{1}}^{}{\rho\left( \boldsymbol{r},\varphi \right)d\varphi},\\
+    &= \rho\left( \boldsymbol{r} \right)\int_{S^{1}}^{}{g_{\boldsymbol{r}}^{(L)}(\varphi)d\varphi}\\
+    &= \rho\left( \boldsymbol{r} \right)\\
+    \boldsymbol{\rho}^{(1)}\left( \boldsymbol{r} \right) &\coloneqq \rho\left( \boldsymbol{r} \right)\int_{S^{1}}^{}{g_{\boldsymbol{r}}^{(L)}(\varphi)\boldsymbol{l}(\varphi)d\varphi}\\
+    &= \rho\left( \boldsymbol{r} \right)\beta_{1}\left( \boldsymbol{r} \right){\overline{\boldsymbol{l}}}_{\boldsymbol{r}}^{\left(L \right)}\label{eq:1circavAltens}\\
+    \boldsymbol{\rho}^{\left( \boldsymbol{2} \right)}\left( \boldsymbol{r} \right)&\coloneqq\rho\left( \boldsymbol{r} \right)\int_{S^{1}}^{}{g_{\boldsymbol{r}}^{(L)}(\varphi)\boldsymbol{l}^{\otimes 2}(\varphi)d\varphi}\\
+    &\qquad\vdots\nonumber\\
+    \boldsymbol{\rho}^{(n)}\left( \boldsymbol{r} \right)&\coloneqq\rho\left( \boldsymbol{r} \right)\int_{S^{1}}^{}{g_{\boldsymbol{r}}^{(L)}(\varphi)\boldsymbol{l}^{\otimes n}(\varphi)d\varphi}
+\end{align}
+\end{subequations}
+where the tensor power is defined simply by repeated application of the
+tensor power. For a vector \(\boldsymbol{u}\) we can define it recursively
+\(\boldsymbol{u}^{\otimes n}=\boldsymbol{u}^{\otimes n - 1}\boldsymbol{\otimes u}\). Removing the zeroth order component we arrive at simply an alternative formulation of the orientation distribution function in terms of these tensor moments; because these tensor moments capture various degrees of alignedness of the collection these are termed the alignment tensors $\mathbf{T}^{(n)}(\boldsymbol{r})$, defined as 
+\begin{equation}
+\boldsymbol{\rho}^{(n)}\left( \boldsymbol{r} \right)=\rho\left( \boldsymbol{r} \right)\mathbf{T}^{(n)}\left( \boldsymbol{r} \right),
+\end{equation}
+where
+\begin{equation}
+\mathbf{T}^{(n)}\left( \boldsymbol{r} \right)\coloneqq\left\langle \boldsymbol{l}^{\otimes n}(\varphi) \right\rangle_{\boldsymbol{r}}^{(L)}\label{eq:10alignDef}
+\end{equation}
+Notice that we have already considered the `first circular average' in Eq. (\ref{eq:4avorient}) and the first alignment tensor is related to it rather simply in Eq. (\ref{eq:1circavAltens}). These alignment tensors are related to the higher-order moments of the orientation distribution.  %Notice that for a single-valued orientation distribution ($g_{\boldsymbol{r}}(\varphi) = \delta(\varphi-\overline{\varphi}_{\boldsymbol{r}})$), the alignment tensors would simply be tensor powers of the average line direction.
+
+The reduced dynamics follows primarily from the linearity of the integral, but also due to the following relations
+between derivatives of the unit tangent:
+\begin{subequations}
+\begin{align}
+    \partial_{\varphi}\ \boldsymbol{l}(\varphi) &= \boldsymbol{p}(\varphi),\\
+    \partial_{\varphi}\ \boldsymbol{p}(\varphi) &= - \boldsymbol{l}(\varphi).
+\end{align}
+\end{subequations}
+Using these properties, the high-dimensional evolution equations \cref{eq:8hdcddev} can be used to derive
+evolution equations for the alignment tensors, given below:
+\begin{subequations}\label{eq:11_reducedEvolution}
+\begin{align}
+    \partial_{t}\rho^{(0)} =& \nabla \cdot \left( v\boldsymbol{\ }\hat{\boldsymbol{n}}\times\boldsymbol{\rho}^{\left(1 \right)} \right)+vq^{(0)}\\
+    \partial_{t}\boldsymbol{\rho}^{\left( \boldsymbol{n} \right)}=&\text{sym}\Bigg\lbrack \nabla\times\left( v\ \hat{\boldsymbol{n}}\otimes \boldsymbol{\rho}^{\left( n - 1 \right)} \right)\nonumber\\
+    &+(n - 1)v\mathbf{Q}^{(n)} \nonumber\\
+    &- (n - 1)\left( \hat{\boldsymbol{n}}\times\boldsymbol{\rho}^{(n + 1)} \right) \cdot \nabla v \Bigg\rbrack\\
+    \partial_{t}q^{(0)} =& \nabla \cdot \left( v\mathbf{Q}^{(1)} - \boldsymbol{\rho}^{(2)}\cdot\nabla v \right).
+\end{align}
+\end{subequations}
+where $\text{sym}[\mathbf{A}]$ represents symmetrization over all tensor indices and \(\mathbf{Q}^{(n)}\) are the auxiliary curvature tensors of
+the form:
+\begin{equation}
+\mathbf{Q}^{(n)}=\int_{}^{}{q\left( \boldsymbol{r},\varphi \right)\ \boldsymbol{p}^{\otimes 2}(\varphi)\otimes \boldsymbol{l}^{\otimes n - 2}(\varphi)}\boldsymbol{\ }d\varphi.
+\end{equation}
+For \(n \leq 2\) the power of \(\boldsymbol{p}\) is equal to \(n\). Notice
+that each of the evolution equations in Eqs. (\ref{eq:11_reducedEvolution}) is coupled to the next equation in the hierarchy:
+\(\partial_{t}\boldsymbol{\rho}^{(n)}\) involves a \(\boldsymbol{\rho}^{(n + 1)}\) term. Unless we
+close the hierarchy at a low order, we have gained nothing: we have just
+changed the manner in which the full orientation space is represented.
+
+In order to close the hierarchy at order \(m\), it is necessary to
+determine some closure function $h$ by which:
+\begin{equation}
+\mathbf{T}^{(m + 1)}(\boldsymbol{r})=h\left( \mathbf{T}^{(1)},\ldots,\mathbf{T}^{(m)} \right)\label{eq:closure}
+\end{equation}
+Notice that this closure relation must hold at all points
+\(\boldsymbol{r}\). As a result, we expect the appropriateness of a
+closure relation to depend only on the coarse-graining length \((L)\)
+considered. Before proceeding, let us consider two differing (but equivalent) representations of the alignment tensors \cref{eq:10alignDef} in terms of the symmetric and antisymmetric moment fields:
+\begin{subequations}
+\begin{align}
+M_{n}^{(L)}\left( \boldsymbol{r} \right)&\coloneqq\left\langle \cos^{n}\delta \right\rangle_{\boldsymbol{r}}^{(L)}\\
+    {\widetilde{M}}_{n}^{(L)}\left( \boldsymbol{r} \right)&\coloneqq\begin{dcases}
+\left\langle \sin^{n}\delta \right\rangle_{\boldsymbol{r}}^{(L)} & n\text{ odd} \\
+\left\langle \cos\delta\sin^{n - 1}\delta \right\rangle_{\boldsymbol{r}}^{(L)} & n\text{ even}
+\end{dcases}
+\end{align}
+\end{subequations}
+or the characteristic sequence of the fluctuation distribution
+\begin{equation}
+\beta_{n}^{(L)}\left( \boldsymbol{r} \right) \coloneqq \left\langle z^{n}(\delta) \right\rangle_{\boldsymbol{r}}^{(L)}.
+\end{equation}
+For the remainder of the present work, we assume that the fluctuation distribution is symmetric, resulting in the characteristic sequence being strictly real (and thus symmetric upon reversal of the sign of the index) and that all antisymmetric moments are zero:
+\begin{subequations}
+\begin{align}
+    \beta_{- |k|} &= \beta_{|k|},\\
+    {\widetilde{M}}_{k} &= 0.
+\end{align}
+\end{subequations}Lastly, we state the form of the second and third order alignment
+tensors (cf. Appendix A):
+\begin{subequations}
+\begin{align}
+    \left\langle \boldsymbol{l}^{\otimes 2}(\delta) \right\rangle &= \frac{1}{2}\left\lbrack \left( 1 + \beta_{2} \right)\overline{\boldsymbol{ll}}+\left( 1 - \beta_{2} \right)\overline{\boldsymbol{pp}} \right\rbrack\\
+    \left\langle \boldsymbol{l}^{\otimes 3}(\delta) \right\rangle &= \frac{1}{4}\left\lbrack \left( 3\beta_{1} + \beta_{3} \right)\overline{\boldsymbol{lll}}+\left( 3\beta_{1} - \beta_{3} \right)\overline{\boldsymbol{lpp}} \right\rbrack,
+\end{align}\label{eq:alignmentTensorsChar}\end{subequations}
+where $\overline{\boldsymbol{lpp}}= \text{sym}[\overline{\boldsymbol{l}}\otimes \overline{\boldsymbol{p}}^{\otimes 2}]$. In general, the closure problem which we will now consider can equivalently be phrased in the alignment tensor hierarchy [Eq. (\ref{eq:closure})] or in the $\beta_k$ hierarchy or the $M_k$. With this in mind, let us consider two candidate closure relations: line bundle closure---a contribution of the present work---and the maximum entropy closure, which is the current method in use \cite{Monavari2016}.
+
+\subsection{The line bundle expansion of the alignment tensor
+hierarchy}
+
+The line bundle expansion which we will present in this section is
+motivated by the following observation. At very small length scales, the dislocations in a collection near a point are all parallel.\footnote{In the extreme case of small length $L_0$, only a single dislocation can be present at the point.} The result is
+that the fluctuation distribution is a Dirac mass\footnote{We apologize
+  that the notation \(\delta\) is overloaded. To distinguish the Dirac
+  delta from the fluctuation coordinate, we denote the former by
+  \(\hat{\delta}\).} and the following relations hold for the
+characteristic sequence and alignment tensors:
+\begin{subequations}
+\begin{align}
+    f_{\boldsymbol{r}}^{\left( L_{0} \right)}(\delta) &= \hat{\delta}(\delta)\\
+    \beta_{k}^{\left( L_{0} \right)}\left( \boldsymbol{r} \right) &= 1\qquad \forall k \in \mathbb{Z}\\
+    \left\langle \boldsymbol{l}^{\otimes n}(\delta) \right\rangle_{\boldsymbol{r}}^{\left( L_{0} \right)}&=\overline{\boldsymbol{l}}_{\boldsymbol{r}}^{ \ \otimes n}\label{eq:12_dirac_alignment}
+\end{align}
+\end{subequations}
+Well, what relations between alignment tensors would obtain if we go to slightly longer length scales? Here we might be including one or more bowed dislocations which form a `smooth line bundle' \cite{Sedlacek2010,Lin2021}. In this regime, the polarization would differ from unity, but only slightly: 
+\begin{equation}
+\beta_{1}^{(L)}\left( \boldsymbol{r} \right) = 1 - \epsilon\left( \boldsymbol{r} \right),\qquad 0 < \epsilon \ll 1\end{equation}
+and the angular distribution would be sharply focused around zero fluctuation. Inspired by the discrete relation for the alignment tensor as simply the tensor power of the average direction \cref{eq:12_dirac_alignment}, we propose a more modest goal, that we might factor out of the $n$-th alignment tensor a single factor of \(\overline{\boldsymbol{l}}\):
+
+\begin{equation}\left\langle \boldsymbol{l}^{\otimes n}(\delta) \right\rangle_{\boldsymbol{r}}^{(L)} \approx \text{sym}\left\lbrack {\overline{\boldsymbol{l}}}_{r} \otimes \left\langle \boldsymbol{l}^{\otimes n}(\delta) \right\rangle_{\boldsymbol{r}}^{(L)} \right\rbrack.\ \ \end{equation}
+In order to perform this factoring, what closure relation would need to obtain in the characteristic sequence? For how low of polarization would this relation hold? The true closure would take the form of a ladder operator for the characteristic sequence. Without loss of generality, we may define a ladder operator \(\eta_{k}^{\pm}\) as the ratio between neighboring entries in the characteristic sequence: 
+\begin{equation}
+\eta_{k}^{\pm}\beta_{k} = \beta_{k \pm 1}.
+\end{equation}
+The approximation we make is to consider the fluctuation distribution to be `Cauchy-like', having the ladder operator:
+\begin{subequations}
+\begin{align}
+    \eta^+_k &\approx \begin{dcases}
+        \beta_1 &k\geq 0\\
+        \beta_1^{-1} &k <0 \\ 
+    \end{dcases}\\
+    \eta^-_k &\approx \begin{dcases}
+        \beta_1^{-1} &k> 0\\
+        \beta_1  &k \leq0 \\ 
+    \end{dcases}
+\end{align}
+\label{eq:13_ladder}
+\end{subequations}
+Such a distribution we term `Cauchy-like' because this relation would
+hold exactly for a (wrapped) Cauchy distribution \cite{mardiaStatisticsDirectionalData1975}, which has a geometric
+characteristic sequence:
+\begin{equation}
+\beta_{k}^{(\text{Cauchy})} = \beta_{1}^{|k|}.
+\end{equation}
+
+The definition of a closure approximation in terms of a ladder operator keeps us from over committing to the Cauchy shape; the closure at \(n\)-th order simply requires:
+\begin{equation}
+\eta_{n}^{+}\beta_{n} = \beta_{n + 1}.
+\end{equation}
+What are the effects of this approximation to the characteristic
+sequence? Closing the sequence in this manner results in the following
+expansion of the \(n\)th order alignment tensor:
+
+\begin{equation}\left\langle \boldsymbol{l}^{\otimes n}(\delta) \right\rangle_{\boldsymbol{r}}^{(L)} \approx sym\left\lbrack {\overline{\boldsymbol{l}}}_{r} \otimes \left\langle \boldsymbol{l}^{\otimes n}(\delta) \right\rangle_{\boldsymbol{r}}^{(L)} \right\rbrack + O(\epsilon).\end{equation}
+
+For a detailed derivation of these relations by means of this recursion
+relation for the Fourier components of the tensor power sequence shown
+in Eq. (11), we refer the reader to Appendix A.
+
+In order to test such an assumption, we may evaluate the accuracy of the
+following closure approximations at second and third order,
+respectively:
+\begin{align}
+\beta_{2} &\approx \beta_{1}^{2}\label{eq:LB1}\\
+\beta_{3} &\approx \beta_1\beta_2\label{eq:LB2}
+\end{align}
+which correspond to the following expressions for the alignment tensors [cf. Eq. (\ref{eq:alignmentTensorsChar})]:
+\begin{subequations}
+\begin{align}
+    \left\langle \boldsymbol{l}^{\otimes 2}(\delta) \right\rangle_{\boldsymbol{r}}^{(L)}&\approx\frac{1}{2}\left\lbrack \left( 1 + \beta_{1}^{2} \right)\overline{\boldsymbol{ll}} + \left( 1 - \beta_{1}^{2} \right)\overline{\boldsymbol{pp}} \right\rbrack,\\
+    \left\langle \boldsymbol{l}^{\otimes 3}(\delta) \right\rangle_{\boldsymbol{r}}^{(L)}&\approx\frac{\beta_{1}}{4}\left\lbrack \left( 3 + \beta_{2} \right)\overline{\boldsymbol{ll}} + \left( 2\beta_{1}^{- 2} + 1 - \beta_{2} \right)\overline{\boldsymbol{pp}} \right\rbrack.
+\end{align}
+\end{subequations}
+
+\subsection{Maximum entropy closure of the alignment tensor
+hierarchy}
+For comparison, we will also present here the closure approximations for the maximum entropy approach due to Monavari et al. \cite{Monavari2016}. The maximum entropy approach derives from finding the extremum of the entropy functional
+\begin{equation}S\lbrack f\rbrack \coloneqq \int_{S^{1}}^{}{f(\delta)\ln{f(\delta)}d\delta}\end{equation}
+subject to the constraint of the first \(n\) moments of the
+distribution:
+\begin{equation}
+\int_{S^{1}}^{}{f(\delta)\cos^{k}\delta} = M_{k},\qquad k = 1,\ldots n.
+\end{equation}
+This common approach formalizes a concept of the `maximally ignorant' distribution which could agree with the first \emph{n} known moments. The result is that the fluctuation distribution can be given in terms of Lagrange multipliers $\lambda_{1}, \dots, \lambda_n$, which in turn are functions of the known moments:
+\begin{equation}
+f(\delta) \approx \frac{1}{Z\left( M_{1},\ldots,M_{n} \right)}\exp{\left\lbrack {\sum_{k = 1}^{n}{\lambda_{k}\left( M_{1},\ldots M_{n} \right)}\cos^{k}}\delta \right\rbrack.}
+\end{equation}
+$Z$ is the partition function, serving to normalize the distribution. From this approximate distribution, the higher order moments can be evaluated. The Lagrange parameters tend to be non-linear functions of the constrained moments. The resulting closure relations for the higher order moment functions are closely approximated in the relevant regions of the space of lower order moments by the following polynomials. For closure at second order, the second moment is given approximately by \cite{Monavari2016}:
+\begin{equation}
+M_{2}^{(L)}(\boldsymbol{r)} = \frac{1}{4}\left( 2 + M_{1}^{2} + \beta_{1}^{6} \right).
+\end{equation}
+For closure at third order, the third moment is given by:
+\begin{equation}M_{3}^{(L)}(\boldsymbol{r)} = M_{1}\sqrt{M_{2}}.\end{equation}
+By utilizing the power reduction formulae describing the equivalence between the characteristic sequence and moments, these reduce, respectively, to the following closure approximations for the characteristic sequence:
+\begin{align}
+\beta_{2}^{(L)}\left( \boldsymbol{r} \right) &\approx \frac{1}{2}\left( \beta_1^2 + \beta_{1}^{6} \right),   \label{eq:ME1} \\
+\beta_{3}^{(L)}\left( \boldsymbol{r} \right) &\approx 2\sqrt{2}\beta_{1}\left( \sqrt{1 + \beta_{2}} - 3 \right).\label{eq:ME2}
+\end{align}
+Compared to the line bundle closure, the maximum entropy closure more aggressively flattens the orientation distribution, as is seen from the $\beta_1^6$ term in the first order closure.
+
+\subsection{A note on the closure of local and global orientation
+distributions}
+
+We now have two sets of closure relations, the line bundle relations [\cref{eq:LB1,eq:LB2}] and the maximum entropy relations [\cref{eq:ME1,eq:ME2}]. There is one remaining issue which must be addressed before we can evaluate the closure relations from discrete dislocation data. This issue is that the closure relations are all relations between local moments of the fluctuation distribution: the characteristic sequence in general may vary from point to point within the crystal. As we will now show, the requirement for the closure relations to obtain with respect to the global distribution [\cref{eq:6globFDFdef}] is not that the fluctuations are identically distributed, but only that they are independently distributed. Thus, while the local characteristic sequence may differ from the global characteristic sequence, the closure relations which obtain locally also obtain globally.
+
+It is clear that the global average of a local angular average is equal to the equivalent angular average with respect to the global fluctuation distribution, regardlesss of statistical independence. Letting the following bracket notation denote the spatial average of some quantity $C\left( \boldsymbol{r}\right)$ over the domain $\mathcal{M}$:
+\begin{equation}
+    \left\lbrack C\left( \boldsymbol{r} \right) \right\rbrack_{\mathcal{M}}^{(L)} \coloneqq \frac{1}{\left| \mathcal{L} \right|}\int_{\mathcal{M}}^{}\rho^{(L)}\left( \boldsymbol{r} \right)C\left( \boldsymbol{r} \right)d^{3}\boldsymbol{r},
+\end{equation}
+the statement above follows simply by interchange of integrals:
+\begin{subequations}
+\begin{align}
+    \left\langle A(\delta) \right\rangle^{(L)} &= \int_{S^{1}}^{}{d\delta\ A(\delta)}f^{(L)}(\delta)\\
+    &= \int_{S^{1}}^{}{d\delta\ A(\delta)}\left\lbrack f_{\boldsymbol{r}}^{(L)}(\delta) \right\rbrack_{\mathcal{M}}^{(L)}\\
+    &= \left\lbrack \int_{S^{1}}^{}{d\delta\ A(\delta)f_{\boldsymbol{r}}^{(L)}(\delta)} \right\rbrack_{\mathcal{M}}^{(L)}\\
+    &= \left\lbrack \left\langle A(\delta) \right\rangle_{\boldsymbol{r}}^{(L)} \right\rbrack_{\mathcal{M}}^{(L)}.
+\end{align}\label{eq:interchangeofav}
+\end{subequations}
+
+The above simple case would extend to any linear combination of angular averages as well. However, all of the closure relations involve non-linear functions of angular averages [Eqs. (\ref{eq:LB1}-\ref{eq:LB2}, \ref{eq:ME1}-\ref{eq:ME2})]. That these relations would hold in the case of the global fluctuation distribution is not immediately clear. In order to show that the non-linear functions of angular averages (e.g. \(\beta_{1}^{2}\), \(\sqrt{1 + \beta_{2}}\), \(\beta_{1}\beta_{2}\)) can be evaluated from the global distribution, we simply wish to show that:
+\begin{equation}
+\left\lbrack \left\langle A(\delta) \right\rangle_{\boldsymbol{r}}^{(L)}\left\langle B(\delta) \right\rangle_{\boldsymbol{r}}^{(L)} \right\rbrack_{\mathcal{M}}^{(L)} = \left\langle A(\delta) \right\rangle^{(L)}\left\langle B(\delta) \right\rangle^{(L)}. \label{eq:18_loctoglobclos}
+\end{equation}
+
+By introducing a second volume average over \(\boldsymbol{r}'\), we may rewrite this equation in such a way that the issue is clearer:
+\begin{widetext}
+\begin{equation}\left\lbrack \left\lbrack \left\langle A(\delta) \right\rangle_{\boldsymbol{r}}^{(L)}\left\langle B(\delta) \right\rangle_{\boldsymbol{r}^{\boldsymbol{'}}}^{(L)}\hat{\delta}\left( \boldsymbol{r -}\boldsymbol{r}^{\boldsymbol{'}} \right) \right\rbrack_{\mathcal{M}}^{(L)} \right\rbrack_{\mathcal{M}^{'}}^{(L)} = \left\lbrack \left\lbrack \left\langle A(\delta) \right\rangle_{\boldsymbol{r}}^{(L)}\left\langle B(\delta) \right\rangle_{\boldsymbol{r}^{\boldsymbol{'}}}^{(L)} \right\rbrack_{\mathcal{M}}^{(L)} \right\rbrack_{\mathcal{M}^{'}}^{(L)}
+\end{equation}
+\end{widetext}
+The requirement for this equality to hold is that spatial measurements
+of the fluctuation distribution must be independent. We assume the
+fluctuation distributions are statistically independent,\footnote{An
+  assumption supported by the data as calculated in the following
+  section.} and thus the second integration over \(\boldsymbol{r}'\) is
+unaffected by the fact that it must consider the same field point as the
+first integration over \(\boldsymbol{r}\).
+
+Because the products of local angular averages can be represented as
+products of the equivalent global average [\cref{eq:18_loctoglobclos}], and assuming that the closure relation $h$ has a Taylor expansion, we see that:
+\begin{align}\bigg\lbrack h\Big( \left\langle A(\delta) \right\rangle_{\boldsymbol{r}}^{(L)},&\left\langle B(\delta) \right\rangle_{\boldsymbol{r}}^{(L)},\ldots \Big) \bigg\rbrack_{\mathcal{M}}^{(L)} = \nonumber\\
+ & h\left( \left\langle A(\delta) \right\rangle^{(L)},\left\langle B(\delta) \right\rangle^{(L)},\ldots \right)
+\end{align}
+
+Thus, it suffices for our evaluation of the closure relations [Eqs. (\ref{eq:LB1}-\ref{eq:LB2}, \ref{eq:ME1}-\ref{eq:ME2})] to consider their efficacy on the characteristic sequence of the global distribution [\cref{eq:6globFDFdef}] across a spectrum of coarse-graining lengths \(L\).
+

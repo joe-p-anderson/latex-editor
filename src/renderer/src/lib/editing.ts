@@ -11,7 +11,9 @@
 //    of an environment renames the other;
 //  - typing $ pairs it;
 //  - completion for commands (with argument placeholders), environments,
-//    \ref labels, and the vault's snippet file;
+//    \ref labels, \cite keys (searched by author, title and year), and the
+//    vault's snippet file;
+//  - typing \cite{ opens the cite picker; hovering a cite key shows its entry;
 //  - folding of environments, sections and questions;
 //  - F2 on a \label or \ref key renames it across the vault;
 //  - Ctrl+Alt+T, or pasting spreadsheet cells, opens the table editor.
@@ -20,7 +22,9 @@ import { snippet, startCompletion, type Completion, type CompletionContext, type
 import { insertNewlineAndIndent } from '@codemirror/commands'
 import { foldService, indentUnit } from '@codemirror/language'
 import { EditorSelection, EditorState, Prec, StateField, type Extension } from '@codemirror/state'
-import { EditorView, keymap } from '@codemirror/view'
+import { EditorView, hoverTooltip, keymap } from '@codemirror/view'
+import { citeKeyAt, entryText, OPEN_CITE, searchBib } from '@shared/bibtex'
+import type { Citations } from './citations'
 import {
   beginEnter,
   blankComments,
@@ -63,6 +67,10 @@ export interface EditingHooks {
    * the cursor), with `grid` pasted in at the cursor's row when given.
    */
   editTable(range: { from: number; to: number } | null, grid: string[][] | null): void
+  /** The open document's bibliography, once loaded. */
+  citations(): Citations | null
+  /** Open the cite picker (typing \cite{, Ctrl+Shift+C). */
+  openCitePicker(): void
 }
 
 export function latexEditing(hooks: EditingHooks): Extension {
@@ -101,6 +109,8 @@ export function latexEditing(hooks: EditingHooks): Extension {
       ]),
     ),
     EditorView.inputHandler.of(dollar),
+    EditorView.inputHandler.of((view, from, to, text) => citeOpened(view, from, text, hooks)),
+    citeHover(hooks),
     mirrorRenames,
     structure,
     folding,
@@ -131,6 +141,46 @@ function tablePaste(hooks: EditingHooks): Extension {
       hooks.editTable(tableRangeAt(view.state.doc.toString(), view.state.selection.main.head), grid)
       return true
     },
+  })
+}
+
+/**
+ * Typing the { of an empty \cite{ (or \citep[…]{, \parencite{, …) opens the
+ * cite picker once the brace is in. Returns false: the brace goes in as usual.
+ */
+function citeOpened(view: EditorView, from: number, text: string, hooks: EditingHooks): boolean {
+  if (text !== '{' || !hooks.citations()?.info.entries.length) return false
+  const line = view.state.doc.lineAt(from)
+  const before = line.text.slice(0, from - line.from) + '{'
+  const after = line.text.slice(from - line.from)
+  // Only a fresh one: nothing typed in it yet (the brace may be auto-closed after).
+  if (OPEN_CITE.exec(before)?.[1] !== '' || /^[^}\s]/.test(after)) return false
+  setTimeout(() => hooks.openCitePicker(), 0)
+  return false
+}
+
+/** Hovering a key in \cite{…} shows its entry. */
+function citeHover(hooks: EditingHooks): Extension {
+  return hoverTooltip((view, pos) => {
+    const cites = hooks.citations()
+    if (!cites) return null
+    const line = view.state.doc.lineAt(pos)
+    const hit = citeKeyAt(line.text, pos - line.from)
+    if (!hit) return null
+    const entry = cites.byKey.get(hit.key)
+    const label = cites.info.labels[hit.key]
+    return {
+      pos: line.from + hit.from,
+      end: line.from + hit.to,
+      above: true,
+      create: () => {
+        const dom = document.createElement('div')
+        dom.className = 'cm-cite-card'
+        dom.textContent = entry ? `${label ? `[${label}] ` : ''}${entryText(entry)}` : `No entry "${hit.key}" in ${cites.info.bibs.join(', ') || 'the bibliography'}`
+        if (!entry) dom.classList.add('missing')
+        return { dom }
+      },
+    }
   })
 }
 
@@ -375,6 +425,9 @@ function complete(ctx: CompletionContext, hooks: EditingHooks): CompletionResult
   const env = /\\(begin|end)\s*\{([^}\s\\]*)$/.exec(before)
   if (env) return completeEnvironment(ctx, hooks, env[1] as 'begin' | 'end', ctx.pos - env[2].length)
 
+  const cite = OPEN_CITE.exec(before)
+  if (cite) return completeCite(ctx, cite[1], hooks)
+
   const ref = /\\(?:ref|eqref|cref|Cref|autoref|pageref|nameref|vref)\s*\{([^}]*)$/.exec(before)
   if (ref) {
     return {
@@ -387,6 +440,30 @@ function complete(ctx: CompletionContext, hooks: EditingHooks): CompletionResult
   const cmd = /(?<!\\)\\([A-Za-z@]*)$/.exec(before)
   if (!cmd || (!cmd[1] && !ctx.explicit)) return null
   return { from: ctx.pos - cmd[0].length, options: commandOptions(hooks), validFor: /^\\[A-Za-z@]*$/ }
+}
+
+/**
+ * Keys for the cite command the cursor is in: the word after the last comma
+ * is matched against each entry's key, authors, title, year and journal, not
+ * just the key, and the best matches come first.
+ */
+function completeCite(ctx: CompletionContext, typed: string, hooks: EditingHooks): CompletionResult | null {
+  const cites = hooks.citations()
+  if (!cites?.info.entries.length) return null
+  const word = typed.slice(typed.lastIndexOf(',') + 1).trimStart()
+  if (!word && !ctx.explicit) return null
+  const matches = searchBib(cites.info.entries, word).slice(0, 60)
+  return {
+    from: ctx.pos - word.length,
+    filter: false,
+    options: matches.map((e, i) => ({
+      label: e.key,
+      detail: `  ${[e.author, e.year].filter(Boolean).join(' ')}${cites.info.labels[e.key] ? ` [${cites.info.labels[e.key]}]` : ''}`,
+      info: [e.title, e.venue].filter(Boolean).join('. '),
+      type: 'text',
+      boost: -i,
+    })),
+  }
 }
 
 function commandOptions(hooks: EditingHooks): Completion[] {
