@@ -60,7 +60,6 @@
       <div
         class="tab"
         class:active={rel === active}
-        class:paper={papers.has(rel)}
         class:drop-before={dropAt === i && dragging !== i && dragging !== i - 1}
         class:drop-after={dropAt === i + 1 && i === tabs.length - 1 && dragging !== i}
         role="tab"
@@ -86,6 +85,7 @@
         }}
         onmousedown={(e) => e.button === 1 && e.preventDefault()}
       >
+        {#if papers.has(rel)}<span class="pmark" aria-label="Part of {papers.get(rel)}">§</span>{/if}
         <span class="name">{name(rel)}</span>
         {#if (clashes.get(name(rel)) ?? 0) > 1 && folder(rel)}<span class="dir">{folder(rel)}</span>{/if}
         <button
@@ -132,9 +132,11 @@
   .tab:hover {
     color: var(--ink);
   }
-  /* a paper's files: a band of the detail colour along the foot */
-  .tab.paper {
-    box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--detail) 60%, transparent);
+  /* a paper's files: a § before the name */
+  .pmark {
+    margin-right: -3px;
+    color: var(--detail);
+    font: 600 13px var(--f-page);
   }
   .tab.active {
     background: var(--desk);

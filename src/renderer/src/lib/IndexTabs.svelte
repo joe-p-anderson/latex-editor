@@ -33,7 +33,6 @@
       <div
         class="itab"
         class:on={rel === active}
-        class:paper={papers.has(rel)}
         role="tab"
         tabindex="0"
         aria-selected={rel === active}
@@ -49,6 +48,7 @@
         onmousedown={(e) => e.button === 1 && e.preventDefault()}
       >
         {#if dirty.has(rel)}<span class="dot" title="Unsaved"></span>{/if}
+        {#if papers.has(rel)}<span class="pmark" aria-label="Part of {papers.get(rel)}">§</span>{/if}
         <span class="nm">{name(rel)}</span>
         <button
           class="x"
@@ -185,11 +185,10 @@
     opacity: 1;
     background: rgba(0, 0, 0, 0.12);
   }
-  /* a paper's files: a band of the detail colour on the tab's outer edge */
-  .itab.paper {
-    box-shadow: inset 3px 0 0 color-mix(in srgb, var(--detail) 65%, transparent);
-  }
-  .rail.top .itab.paper {
-    box-shadow: inset 0 3px 0 color-mix(in srgb, var(--detail) 65%, transparent);
+  /* a paper's files: a § before the name */
+  .pmark {
+    margin-right: 3px;
+    color: var(--detail);
+    font-weight: 600;
   }
 </style>

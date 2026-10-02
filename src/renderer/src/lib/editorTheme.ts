@@ -48,6 +48,9 @@ const theme = EditorView.theme({
   '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
     backgroundColor: 'color-mix(in srgb, var(--detail) 28%, transparent)',
   },
+  // CodeMirror draws the selection beneath the text, but the page's paper is
+  // painted on the text layer itself and would hide it: lift it above, see-through.
+  '.cm-selectionLayer': { zIndex: '1 !important', pointerEvents: 'none' },
   '.cm-activeLine': { backgroundColor: 'color-mix(in srgb, var(--ink) 4%, transparent)' },
   '&.cm-live .cm-activeLine:not(.cm-live-src)': { backgroundColor: 'transparent' },
   '.cm-activeLineGutter': { backgroundColor: 'transparent', color: 'var(--ink-soft)' },

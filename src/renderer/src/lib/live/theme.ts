@@ -27,7 +27,7 @@ export const liveTheme = EditorView.baseTheme({
   '&.cm-live .cm-live-fence': { lineHeight: '1.1' },
   '.cm-live-fence-tag': {
     fontFamily: ui,
-    fontSize: '10px',
+    fontSize: 'calc(var(--page-size) * 0.58)',
     letterSpacing: '0.04em',
     textTransform: 'uppercase',
     color: muted,
@@ -54,7 +54,7 @@ export const liveTheme = EditorView.baseTheme({
   '.cm-live-marker.correct .cm-live-marker-label': { color: 'var(--ok)' },
   '.cm-live-points': {
     fontFamily: ui,
-    fontSize: '10px',
+    fontSize: 'calc(var(--page-size) * 0.6)',
     color: muted,
     border: '1px solid var(--line)',
     borderRadius: '8px',
@@ -82,7 +82,7 @@ export const liveTheme = EditorView.baseTheme({
     margin: '4px 0 10px',
     padding: '4px 10px',
     fontFamily: ui,
-    fontSize: '12px',
+    fontSize: 'calc(var(--page-size) * 0.7)',
     color: muted,
     background: 'var(--side)',
     border: '1px solid var(--line)',
@@ -105,13 +105,12 @@ export const liveTheme = EditorView.baseTheme({
   // An abstract's text, set in from both sides and a touch smaller.
   '&.cm-live .cm-live-inset': { paddingLeft: '2.2em', paddingRight: '2.2em', fontSize: '0.92em' },
 
-
   // An \input'ed file of a paper: its name and numbered headings.
   '.cm-live-include': {
     margin: '4px 0',
     padding: '5px 12px 6px',
     fontFamily: ui,
-    fontSize: '12px',
+    fontSize: 'calc(var(--page-size) * 0.76)',
     lineHeight: '1.5',
     color: muted,
     background: 'var(--side)',
@@ -126,7 +125,7 @@ export const liveTheme = EditorView.baseTheme({
   '.cm-live-include.missing': { borderLeftColor: 'var(--err)' },
   '.cm-live-include-head': { display: 'flex', alignItems: 'baseline', gap: '8px' },
   '.cm-live-include-icon': { color: 'var(--detail)' },
-  '.cm-live-include-file': { fontWeight: '600', color: 'var(--ink)', fontFamily: 'var(--f-mono)', fontSize: '11.5px' },
+  '.cm-live-include-file': { fontWeight: '600', color: 'var(--ink)', fontFamily: 'var(--f-mono)', fontSize: '0.95em' },
   '.cm-live-include-note': { fontStyle: 'italic' },
   '.cm-live-include.missing .cm-live-include-note': { color: 'var(--err)' },
   '.cm-live-include-h': { display: 'flex', gap: '8px', paddingLeft: '20px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--ink)' },
@@ -171,7 +170,7 @@ export const liveTheme = EditorView.baseTheme({
     alignItems: 'center',
     gap: '3px',
     fontFamily: ui,
-    fontSize: '11px',
+    fontSize: 'calc(var(--page-size) * 0.74)',
     lineHeight: '1.5',
     padding: '0 6px',
     borderRadius: '9px',

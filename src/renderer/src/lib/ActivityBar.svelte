@@ -1,7 +1,7 @@
 <script lang="ts" module>
   import type { IconName } from './icons'
 
-  export type View = 'files' | 'search' | 'symbols' | 'cite' | 'appearance'
+  export type View = 'files' | 'contents' | 'search' | 'symbols' | 'cite' | 'appearance'
   export interface ViewButton {
     id: View
     icon: IconName

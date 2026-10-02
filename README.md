@@ -192,7 +192,7 @@ Inside `\cite{…}`, completion offers keys the same way: `\cite{kocks` finds `k
 
 ### Multi-part papers
 
-A paper split into files (`main.tex` with `\input{1_Intro}`, `\input{2_methods}`, …) can be marked as a **multi-part paper**. Open any of its files: Contents offers **Mark as paper** when a document brings in other files. Marking records the paper in `.vault.json` (`"papers": ["main.tex"]`) and adds `% !TEX root = main.tex` to the top of each of its files, so other editors build the right document too.
+A paper split into files (`main.tex` with `\input{1_Intro}`, `\input{2_methods}`, …) can be marked as a **multi-part paper**. Open any of its files: the **Contents** view (its own icon in the activity bar, or click the section in the status bar) offers **Mark as paper** when a document brings in other files. Marking records the paper in `.vault.json` (`"papers": ["main.tex"]`) and adds `% !TEX root = main.tex` to the top of each of its files, so other editors build the right document too.
 
 In a marked paper, each file reads as part of the whole:
 
@@ -201,9 +201,9 @@ In a marked paper, each file reads as part of the whole:
 - `\ref` and `\eqref` to a label in another file show its number. Ctrl+click opens that file at the label. Completion inside `\ref{…}` offers the paper's labels, e.g. `eq:closure  Eq. (41) · 3_reduced`.
 - In `main.tex`, each `\input` shows as a card with the file's numbered sections. Click it to open the file; Alt+click edits the line. A commented-out `\input` shows dimmed, as switched off.
 - The title bar shows where you are, e.g. `3_reduced.tex · main §III` or `main §VI–VII`, and the status bar the section under the cursor with its number.
-- The paper's tabs are marked with a band of the detail colour.
+- The paper's tabs have a § before the file name.
 
-**The paper map.** In a marked paper, Contents lists every file in reading order, each with its § numbers and numbered sections. Click a file or a section to open it there.
+**The paper map.** In a marked paper, Contents lists every file in reading order, each with its § numbers and numbered sections. Click a file or a section to open it there. The open file shows all its headings; the others show their top-level sections.
 
 - **Reorder:** drag a file among its siblings. Its `\input` line moves, with any comment lines just above it.
 - **Switch off:** the eye comments out the file's `\input`, leaving it out of the build; click again to switch it back on.

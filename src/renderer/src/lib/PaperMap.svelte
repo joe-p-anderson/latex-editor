@@ -201,7 +201,8 @@
             <button class="icon more" title="More" aria-label="More" onclick={(e) => fileMenu(e, r)}><Icon name="more" size={14} /></button>
           {/if}
         </div>
-        {#each r.headings as h (h.line)}
+        <!-- The open file in full; the others by their top-level sections, to keep the map short. -->
+        {#each r.rel === active ? r.headings : r.headings.filter((x) => x.level <= top) as h (h.line)}
           <button
             class="h l{h.level - top}"
             class:current={r.rel === active && h.line === currentLine}

@@ -106,7 +106,6 @@
   let panelTab = $state<'problems' | 'log'>('problems')
   // Sidebar sections (Files, Contents) folded open or closed.
   let filesSection = $state(true)
-  let contentsSection = $state(true)
   $effect(() => {
     const layout = { split, pdfOpen, sideOpen, sideWidth, panelHeight }
     try {
@@ -134,7 +133,8 @@
   }
 
   const VIEWS: ViewButton[] = [
-    { id: 'files', icon: 'files', tip: 'Files and contents' },
+    { id: 'files', icon: 'files', tip: 'Files' },
+    { id: 'contents', icon: 'contents', tip: "Contents: the file's sections, or the whole paper's" },
     { id: 'search', icon: 'search', tip: 'Search the vault (Ctrl+Shift+H)' },
     { id: 'symbols', icon: 'symbols', tip: 'Symbols' },
   ]
@@ -218,6 +218,7 @@
 
   /** After the paper's structure changed: read it again and build it. */
   async function afterPaperEdit(): Promise<void> {
+    lastRenumber = null // another change: the last renumbering is no longer the one to undo
     if (active) await loadPaper(active)
     if (paper) await compile(paper.root)
   }
@@ -256,7 +257,7 @@
       paperPrompt = {
         title: 'New section file',
         initial: '',
-        hint: `The section's title. The file goes beside the paper's other files, ${rel ? `after ${rel.split('/').pop()}` : 'at the end'}.`,
+        hint: `The section's title (its file is named from it), or a file name such as 5_Methods.tex. It goes beside the paper's other files, ${rel ? `after ${rel.split('/').pop()}` : 'at the end'}.`,
         run: (title) => newSectionFile(p.root, rel, title),
       }
     },
@@ -305,7 +306,12 @@
     if (!title || !paper) return
     const parent = after ? (fileOf(after)?.parent ?? root) : root
     const siblings = paper.files.filter((f) => f.parent === parent && f.include).map((f) => ({ rel: f.rel, arg: f.include!.arg }))
-    const { rel, arg } = placeNewFile(slugify(title), root, siblings, taken)
+    // A file name (5_Methods.tex, more_appendices) is used as typed, and the
+    // heading made from it; a title names the file.
+    const asName = /\.tex$/i.test(title) || (/^[\w.-]+$/.test(title) && /[_-]/.test(title))
+    const fileBase = asName ? title.replace(/\.tex$/i, '').replace(/[^\w.-]+/g, '_') : slugify(title)
+    if (asName) title = title.replace(/\.tex$/i, '').replace(/^\d+[_-]/, '').replace(/[_-]+/g, ' ').trim() || title
+    const { rel, arg } = placeNewFile(fileBase, root, siblings, taken)
     await window.api.writeFile(rel, `${rootComment(rel, root)}\n\\section{${title}}\n\n`)
     await editAndSave(parent, (t) => {
       const line = `\\input{${arg}}\n`
@@ -392,9 +398,9 @@
   async function renumber(): Promise<void> {
     const plan = renames
     if (!plan.length || !(await applyRenames(plan))) return
-    lastRenumber = plan
     flash(`Renumbered ${plan.length} file${plan.length === 1 ? '' : 's'}`)
     await afterPaperEdit()
+    lastRenumber = plan
   }
   async function undoRenumber(): Promise<void> {
     const plan = lastRenumber
@@ -1422,53 +1428,52 @@
             </button>
             {#if filesSection}<div class="sec-b"><FileTree nodes={vault.tree} {active} {dirty} onopen={openFile} /></div>{/if}
           </section>
+        </div>
+        <!-- Contents: the open file's outline, or the paper map for a file of a marked paper. -->
+        <div class="side-body contents-view" hidden={view !== 'contents'}>
           {#if active?.endsWith('.tex')}
-            <section class="sec contents" class:open={contentsSection}>
-              <button class="sec-h" onclick={() => (contentsSection = !contentsSection)}>
-                <Icon name="chev" size={12} /><span class="t">Contents</span>
-              </button>
-              {#if contentsSection}
-                <div class="sec-b">
-                  {#if paper && !paper.declared && paper.files.length > 1}
-                    <div class="paper-offer">
-                      <span><strong>{paper.root.split('/').pop()}</strong> brings in {paper.files.length - 1} other file{paper.files.length === 2 ? '' : 's'}. Treat it as a multi-part paper, so each file builds it and numbers as part of it?</span>
-                      <button onclick={() => markPaper(true)}>Mark as paper</button>
-                    </div>
-                  {/if}
-                  {#if paper?.declared && inPaper(active)}
-                    <PaperMap
-                      {paper}
-                      model={paperModel}
-                      {active}
-                      {cursorLine}
-                      activeOutline={outlineItems}
-                      {renames}
-                      onrenumber={renumber}
-                      ondismissrenumber={() => (keptOrder = new Set(keptOrder).add(JSON.stringify(renames)))}
-                      actions={paperActions}
-                    />
-                    {#if trashOffer}
-                      {@const t = trashOffer}
-                      <div class="paper-offer">
-                        <span><strong>{t.rel.split('/').pop()}</strong> is now part of {t.into.split('/').pop()}, and nothing includes it. Send it to the Recycle Bin?</span>
-                        <span class="row">
-                          <button onclick={trashPutBack}>Send to Recycle Bin</button>
-                          <button onclick={() => (trashOffer = null)}>Keep it</button>
-                        </span>
-                      </div>
-                    {/if}
-                    {#if lastRenumber}
-                      <div class="paper-offer">
-                        <span>Renumbered {lastRenumber.length} file{lastRenumber.length === 1 ? '' : 's'}.</span>
-                        <button onclick={undoRenumber}>Undo</button>
-                      </div>
-                    {/if}
-                  {:else}
-                    <Outline items={outlineItems} {cursorLine} onjump={(line) => editor?.gotoLine(line)} />
-                  {/if}
+            {#if paper && !paper.declared && paper.files.length > 1}
+              <div class="paper-offer">
+                <span><strong>{paper.root.split('/').pop()}</strong> brings in {paper.files.length - 1} other file{paper.files.length === 2 ? '' : 's'}. Treat it as a multi-part paper, so each file builds it and numbers as part of it?</span>
+                <button onclick={() => markPaper(true)}>Mark as paper</button>
+              </div>
+            {/if}
+            {#if paper?.declared && inPaper(active)}
+              <PaperMap
+                {paper}
+                model={paperModel}
+                {active}
+                {cursorLine}
+                activeOutline={outlineItems}
+                {renames}
+                onrenumber={renumber}
+                ondismissrenumber={() => (keptOrder = new Set(keptOrder).add(JSON.stringify(renames)))}
+                actions={paperActions}
+              />
+              {#if trashOffer}
+                {@const t = trashOffer}
+                <div class="paper-offer">
+                  <span><strong>{t.rel.split('/').pop()}</strong> is now part of {t.into.split('/').pop()}, and nothing includes it. Send it to the Recycle Bin?</span>
+                  <span class="row">
+                    <button onclick={trashPutBack}>Send to Recycle Bin</button>
+                    <button onclick={() => (trashOffer = null)}>Keep it</button>
+                  </span>
                 </div>
               {/if}
-            </section>
+              {#if lastRenumber}
+                <div class="paper-offer">
+                  <span>Renumbered {lastRenumber.length} file{lastRenumber.length === 1 ? '' : 's'}.</span>
+                  <span class="row">
+                    <button onclick={undoRenumber}>Undo</button>
+                    <button onclick={() => (lastRenumber = null)}>Done</button>
+                  </span>
+                </div>
+              {/if}
+            {:else}
+              <Outline items={outlineItems} {cursorLine} onjump={(line) => editor?.gotoLine(line)} />
+            {/if}
+          {:else}
+            <p class="side-empty">Open a .tex file to see its contents.</p>
           {/if}
         </div>
         <div class="side-body" hidden={view !== 'search'}>
@@ -1579,9 +1584,8 @@
       problems={problemCounts}
       onendpaper={() => showView('appearance')}
       onsection={() => {
-        view = 'files'
+        view = 'contents'
         sideOpen = true
-        contentsSection = true
       }}
       onlive={() => editor?.toggleLiveMode()}
       onspelling={() => setSpelling(!spellOn)}
@@ -1719,14 +1723,15 @@
     flex-direction: column;
     min-height: 0;
   }
-  .sec + .sec {
-    border-top: 1px solid var(--line);
-  }
   .sec.grow.open {
     flex: 1;
   }
-  .sec.contents.open {
-    flex: 0 1 44%;
+  .contents-view {
+    padding-top: 6px;
+  }
+  .side-empty {
+    margin: 8px 12px;
+    color: var(--ink-soft);
   }
   .sec-h {
     flex: none;
