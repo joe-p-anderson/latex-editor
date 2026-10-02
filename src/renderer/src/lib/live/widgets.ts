@@ -404,7 +404,7 @@ export class NeighbourWidget extends WidgetType {
       e.preventDefault()
       view.dom.dispatchEvent(new CustomEvent<OpenLocation>(OPEN_LOCATION_EVENT, { bubbles: true, detail: { file: this.rel, line: 1 } }))
     })
-    return dom
+    return spaced(dom)
   }
 }
 
