@@ -3,6 +3,7 @@ import type { BibSummary } from './bibtex'
 import type { CommandSig } from './latexedit'
 import type { MacroDefs } from './mathrender'
 import type { PaperFile } from './project'
+import type { Counters } from './livemodel'
 import type { SearchOptions, SearchResult } from './search'
 
 // Types shared by the main process, the preload bridge and the renderer.
@@ -100,6 +101,20 @@ export interface CompileResult {
   draft: boolean
   /** The build started from the cached preamble format. */
   preloaded?: boolean
+  /** Just one section of a multi-part paper was built (its name, e.g. §III). */
+  section?: string
+  /** Why the whole paper was built when only a section was asked for. */
+  fullReason?: string
+}
+
+/** One section file of a marked paper, to build on its own. */
+export interface SectionTarget {
+  /** The file the root \inputs (the edited file, or the one it's inside). */
+  unit: string
+  /** Its starting counters, from the paper model. */
+  start: Counters
+  /** e.g. §III */
+  label: string
 }
 
 /** A rectangle on a PDF page, in PDF points from the page's top-left corner. */
@@ -187,6 +202,13 @@ export interface Api {
   paperInfo(rel: string): Promise<PaperInfo | null>
   /** Marks `root` as a multi-part paper, or unmarks it, in .vault.json. */
   declarePaper(root: string, on: boolean): Promise<void>
+  /**
+   * Builds just the section `rel` is in (a file of a marked paper). Saving
+   * (`saving`) builds the whole paper instead when the section alone can't
+   * be trusted (fullBuildReason); a preview builds the section unless there's
+   * no full build yet. Falls back to a full build when a section can't be made.
+   */
+  compileSection(rel: string, buffers: Record<string, string>, target: SectionTarget, saving: boolean): Promise<CompileResult | null>
   /** Every image in the vault, vault-relative. */
   listImages(): Promise<string[]>
   /** Copies an image from outside the vault into its image folder (or returns its path if inside). */

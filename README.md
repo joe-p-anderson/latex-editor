@@ -98,6 +98,8 @@ While you type math, its preview keeps the last version that rendered, faded, in
 | Ctrl+W | Close the tab, offering to save it first |
 | Ctrl+Tab / Ctrl+Shift+Tab | The most recently used tabs, while Ctrl is held |
 | Ctrl+PageDown / Ctrl+PageUp | The next / previous tab |
+| Alt+Left / Alt+Right | Back / forward through the places you jumped between (also the mouse's back and forward buttons, and ‹ › in the title bar) |
+| Alt+PageDown / Alt+PageUp | In a multi-part paper: the next / previous file in reading order |
 | Ctrl+Alt+S | Save every unsaved file, then compile once |
 | Ctrl+Shift+H | Search the vault, starting from the selected text |
 | Ctrl+Shift+C | Cite: open the cite picker (so does typing `\cite{`) |
@@ -212,6 +214,16 @@ In a marked paper, each file reads as part of the whole:
 - **Put back:** a file's ⋯ menu puts its text back in place of its `\input`, then offers to send the file to the Recycle Bin.
 - **Renumbering:** when the paper's files are named `1_Intro`, `2_Model`, … and a reorder or a new file puts them out of order, the map offers to renumber them, listing each rename first. A reorder reuses the same numbers (so `67_discussion` keeps 67); a new file takes the next number and the files after it move up only as far as they must. **Undo** puts the old names back.
 - The ⋯ by the paper's name can stop treating it as a multi-part paper.
+
+**Section builds.** While you work in a file of a marked paper, the preview builds just its section: the root's preamble, then only the `\input` you're in, starting from the numbers the paper gives it (section III's file starts at III, its equations carry on from the one before), with the labels and citations from the last full build. The PDF shows only that section, and the title bar says so (`§III · 1.4 s`). The switch over the PDF (**§III | Paper**) goes back to building the whole paper.
+
+- Saving builds just the section too, unless that could be wrong: the whole paper builds when it hasn't been built in full yet, when another of its files was saved since the last full build, or when the file defines a new label or cites a new key. Hovering over the build note says which, and why.
+- Build → Recompile always builds the whole paper and updates `pdf/`. Section builds never touch `pdf/`.
+- A file nested deeper (an `\input` inside a section file) builds the top-level file it's in.
+
+**Moving around a paper.** At the top and foot of each of its files are the files before and after it, a click away (Alt+PageUp, Alt+PageDown). Every jump (Ctrl+click on a ref, a citation or an `\input` card, Contents, Problems, search, the PDF, opening a file) can be undone with Alt+Left, and redone with Alt+Right. Going back switches to the file's tab, or reopens it: a file is only ever open once.
+
+**Search and rename within the paper.** In a paper's file, the search box's **§** limits the search (and replace) to the paper's files, listed in reading order. F2 on a label renames it and its references in the paper's files only.
 
 `\include`, `\subfile`, `\import` and `\subimport` are read too; `\input` is what the app recommends, since it doesn't force page breaks and every journal and arXiv accept it.
 

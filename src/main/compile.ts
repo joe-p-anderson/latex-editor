@@ -8,7 +8,7 @@
 //   - a preview build compiles unsaved buffers from a shadow folder
 //     (shadow.ts), without touching the vault or pdf/.
 import { spawn, type ChildProcess } from 'node:child_process'
-import { copyFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { delimiter, isAbsolute, join, posix, resolve } from 'node:path'
 import type { CompileResult, Problem } from '../shared/api'
 import { bibKeys, bibNeeds, bibStale, dropBibKey, runBib, saveBibKey, type BibJob, type BibTool } from './bibliography'
@@ -17,7 +17,10 @@ import { parseLog } from './logparser'
 import { definitionsFor } from './macros'
 import { buildFormat, dropFormat, preambleHash, preambleOf, usableFormat } from './preamble'
 import { declaredPaperOf, paperGraph } from './project'
-import { dirOf, isDocument, magicRoot } from '../shared/project'
+import { dirOf, isDocument, magicRoot, type PaperFile } from '../shared/project'
+import { labelsIn, sectionDocument } from '../shared/sectiondoc'
+import { citedKeys } from '../shared/bibtex'
+import type { Counters } from '../shared/livemodel'
 import { unshadow, writeShadow } from './shadow'
 import type { Vault } from './vault'
 
@@ -106,13 +109,7 @@ async function build(vault: Vault, rel: string, buffers: Record<string, string> 
   const shadow = buffers && Object.keys(buffers).length ? await writeShadow(vault.root, buffers) : null
   if (gen !== generation) return stale()
   const cwd = shadow ?? vault.root
-  const env = { ...process.env }
-  // '//' searches subfolders; the trailing separator keeps MiKTeX's default path.
-  // A document in a subfolder finds its \input pieces in its own folder
-  // (and the shadow's copy of it) before the vault root.
-  const docDirs = relDir ? [...(shadow ? [join(shadow, relDir)] : []), join(vault.root, relDir)] : []
-  const dirs = [...(shadow ? [shadow] : []), ...docDirs, ...(shadow || relDir ? [vault.root] : []), ...vault.templateDirs.map((d) => `${d}//`)]
-  if (dirs.length) env.TEXINPUTS = dirs.map((d) => `${d}${delimiter}`).join('')
+  const env = texEnv(vault, relDir, shadow)
   // \include{sections/x} writes sections/x.aux in the aux folder, which must exist.
   const { files: parts } = await paperGraph(vault, root, buffers ?? undefined).catch(() => ({ files: [] }))
   for (const f of parts) {
@@ -126,17 +123,9 @@ async function build(vault: Vault, rel: string, buffers: Record<string, string> 
   const rootText = buffers?.[root] ?? (await readFile(vault.abs(root), 'utf8').catch(() => ''))
   const preamble = vault.fastCompile ? preambleOf(rootText) : null
   const formatKey = preamble && `${cacheDir}|${preambleHash(preamble)}`
-  let format = preamble && !badFormats.has(formatKey!) ? await usableFormat(root, cacheDir, name, preamble, vault.root, [vault.root, ...vault.templateDirs]) : null
-  if (format && buffers) {
-    const dirty = new Set(Object.keys(buffers).map((r) => vault.abs(r).toLowerCase()))
-    if (format.deps.some((d) => dirty.has(d.toLowerCase()))) format = null
-  }
+  let format = await formatFor(vault, root, cacheDir, name, preamble, buffers)
 
-  const baseArgs = [
-    '-synctex=1', '-interaction=nonstopmode', '-file-line-error',
-    '-max-print-line=10000', // one message per line, no 79-column wrapping
-    `-aux-directory=${cacheDir}`, `-output-directory=${cacheDir}`,
-  ]
+  const baseArgs = baseArgsFor(cacheDir)
   const logPath = join(cacheDir, `${name}.log`)
   // The bibliography step runs (at most) once per build, after the first
   // pass that leaves an .aux asking for it.
@@ -153,9 +142,12 @@ async function build(vault: Vault, rel: string, buffers: Record<string, string> 
     let owed = 0
     for (;;) {
       passes++
+      // A pass that dies before writing its log must not be read as the last pass's.
+      await rm(logPath, { force: true }).catch(() => {})
       await runTool('pdflatex', args, cwd, env)
       if (gen !== generation) return null
       log = await readFile(logPath, 'utf8').catch(() => '')
+      if (!log) break // pdflatex didn't run (see the format check below)
       if (!bibChecked) {
         bibChecked = true
         const needs = await bibNeeds(bibJob)
@@ -181,6 +173,15 @@ async function build(vault: Vault, rel: string, buffers: Record<string, string> 
 
   let run = await runPasses(format?.fmt ?? null)
   if (!run) return stale()
+  // pdflatex can die loading a format before writing anything (MiKTeX does
+  // when the format's path is very long): build without it, and don't use it again.
+  if (format && formatKey && !run.log) {
+    badFormats.add(formatKey)
+    await dropFormat(cacheDir, name)
+    format = null
+    run = await runPasses(null)
+    if (!run) return stale()
+  }
   // A format that leads to errors is checked once against a plain build.
   // If that build is cleaner, the format is at fault (some packages can't
   // be preloaded): it's dropped and never used for this preamble again.
@@ -226,6 +227,156 @@ async function build(vault: Vault, rel: string, buffers: Record<string, string> 
 }
 
 const errorCount = (log: string) => (log.match(ERROR_LINES) ?? []).length
+
+/**
+ * pdflatex's environment: TEXINPUTS with the shadow folder (for a preview),
+ * the document's own folder, the vault root and the template libraries.
+ */
+function texEnv(vault: Vault, relDir: string, shadow: string | null): NodeJS.ProcessEnv {
+  const env = { ...process.env }
+  // '//' searches subfolders; the trailing separator keeps MiKTeX's default path.
+  // A document in a subfolder finds its \input pieces in its own folder
+  // (and the shadow's copy of it) before the vault root.
+  const docDirs = relDir ? [...(shadow ? [join(shadow, relDir)] : []), join(vault.root, relDir)] : []
+  const dirs = [...(shadow ? [shadow] : []), ...docDirs, ...(shadow || relDir ? [vault.root] : []), ...vault.templateDirs.map((d) => `${d}//`)]
+  if (dirs.length) env.TEXINPUTS = dirs.map((d) => `${d}${delimiter}`).join('')
+  return env
+}
+
+/**
+ * The preamble format, when there is a current one. A preview whose unsaved
+ * files include something the format was built from can't use it.
+ */
+async function formatFor(vault: Vault, root: string, cacheDir: string, name: string, preamble: string | null, buffers: Record<string, string> | null) {
+  const formatKey = preamble && `${cacheDir}|${preambleHash(preamble)}`
+  const format = preamble && !badFormats.has(formatKey!) ? await usableFormat(root, cacheDir, name, preamble, vault.root, [vault.root, ...vault.templateDirs]) : null
+  if (format && buffers) {
+    const dirty = new Set(Object.keys(buffers).map((r) => vault.abs(r).toLowerCase()))
+    if (format.deps.some((d) => dirty.has(d.toLowerCase()))) return null
+  }
+  return format
+}
+
+const baseArgsFor = (cacheDir: string) => [
+  '-synctex=1', '-interaction=nonstopmode', '-file-line-error',
+  '-max-print-line=10000', // one message per line, no 79-column wrapping
+  `-aux-directory=${cacheDir}`, `-output-directory=${cacheDir}`,
+]
+
+/** The full build's .aux for `root`, which a section build reads its labels and citations from. */
+const fullAux = (vault: Vault, root: string) => join(cacheDirFor(vault, root), `${posix.basename(root, '.tex')}.aux`)
+
+/**
+ * Why saving `rel` (with text `text`) should build the whole paper rather
+ * than just its section, or null when its section will do: there's no full
+ * build yet; another of the paper's files was saved since the last one (its
+ * numbers or labels may have moved); or `rel` defines a label or cites a key
+ * the last full build didn't see.
+ */
+export async function fullBuildReason(vault: Vault, root: string, rel: string, text: string): Promise<string | null> {
+  const auxPath = fullAux(vault, root)
+  const built = await stat(auxPath).then((s) => s.mtimeMs, () => null)
+  if (built == null) return 'The paper hasn\'t been built in full yet'
+  const { files } = await paperGraph(vault, root).catch(() => ({ files: [] as { rel: string; exists: boolean; off: boolean }[] }))
+  for (const f of files) {
+    if (f.rel === rel || !f.exists || f.off) continue
+    const changed = await stat(vault.abs(f.rel)).then((s) => s.mtimeMs > built, () => false)
+    if (changed) return `${posix.basename(f.rel)} changed since the last full build`
+  }
+  const aux = await readFile(auxPath, 'utf8').catch(() => '')
+  const known = new Set([...aux.matchAll(/\\newlabel\{([^}]+)\}/g)].map((m) => m[1]))
+  const fresh = labelsIn(text).find((k) => !known.has(k))
+  if (fresh) return `New label ${fresh}`
+  const cited = new Set([...aux.matchAll(/\\citation\{([^}]*)\}/g)].flatMap((m) => m[1].split(',').map((k) => k.trim())))
+  const newCite = citedKeys(text).find((k) => !cited.has(k))
+  if (newCite) return `New citation ${newCite}`
+  return null
+}
+
+/**
+ * Builds just one file of a marked paper (`unit`, which the root \inputs),
+ * as a preview: the root's preamble, the counters where that file starts
+ * (`start`, from the renderer's paper model), and the labels and citations
+ * of the last full build, in one pass (see sectiondoc.ts). `label` names it
+ * (§III). Null when it can't be done: no full build to read labels from, or
+ * `unit` isn't one of the root's own includes.
+ */
+export async function compileSection(
+  vault: Vault,
+  rel: string,
+  buffers: Record<string, string>,
+  unit: string,
+  start: Counters,
+  label: string,
+): Promise<CompileResult | null> {
+  const started = Date.now()
+  const root = await resolveRoot(vault, rel, buffers[rel]).catch(() => null)
+  if (!root) return null
+  const relDir = posix.dirname(root) === '.' ? '' : posix.dirname(root)
+  const name = posix.basename(root, '.tex')
+  const cacheDir = cacheDirFor(vault, root)
+  if (!(await stat(fullAux(vault, root)).then(() => true, () => false))) return null
+  const { files } = await paperGraph(vault, root, buffers).catch(() => ({ files: [] as PaperFile[] }))
+  const file = files.find((f) => f.rel === unit && f.parent === root && !f.off && f.include)
+  const rootText = buffers[root] ?? (await readFile(vault.abs(root), 'utf8').catch(() => ''))
+  const doc = file ? sectionDocument(rootText, file.include!.line, start) : null
+  if (!doc) return null
+
+  lastRoot = root
+  const gen = ++generation
+  const draft = true
+  const stale = (): CompileResult => ({ ok: false, root, passes: 0, pdf: null, problems: [], log: '', durationMs: Date.now() - started, draft, section: label })
+  const shadow = Object.keys(buffers).length ? await writeShadow(vault.root, buffers) : null
+  if (gen !== generation) return stale()
+
+  // Its own job in the cache folder, starting from the full build's .aux
+  // (labels, \bibcite) and .bbl (biblatex).
+  const job = `${name}-section`
+  const docPath = join(cacheDir, `${job}.tex`)
+  await writeFile(docPath, doc)
+  await copyFile(join(cacheDir, `${name}.aux`), join(cacheDir, `${job}.aux`)).catch(() => {})
+  // biblatex takes its citations from the .bbl. BibTeX's come from \bibcite
+  // in the .aux; its .bbl would only be typeset (revtex does at the end).
+  const biblatex = await stat(join(cacheDir, `${name}.bcf`)).then(() => true, () => false)
+  if (biblatex) await copyFile(join(cacheDir, `${name}.bbl`), join(cacheDir, `${job}.bbl`)).catch(() => {})
+  else await rm(join(cacheDir, `${job}.bbl`), { force: true })
+
+  const preamble = vault.fastCompile ? preambleOf(rootText) : null
+  const format = await formatFor(vault, root, cacheDir, name, preamble, Object.keys(buffers).length ? buffers : null)
+  const logPath = join(cacheDir, `${job}.log`)
+  const pass = async (fmt: string | null) => {
+    await rm(logPath, { force: true }).catch(() => {})
+    const args = [...baseArgsFor(cacheDir), `-jobname=${job}`, ...(fmt ? [`-fmt=${fmt}`] : []), docPath]
+    await runTool('pdflatex', args, shadow ?? vault.root, texEnv(vault, relDir, shadow)).catch(() => {})
+    return readFile(logPath, 'utf8').catch(() => '')
+  }
+  let log = await pass(format?.fmt ?? null)
+  if (gen !== generation) return stale()
+  // As in build(): a format pdflatex can't load is dropped, and the pass run without it.
+  const formatKey = preamble && `${cacheDir}|${preambleHash(preamble)}`
+  let preloaded = !!format
+  if (format && formatKey && !log) {
+    badFormats.add(formatKey)
+    await dropFormat(cacheDir, name)
+    preloaded = false
+    log = await pass(null)
+    if (gen !== generation) return stale()
+  }
+
+  // The log names this job's file; problems in it are the root's (its lines are the root's lines).
+  if (shadow) log = unshadow(log)
+  for (const p of new Set([docPath, docPath.replace(/\\/g, '/')])) log = log.split(p).join(vault.abs(root))
+  await writeFile(join(cacheDir, `${job}.log`), log).catch(() => {})
+
+  const overrides = new Map(Object.entries(buffers).map(([r, t]) => [resolve(vault.abs(r)).toLowerCase(), t]))
+  const problems = (await diagnose(parseLog(log), diagnoseContext(vault, root, log, fullAux(vault, root), overrides)))
+    // Its own .aux differs from the full build's by design: not worth a rerun warning.
+    .filter((p) => !/rerun|may have changed/i.test(p.title))
+  const pdf = join(cacheDir, `${job}.pdf`)
+  const pdfExists = await stat(pdf).then(() => true, () => false)
+  const ok = pdfExists && !problems.some((p) => p.severity === 'error' && !p.hidden)
+  return { ok, root, passes: 1, pdf: pdfExists ? pdf : null, problems, log, durationMs: Date.now() - started, draft, preloaded, section: label }
+}
 
 /**
  * What the diagnosis rules may look at, read lazily and at most once.

@@ -36,9 +36,9 @@ What would make this a better LaTeX editor, roughly in order of payoff. Items ma
 
 ## Papers
 
-- **Multi-part papers.** Done: marking a paper, each file building it, numbering and refs carried across files, `\input` cards, and the paper map (reorder, switch off, new section file, move a section out and back, renumbering). Still to come:
-  - a section preview: compile only the section being edited, with the numbering restored from the last full build (spiked: about 1.4 s against 2.1 s for the AngStatsRevTex paper); the full build runs when other files' changes affect numbering or citations;
-  - next/previous file in paper order, search within the paper, and renaming a label across the paper's files only.
+- **Multi-part papers.** Done: marking a paper, each file building it, numbering and refs carried across files, `\input` cards, the paper map (reorder, switch off, new section file, move a section out and back, renumbering), section builds, back/forward, next/previous file, search and rename within the paper. Could follow:
+  - a "Move section to its own file" command in the editor (it's in the paper map's right-click today);
+  - SyncTeX from a section build's PDF back into the root's lines (its own lines are blanked copies of the root's).
 - **New paper from a journal template.** Recently used classes, the template folder, and a curated journal list (revtex, elsarticle, IEEEtran, …). Each is marked installed or available, and MiKTeX installs a missing class, with progress shown.
 - **Submission bundle.** Flatten the `\input`s into one file, include the `.bbl`, keep only the figures used, and zip it for arXiv or a journal.
 - **Page checks before printing.** Flag an overfull box as a visible marker in the PDF. Warn when a question splits across a page break, and give a page count.

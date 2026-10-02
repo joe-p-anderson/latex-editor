@@ -96,3 +96,17 @@ describe('preview build', () => {
     expect(errors(r!)).toEqual([])
   })
 })
+
+describe('a format pdflatex cannot load', () => {
+  it('is dropped, and the build runs without it', async () => {
+    await compile(vault, DOC)
+    await formatsBuilt()
+    // Wreck the cached format (MiKTeX dies the same way on a very long format path).
+    const fmt = join(dir, '.texcache', 'Homework', 'HW3_vectors', 'HW3_vectors-preamble.fmt')
+    writeFileSync(fmt, 'not a format')
+    const r = await compile(vault, DOC)
+    expect(r.preloaded).toBe(false)
+    expect(errors(r)).toEqual([])
+    expect(pages(r.log)).toBeGreaterThan(0)
+  })
+})

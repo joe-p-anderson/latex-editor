@@ -6,6 +6,7 @@ import { inlineParts, type FrontPart, type ItemStyle, type Tabular } from '@shar
 import { cachedRender, type RenderFn } from '../mathPreview'
 import { thumbnail } from '../thumbnails'
 import { OPEN_LOCATION_EVENT, type OpenLocation } from '../citations'
+import { liveFile } from './live'
 
 /** Clicking a widget puts the cursor where it is, which shows its source. */
 function revealOnClick(dom: HTMLElement, view: EditorView, offset = 0): void {
@@ -273,6 +274,13 @@ export class RefWidget extends WidgetType {
         return
       }
       if ((e.ctrlKey || e.metaKey) && this.target !== null) {
+        // Through the app, which remembers where it came from (Alt+Left goes back).
+        const file = view.state.facet(liveFile)
+        if (file) {
+          const line = view.state.doc.lineAt(this.target).number
+          view.dom.dispatchEvent(new CustomEvent<OpenLocation>(OPEN_LOCATION_EVENT, { bubbles: true, detail: { file, line } }))
+          return
+        }
         view.dispatch({ selection: { anchor: this.target }, effects: EditorView.scrollIntoView(this.target, { y: 'center' }) })
       } else view.dispatch({ selection: { anchor: view.posAtDOM(dom) } })
       view.focus()
@@ -365,6 +373,38 @@ export class IncludeWidget extends WidgetType {
       view.focus()
     })
     return spaced(dom)
+  }
+}
+
+/**
+ * At the top or foot of a file of a paper: the file before or after it in
+ * reading order (Alt+PageUp, Alt+PageDown). Click to go there.
+ */
+export class NeighbourWidget extends WidgetType {
+  constructor(
+    readonly rel: string,
+    readonly label: string | null,
+    readonly next: boolean,
+  ) {
+    super()
+  }
+  eq(o: NeighbourWidget): boolean {
+    return o.rel === this.rel && o.label === this.label && o.next === this.next
+  }
+  toDOM(view: EditorView): HTMLElement {
+    const dom = el('div', `cm-live-neighbour ${this.next ? 'next' : 'prev'}`)
+    const name = this.rel.split('/').pop()!
+    dom.append(
+      el('span', 'cm-live-neighbour-dir', this.next ? 'Continue' : 'Before this'),
+      el('span', 'cm-live-neighbour-file', `${this.next ? '' : '← '}${name}${this.label ? ` ${this.label}` : ''}${this.next ? ' →' : ''}`),
+    )
+    dom.title = `${this.rel} (${this.next ? 'Alt+PageDown' : 'Alt+PageUp'})`
+    dom.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return
+      e.preventDefault()
+      view.dom.dispatchEvent(new CustomEvent<OpenLocation>(OPEN_LOCATION_EVENT, { bubbles: true, detail: { file: this.rel, line: 1 } }))
+    })
+    return dom
   }
 }
 

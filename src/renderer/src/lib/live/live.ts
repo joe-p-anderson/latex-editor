@@ -25,6 +25,7 @@ import {
   HeadingNumberWidget,
   ImageWidget,
   IncludeWidget,
+  NeighbourWidget,
   type IncludeCard,
   LabelWidget,
   MarkerWidget,
@@ -54,6 +55,9 @@ export interface LivePaper {
   options: LiveOptions
   /** The card for an include in this file. */
   card(inc: { cmd: string; dir: string; arg: string }, off: boolean): IncludeCard
+  /** The files before and after it in the paper's reading order, for the cards at its top and foot. */
+  prev: { rel: string; label: string | null } | null
+  next: { rel: string; label: string | null } | null
 }
 
 /** The vault-relative file an editor state holds (set when the state is made). */
@@ -317,6 +321,10 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
       }
     }
   }
+  // In a file of a paper: the files before and after it, a click away.
+  if (paper?.prev) out.push(Decoration.widget({ widget: new NeighbourWidget(paper.prev.rel, paper.prev.label, false), block: true, side: -1 }).range(0))
+  if (paper?.next) out.push(Decoration.widget({ widget: new NeighbourWidget(paper.next.rel, paper.next.label, true), block: true, side: 1 }).range(doc.length))
+
   // A commented-out include is a file switched off: a dimmed card.
   if (paper) {
     for (const inc of parseIncludes(doc.toString())) {

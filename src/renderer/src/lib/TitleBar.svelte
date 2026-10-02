@@ -24,6 +24,7 @@
     ontogglepdf,
     ontogglepanel,
     onribbon,
+    nav = null,
   }: {
     logo?: string
     vaultName: string | null
@@ -40,6 +41,8 @@
     ontogglepdf: () => void
     ontogglepanel: () => void
     onribbon: () => void
+    /** Back and forward through the places jumped between (Alt+Left, Alt+Right). */
+    nav?: { canBack: boolean; canForward: boolean; onback: () => void; onforward: () => void } | null
   } = $props()
 
   const MENUS = ['File', 'Edit', 'View', 'Build']
@@ -60,6 +63,12 @@
         <button onclick={(e) => openMenu(label, e)}>{label}</button>
       {/each}
     </nav>
+    {#if nav}
+      <span class="nav">
+        <button disabled={!nav.canBack} onclick={nav.onback} title="Back (Alt+Left)" aria-label="Back">‹</button>
+        <button disabled={!nav.canForward} onclick={nav.onforward} title="Forward (Alt+Right)" aria-label="Forward">›</button>
+      </span>
+    {/if}
   </div>
 
   <button class="running" onclick={onrunning} title="Go to a file (Ctrl+P)">
@@ -129,6 +138,24 @@
   }
   .menus button:hover {
     background: var(--chrome-btn);
+  }
+  .nav {
+    display: flex;
+    margin-left: 6px;
+  }
+  .nav button {
+    border: 0;
+    width: 26px;
+    padding: 0 0 2px;
+    border-radius: 3px;
+    font-size: 20px;
+    line-height: 1;
+  }
+  .nav button:hover:not(:disabled) {
+    background: var(--chrome-btn);
+  }
+  .nav button:disabled {
+    opacity: 0.35;
   }
   .running {
     border: 0;

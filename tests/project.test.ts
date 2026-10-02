@@ -3,10 +3,13 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { includeCandidates, magicRoot, paperFiles, parseIncludes, rootComment } from '../src/shared/project'
 import { PaperModel } from '../src/shared/papermodel'
-import { liveModel } from '../src/shared/livemodel'
+import { freshCounters, liveModel } from '../src/shared/livemodel'
+import { sectionDocument } from '../src/shared/sectiondoc'
 import { DEFAULT_LISTS } from '../src/shared/latexedit'
 
 const VAULT = resolve(import.meta.dirname, '../fixtures/vaults/AngStatsRevTex')
+/** The 1-based line of a fixture file that contains `needle`. */
+const lineOf = (file: string, needle: string) => readFileSync(resolve(VAULT, file), 'utf8').split(/\r?\n/).findIndex((l) => l.includes(needle)) + 1
 
 describe('parseIncludes', () => {
   it('finds each kind of include, with its line and span', () => {
@@ -74,7 +77,7 @@ describe('paperFiles', () => {
       'A_Appendices.tex',
     ])
     expect(files.every((f) => f.exists && !f.off)).toBe(true)
-    expect(files[3]).toMatchObject({ parent: 'main.tex', depth: 1, include: { line: 48 } })
+    expect(files[3]).toMatchObject({ parent: 'main.tex', depth: 1, include: { line: lineOf('main.tex', '\\input{3_reduced}') } })
     expect(texts.size).toBe(8)
   })
 
@@ -115,7 +118,7 @@ describe('PaperModel', () => {
     // Equations run on across files, and start again as A1 in the appendix.
     const intro = m.files.get('2_full_description.tex')!
     expect(m.files.get('3_reduced.tex')!.start.equation).toBe(intro.end.equation)
-    expect(m.labels.get('eq:MainAv')).toMatchObject({ kind: 'equation', file: 'A_Appendices.tex', line: 51 })
+    expect(m.labels.get('eq:MainAv')).toMatchObject({ kind: 'equation', file: 'A_Appendices.tex', line: lineOf('A_Appendices.tex', '\\label{eq:MainAv}') })
     // The first equation of the second appendix.
     expect(m.labels.get('eq:MainAv')!.number).toBe('B1')
     expect(m.labels.get('sec:3_reduced_descriptions')).toMatchObject({ number: 'III', file: '3_reduced.tex' })
@@ -138,5 +141,27 @@ describe('PaperModel', () => {
     const root = liveModel(main, DEFAULT_LISTS, m.options('main.tex'))
     expect(root.nodes.filter((n) => n.kind === 'include')).toHaveLength(7)
     expect(root.end.sec[1]).toBe(m.files.get('A_Appendices.tex')!.end.sec[1])
+  })
+})
+
+describe('sectionDocument', () => {
+  it('keeps the preamble and one include, sets the counters, and keeps line numbers', () => {
+    const root = ['\\documentclass{revtex4-2}', '\\begin{document}', '\\maketitle', '\\input{1_a}', '  \\input{2_b}', '\\bibliography{x}', '\\end{document}', ''].join('\n')
+    const start = { ...freshCounters(), sec: [0, 1, 2, 0], equation: 7, figure: 1 }
+    const doc = sectionDocument(root, 5, start)!
+    const lines = doc.split('\n')
+    expect(lines).toHaveLength(8)
+    expect(lines.slice(0, 2)).toEqual(['\\documentclass{revtex4-2}', '\\begin{document}'])
+    expect(lines[2]).toBe('')
+    expect(lines[3]).toBe('')
+    expect(lines[4]).toBe('\\setcounter{section}{1}\\setcounter{subsection}{2}\\setcounter{subsubsection}{0}\\setcounter{equation}{7}\\setcounter{figure}{1}\\setcounter{table}{0}\\input{2_b}')
+    expect(lines[5]).toBe('')
+    expect(lines[6]).toBe('\\end{document}')
+    expect(sectionDocument(root, 1, start)).toBeNull()
+  })
+
+  it('starts an appendix with \\appendix', () => {
+    const root = '\\begin{document}\n\\input{app}\n\\end{document}'
+    expect(sectionDocument(root, 2, { ...freshCounters(), appendix: true })!.split('\n')[1]).toMatch(/^\\appendix\\setcounter\{section\}\{0\}/)
   })
 })

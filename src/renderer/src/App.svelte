@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import type { BibInfo, CompileResult, EditorContext, PaperInfo, Problem, QuickFix, TextEdit, TreeNode, VaultInfo } from '@shared/api'
+  import type { BibInfo, CompileResult, EditorContext, PaperInfo, Problem, QuickFix, SectionTarget, TextEdit, TreeNode, VaultInfo } from '@shared/api'
   import { isDocument, magicRoot, parseIncludes, rootComment, type Include } from '@shared/project'
   import { extractSection, includeBlock, inlineInclude, moveInclude, placeNewFile, renameIncludes, renumberPlan, slugify, toggleInclude } from '@shared/paperedit'
   import PaperMap, { type PaperMapActions } from './lib/PaperMap.svelte'
@@ -181,8 +181,16 @@
   function livePaper(rel: string | null): LivePaper | null {
     const model = paperModel
     if (!rel || !model || !inPaper(rel)) return null
+    const i = readingOrder.indexOf(rel)
+    const neighbour = (r: string | undefined) => {
+      if (!r) return null
+      const s = model.sectionsOf(r)
+      return { rel: r, label: s ? `§${s}` : null }
+    }
     return {
       options: model.options(rel),
+      prev: i > 0 ? neighbour(readingOrder[i - 1]) : null,
+      next: i >= 0 ? neighbour(readingOrder[i + 1]) : null,
       card: (inc, off) => {
         const child = model.childOf(rel, inc)
         const file = child ? paper?.files.find((f) => f.rel === child) : null
@@ -227,10 +235,7 @@
   let paperPrompt = $state<{ title: string; initial: string; hint: string; run: (value: string) => void } | null>(null)
 
   const paperActions: PaperMapActions = {
-    async open(rel, line) {
-      await openFile(rel)
-      if (line > 1) editor?.gotoLine(line)
-    },
+    open: (rel, line) => go(rel, line > 1 ? line : undefined),
     async toggle(rel) {
       const f = fileOf(rel)
       if (!f?.parent) return
@@ -421,6 +426,16 @@
     return parents.flatMap((parent) => renumberPlan(p.files.filter((f) => f.parent === parent && f.exists && f.rel.endsWith('.tex')).map((f) => f.rel)))
   }
 
+  /** The paper's files in reading order that can be opened: not the root, not switched off. */
+  const readingOrder = $derived(paper?.declared ? paper.files.filter((f) => f.rel !== paper!.root && f.exists && !f.off).map((f) => f.rel) : [])
+  /** The file `step` places from the open one in the paper's reading order. */
+  function neighbour(step: number): string | null {
+    if (!active || !inPaper(active)) return null
+    const i = readingOrder.indexOf(active)
+    if (i < 0) return step > 0 ? (readingOrder[0] ?? null) : null
+    return readingOrder[i + step] ?? null
+  }
+
   /** Where the open file stands in its paper, for the title bar: main §III. */
   const place = $derived.by(() => {
     if (!paperModel || !active || !inPaper(active) || !paper) return null
@@ -535,9 +550,12 @@
     if (previewing) return { kind: 'busy', note: 'Previewing…', detail: 'Building your unsaved text. Ctrl+S saves and updates pdf/' }
     if (!result) return { kind: 'none', note: '' }
     const errors = result.problems.filter((p) => p.severity === 'error' && !p.hidden && !p.followOn).length
-    const how = `${result.root}: ${result.passes} pass${result.passes === 1 ? '' : 'es'}${result.preloaded ? ', preamble preloaded' : ''}`
-    if (errors) return { kind: 'err', note: `${errors} error${errors === 1 ? '' : 's'}${result.draft ? ' in preview' : ' · pdf/ unchanged'}`, detail: how }
-    return { kind: 'ok', note: `${result.draft ? 'Preview' : 'Built'} · ${(result.durationMs / 1000).toFixed(1)} s`, detail: how }
+    const how = result.section
+      ? `Just ${result.section} of ${result.root}, numbered as in the whole paper, with its labels and citations from the last full build. The whole paper builds when another of its files changes, or with Build → Recompile`
+      : `${result.root}: ${result.passes} pass${result.passes === 1 ? '' : 'es'}${result.preloaded ? ', preamble preloaded' : ''}${result.fullReason ? `. Built in full: ${result.fullReason}` : ''}`
+    const what = result.section ? result.section : result.draft ? 'Preview' : 'Built'
+    if (errors) return { kind: 'err', note: `${errors} error${errors === 1 ? '' : 's'}${result.section ? ` in ${result.section}` : result.draft ? ' in preview' : ' · pdf/ unchanged'}`, detail: how }
+    return { kind: 'ok', note: `${what} · ${(result.durationMs / 1000).toFixed(1)} s`, detail: how }
   })
   const problemCounts = $derived({
     errors: result?.problems.filter((p) => p.severity === 'error' && !p.hidden && !p.followOn).length ?? 0,
@@ -838,6 +856,8 @@
     outlineItems = []
     paper = null
     paperModel = null
+    backStack = []
+    forwardStack = []
     clearSpellingCache() // another vault, another word list
   }
 
@@ -863,6 +883,54 @@
     }
     if (!cycling) mru = [rel, ...mru.filter((r) => r !== rel)]
     loadMacros(rel)
+  }
+
+  // --- Back and forward ---------------------------------------------------------
+  // Jumps (Ctrl+click, the contents, problems, search, the PDF, opening a
+  // file) remember where they left from. Going back switches to that file's
+  // tab (reopening it if it was closed): a file is only ever open once.
+
+  interface Place {
+    rel: string
+    line: number
+  }
+  let backStack = $state<Place[]>([])
+  let forwardStack = $state<Place[]>([])
+  const here = (): Place | null => (active && editor ? { rel: active, line: editor.cursorLine() } : null)
+  const samePlace = (a: Place, b: Place) => a.rel === b.rel && a.line === b.line
+
+  /** Opens `rel` (at `line`), remembering where this left from. */
+  async function go(rel: string, line?: number): Promise<void> {
+    const from = here()
+    await openFile(rel)
+    if (active !== rel) return // an image, or not a text file: nothing to remember
+    if (line) editor?.gotoLine(line)
+    const to = here()
+    if (from && to && !samePlace(from, to)) {
+      backStack = [...backStack.slice(-99), from]
+      forwardStack = []
+    }
+  }
+
+  async function goBack(): Promise<void> {
+    await travel(backStack, (s) => (backStack = s), forwardStack, (s) => (forwardStack = s))
+  }
+  async function goForward(): Promise<void> {
+    await travel(forwardStack, (s) => (forwardStack = s), backStack, (s) => (backStack = s))
+  }
+  /** One step back (or forward): to the last place on `from`, putting here on `to`. */
+  async function travel(from: Place[], setFrom: (s: Place[]) => void, to: Place[], setTo: (s: Place[]) => void): Promise<void> {
+    // A place in a file that's gone is skipped.
+    const present = vault ? new Set(allFiles(vault.tree)) : new Set<string>()
+    const stack = [...from]
+    let place = stack.pop()
+    while (place && !present.has(place.rel)) place = stack.pop()
+    setFrom(stack)
+    if (!place) return
+    const cur = here()
+    if (cur) setTo([...to, cur])
+    await openFile(place.rel)
+    editor?.gotoLine(place.line)
   }
 
   /** Every file in the tree, vault-relative. */
@@ -957,6 +1025,23 @@
 
   /** App-wide keys, caught before the editor sees them. */
   function onkeydown(e: KeyboardEvent): void {
+    if (vault && e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      e.preventDefault()
+      e.stopPropagation()
+      if (e.key === 'ArrowLeft') goBack()
+      else goForward()
+      return
+    }
+    // Alt+PageUp / Alt+PageDown: the paper's previous or next file.
+    if (vault && e.altKey && !e.ctrlKey && !e.shiftKey && (e.key === 'PageUp' || e.key === 'PageDown')) {
+      const target = neighbour(e.key === 'PageDown' ? 1 : -1)
+      if (target) {
+        e.preventDefault()
+        e.stopPropagation()
+        go(target)
+      }
+      return
+    }
     if (!vault || !e.ctrlKey || e.metaKey) return
     const key = e.key.toLowerCase()
     const plain = !e.shiftKey && !e.altKey
@@ -1205,7 +1290,7 @@
   const textOf = async (rel: string) => editor?.textOf(rel) ?? (await window.api.readFile(rel))
 
   async function openMatch(rel: string, m: SearchMatch): Promise<void> {
-    await openFile(rel)
+    await go(rel)
     editor?.select(m.from, m.to)
   }
 
@@ -1232,19 +1317,24 @@
     else if (count) flash(`Replaced ${count} in ${changed} file${changed === 1 ? '' : 's'}, unsaved. Ctrl+Alt+S saves all`)
   }
 
-  /** F2: renames a label, and every reference to it, across the vault. */
+  /** Where F2 renames a label: the open paper's files, or (outside a paper) the whole vault. */
+  const renameScope = () => (paper?.declared && inPaper(active) ? new Set(paper.files.map((f) => f.rel)) : null)
+
+  /** F2: renames a label, and every reference to it, across the paper (or the vault). */
   async function renameLabel(from: string, to: string): Promise<void> {
     renaming = null
     to = to.trim()
     if (!to || to === from) return
     if (/[\s{}\\%#,]/.test(to)) return flash(`"${to}" can't be a label: no spaces, braces, commas, \\, % or #`)
     const literal: SearchOptions = { regex: false, caseSensitive: true, wholeWord: false, includeComments: true }
-    const exists = (await window.api.search(`{${to}}`, literal, overrides())).files.length > 0
+    const scope = renameScope()
+    const inScope = (rel: string) => !scope || scope.has(rel)
+    const exists = (await window.api.search(`{${to}}`, literal, overrides())).files.some((f) => inScope(f.rel))
     if (exists) return flash(`A label or reference "${to}" already exists`)
     const hits = await window.api.search(from, literal, overrides())
     let count = 0
     let changed = 0
-    for (const { rel } of hits.files) {
+    for (const { rel } of hits.files.filter((f) => inScope(f.rel))) {
       const changes = renameKeyChanges(await textOf(rel), from, to)
       if (!changes.length) continue
       await editor?.applyChangesTo(rel, changes)
@@ -1261,16 +1351,65 @@
     if (active && (rel === active || paper?.files.some((f) => f.rel === rel))) loadPaper(active)
     searchVersion++
     await reloadIfSettings(rel)
-    if (COMPILES.test(rel)) await compile(rel)
+    if (COMPILES.test(rel)) await compile(rel, true)
   }
 
-  async function compile(rel: string): Promise<void> {
+  // Section builds: a file of a marked paper builds just its section (the
+  // file the root \inputs that it's in), unless the whole paper is asked for.
+  const SECTION_KEY = 'endleaf-section-builds'
+  let sectionBuilds = $state((() => {
+    try {
+      return localStorage.getItem(SECTION_KEY) !== 'false'
+    } catch {
+      return true
+    }
+  })())
+  function setSectionBuilds(on: boolean): void {
+    sectionBuilds = on
+    try {
+      localStorage.setItem(SECTION_KEY, String(on))
+    } catch {
+      // not remembered; fine
+    }
+    if (active) {
+      if (on) preview(active, true)
+      else compile(active)
+    }
+  }
+
+  /** What a section build of `rel` builds: the root's include it's in, where its numbers start, its name. */
+  function sectionOf(rel: string): SectionTarget | null {
+    const p = paper
+    const model = paperModel
+    if (!p?.declared || !model || rel === p.root || !inPaper(rel)) return null
+    let f = fileOf(rel)
+    while (f && f.parent && f.parent !== p.root) f = fileOf(f.parent)
+    if (!f || f.off || f.parent !== p.root) return null
+    const start = model.files.get(f.rel)?.start
+    if (!start) return null
+    const s = model.sectionsOf(f.rel)
+    return { unit: f.rel, start: $state.snapshot(start), label: s ? `§${s}` : f.rel.split('/').pop()! }
+  }
+  /** The section-or-paper switch over the PDF, for a file of a marked paper. */
+  const pdfScope = $derived.by(() => {
+    if (!active) return null
+    const t = sectionOf(active)
+    return t ? { label: t.label, section: sectionBuilds, onchange: setSectionBuilds } : null
+  })
+
+  /**
+   * Builds `rel`'s document. `saving`: Ctrl+S, which builds just the section
+   * for a file of a marked paper when that's enough (the main process decides).
+   */
+  async function compile(rel: string, saving = false): Promise<void> {
     clearTimeout(previewTimer) // this build includes whatever the preview would have
     const seq = ++compileSeq
     compiling = true
     previewing = false
     try {
-      const r = await window.api.compile(rel)
+      const target = saving && sectionBuilds ? sectionOf(rel) : null
+      const r = target ? await window.api.compileSection(rel, {}, target, true) : await window.api.compile(rel)
+      if (!r) return
       if (seq !== compileSeq) return // a newer save superseded this compile
       show(r)
     } finally {
@@ -1303,17 +1442,18 @@
     previewTimer = setTimeout(() => preview(rel), PREVIEW_DELAY_MS)
   }
 
-  async function preview(rel: string): Promise<void> {
+  async function preview(rel: string, force = false): Promise<void> {
     if (!editor) return
     // A saved build is running: try again after it, which may make this unnecessary.
     if (compiling) return schedulePreview(rel)
     const buffers = Object.fromEntries(editor.dirtyTexts())
     // Nothing unsaved, and the PDF already shows the saved files.
-    if (!Object.keys(buffers).length && !result?.draft) return
+    if (!force && !Object.keys(buffers).length && !result?.draft) return
     const seq = ++compileSeq
     previewing = true
     try {
-      const r = await window.api.compileDraft(rel, buffers)
+      const target = sectionBuilds ? sectionOf(rel) : null
+      const r = target ? await window.api.compileSection(rel, buffers, target, false) : await window.api.compileDraft(rel, buffers)
       if (seq !== compileSeq || !r) return
       show(r)
     } finally {
@@ -1329,8 +1469,7 @@
       flash(`That's in ${p.file.split(/[\\/]/).pop()}, outside this vault`)
       return
     }
-    await openFile(p.file)
-    if (p.line) editor?.gotoLine(p.line)
+    await go(p.file, p.line ?? undefined)
   }
 
   /**
@@ -1372,8 +1511,7 @@
       flash(`That comes from ${loc.file.split(/[\\/]/).pop()}:${loc.line}, outside this vault`)
       return
     }
-    await openFile(loc.file)
-    editor?.gotoLine(loc.line)
+    await go(loc.file, loc.line)
   }
 
   function startDrag(ev: PointerEvent): void {
@@ -1386,7 +1524,16 @@
   }
 </script>
 
-<svelte:window onkeydowncapture={onkeydown} {onkeyup} onblur={endCycle} />
+<svelte:window
+  onkeydowncapture={onkeydown}
+  {onkeyup}
+  onblur={endCycle}
+  onmouseup={(e) => {
+    // The mouse's own back and forward buttons.
+    if (e.button === 3) goBack()
+    else if (e.button === 4) goForward()
+  }}
+/>
 
 <div class="window">
   <TitleBar
@@ -1394,6 +1541,7 @@
     vaultName={vault?.name ?? null}
     file={active}
     {place}
+    nav={vault ? { canBack: backStack.length > 0, canForward: forwardStack.length > 0, onback: goBack, onforward: goForward } : null}
     {live}
     canLive={!!active?.toLowerCase().endsWith('.tex')}
     {pdfOpen}
@@ -1426,7 +1574,7 @@
             <button class="sec-h" onclick={() => (filesSection = !filesSection)}>
               <Icon name="chev" size={12} /><span class="t">{vault.name}</span>
             </button>
-            {#if filesSection}<div class="sec-b"><FileTree nodes={vault.tree} {active} {dirty} onopen={openFile} /></div>{/if}
+            {#if filesSection}<div class="sec-b"><FileTree nodes={vault.tree} {active} {dirty} onopen={(rel) => go(rel)} /></div>{/if}
           </section>
         </div>
         <!-- Contents: the open file's outline, or the paper map for a file of a marked paper. -->
@@ -1470,7 +1618,7 @@
                 </div>
               {/if}
             {:else}
-              <Outline items={outlineItems} {cursorLine} onjump={(line) => editor?.gotoLine(line)} />
+              <Outline items={outlineItems} {cursorLine} onjump={(line) => active && go(active, line)} />
             {/if}
           {:else}
             <p class="side-empty">Open a .tex file to see its contents.</p>
@@ -1483,6 +1631,7 @@
             version={searchVersion}
             onopen={openMatch}
             onreplace={replaceMatches}
+            paper={paper?.declared && inPaper(active) ? { name: paper.name, files: paper.files.map((f) => f.rel) } : null}
           />
         </div>
         <div class="side-body" hidden={view !== 'symbols'}>
@@ -1493,10 +1642,7 @@
             <CitationsView
               {bib}
               oncite={(key) => insertCitation([key])}
-              onopen={async (file, line) => {
-                await openFile(file)
-                editor?.gotoLine(line)
-              }}
+              onopen={(file, line) => go(file, line)}
             />
           </div>
         {:else if view === 'appearance'}
@@ -1529,10 +1675,10 @@
                 <button onclick={() => (keptInVault = new Set(keptInVault).add(active!))} title="Keep editing it here; asked again next time the app starts">Not now</button>
               </div>
             {/if}
-            {#if appearance.look === 'plain'}<TabBar {tabs} {active} {dirty} papers={paperTabs} onselect={openFile} onclose={closeTab} onmove={moveTab} />{/if}
+            {#if appearance.look === 'plain'}<TabBar {tabs} {active} {dirty} papers={paperTabs} onselect={(rel) => go(rel)} onclose={closeTab} onmove={moveTab} />{/if}
             <div class="editor">
               {#if appearance.look === 'bench'}
-                <IndexTabs {tabs} {active} {dirty} papers={paperTabs} edge={appearance.tabs} onselect={openFile} onclose={closeTab} />
+                <IndexTabs {tabs} {active} {dirty} papers={paperTabs} edge={appearance.tabs} onselect={(rel) => go(rel)} onclose={closeTab} />
                 <Riffle run={riffle} />
               {/if}
               <Editor
@@ -1552,10 +1698,7 @@
                 onlivechange={(on) => (live = on)}
                 onedit={schedulePreview}
                 {livePaper}
-                onopenlocation={async (loc) => {
-                  await openFile(loc.file)
-                  editor?.gotoLine(loc.line)
-                }}
+                onopenlocation={(loc) => go(loc.file, loc.line)}
               />
             </div>
             {#if !active}<EmptyPlate logo={logoUrl(endpaper.palette, 'mid')} />{/if}
@@ -1563,7 +1706,7 @@
           </section>
           <div class="splitter v" hidden={!pdfOpen} role="separator" aria-orientation="vertical" onpointerdown={startDrag}></div>
           <section class="pdf-pane" hidden={!pdfOpen}>
-            <PdfViewer bind:this={viewer} {pdf} version={pdfVersion} onsyncclick={syncInverse} onclose={() => (pdfOpen = false)} />
+            <PdfViewer bind:this={viewer} {pdf} version={pdfVersion} scope={pdfScope} onsyncclick={syncInverse} onclose={() => (pdfOpen = false)} />
           </section>
         </div>
         <div class="splitter h" hidden={!panelOpen} role="separator" aria-orientation="horizontal" onpointerdown={dragPanel}></div>
@@ -1613,7 +1756,7 @@
   <PromptDialog
     title="Rename label {from}"
     initial={from}
-    hint="Changes the \label and every reference to it in the vault. The files are left unsaved."
+    hint={`Changes the \\label and every reference to it in ${renameScope() ? `${paper?.name}'s files` : 'the vault'}. The files are left unsaved.`}
     onsubmit={(to) => renameLabel(from, to)}
     oncancel={() => {
       renaming = null
@@ -1641,7 +1784,7 @@
     files={openable}
     onpick={(rel) => {
       quickOpen = false
-      openFile(rel)
+      go(rel)
     }}
     onclose={() => {
       quickOpen = false

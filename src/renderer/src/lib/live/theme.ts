@@ -121,6 +121,23 @@ export const liveTheme = EditorView.baseTheme({
     textIndent: '0',
   },
   '.cm-live-include:hover': { borderColor: 'var(--detail)' },
+
+  // The paper's previous and next files, at a file's top and foot.
+  '.cm-live-neighbour': {
+    display: 'flex',
+    gap: '10px',
+    alignItems: 'baseline',
+    fontFamily: ui,
+    fontSize: 'calc(var(--page-size) * 0.7)',
+    color: muted,
+    cursor: 'pointer',
+    textIndent: '0',
+  },
+  '.cm-live-neighbour.prev': { margin: '0 0 1.2em', paddingBottom: '0.5em', borderBottom: '1px dashed var(--line)' },
+  '.cm-live-neighbour.next': { justifyContent: 'flex-end', margin: '1.6em 0 0', paddingTop: '0.6em', borderTop: '1px dashed var(--line)' },
+  '.cm-live-neighbour-dir': { fontVariantCaps: 'all-small-caps', letterSpacing: '0.08em' },
+  '.cm-live-neighbour-file': { color: 'var(--detail)', fontWeight: '600' },
+  '.cm-live-neighbour:hover .cm-live-neighbour-file': { textDecoration: 'underline' },
   '.cm-live-include.off': { opacity: '0.55', borderLeftStyle: 'dashed' },
   '.cm-live-include.missing': { borderLeftColor: 'var(--err)' },
   '.cm-live-include-head': { display: 'flex', alignItems: 'baseline', gap: '8px' },

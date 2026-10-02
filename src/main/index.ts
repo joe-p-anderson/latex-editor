@@ -3,7 +3,7 @@ import { copyFile, mkdir, readFile, rename, stat, unlink, writeFile } from 'node
 import { basename, join, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { bibInfo } from './bibliography'
-import { cacheDirFor, compile, compileDraft, resolveRoot } from './compile'
+import { cacheDirFor, compile, compileDraft, compileSection, fullBuildReason, resolveRoot } from './compile'
 import { discoverPaperOf, paperInfo } from './project'
 import { importImage, saveImage } from './images'
 import { editorContextFor, macrosFor } from './mathmacros'
@@ -16,7 +16,7 @@ import { Vault } from './vault'
 import { isImage } from '../shared/images'
 import type { SearchOptions } from '../shared/search'
 import { normalizeVaultAppearance, PALETTES, type AppAppearance, type VaultAppearance } from '../shared/appearance'
-import type { RecentVault } from '../shared/api'
+import type { RecentVault, SectionTarget } from '../shared/api'
 
 let win: BrowserWindow | null = null
 let vault: Vault | null = null
@@ -158,6 +158,21 @@ ipcMain.handle('file:rename', async (_e, from: string, to: string) => {
 ipcMain.handle('file:trash', (_e, rel: string) => shell.trashItem(requireVault().abs(rel)))
 ipcMain.handle('compile', (_e, rel: string) => compile(requireVault(), rel))
 ipcMain.handle('compile:draft', (_e, rel: string, buffers: Record<string, string>) => compileDraft(requireVault(), rel, buffers))
+ipcMain.handle('compile:section', async (_e, rel: string, buffers: Record<string, string>, target: SectionTarget, saving: boolean) => {
+  const v = requireVault()
+  const root = await resolveRoot(v, rel, buffers[rel]).catch(() => null)
+  if (!root) return compileDraft(v, rel, buffers)
+  const full = async (reason: string) => {
+    const r = Object.keys(buffers).length ? await compileDraft(v, rel, buffers) : await compile(v, rel)
+    return r && { ...r, fullReason: reason }
+  }
+  if (saving) {
+    const text = buffers[rel] ?? (await readFile(v.abs(rel), 'utf8').catch(() => ''))
+    const reason = await fullBuildReason(v, root, rel, text)
+    if (reason) return full(reason)
+  }
+  return (await compileSection(v, rel, buffers, target.unit, target.start, target.label)) ?? full("The paper hasn't been built in full yet")
+})
 /** Only PDFs the compiler produced (in .texcache), never arbitrary files. */
 function requireCompiledPdf(abs: string): string {
   const cache = join(requireVault().root, '.texcache') + sep

@@ -12,6 +12,7 @@
     version,
     onopen,
     onreplace,
+    paper = null,
   }: {
     search: (query: string, opts: SearchOptions) => Promise<SearchResult>
     /** Changes whenever files may have changed (a save, a replace), to search again. */
@@ -19,7 +20,19 @@
     onopen: (rel: string, match: SearchMatch) => void
     /** Replace in these files (null: every file with results), or just `match` in the one file. */
     onreplace: (query: string, opts: SearchOptions, replacement: string, files: string[] | null, match?: SearchMatch) => Promise<void>
+    /** The open file's multi-part paper (its name and files in reading order), to search just it. */
+    paper?: { name: string; files: string[] } | null
   } = $props()
+
+  // Just the paper: its files only, in reading order.
+  let inPaper = $state(false)
+  const scoped = $derived(inPaper && !!paper)
+  const shown = $derived.by(() => {
+    if (!result || !scoped || !paper) return result
+    const order = new Map(paper.files.map((f, i) => [f, i]))
+    const files = result.files.filter((f) => order.has(f.rel)).sort((a, b) => order.get(a.rel)! - order.get(b.rel)!)
+    return { ...result, files }
+  })
 
   let query = $state('')
   let replacement = $state('')
@@ -30,7 +43,7 @@
   let collapsed = $state(new Set<string>())
   let input = $state<HTMLInputElement>()
 
-  const total = $derived(result?.files.reduce((n, f) => n + f.matches.length, 0) ?? 0)
+  const total = $derived(shown?.files.reduce((n, f) => n + f.matches.length, 0) ?? 0)
 
   // Search as you type (debounced), when an option changes, and after saves.
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -74,8 +87,9 @@
   }
 
   async function replaceAll(files: string[] | null): Promise<void> {
-    if (!result?.files.length) return
-    await onreplace(query, { ...opts }, replacement, files)
+    if (!shown?.files.length) return
+    // Searching just the paper: replace in just its files.
+    await onreplace(query, { ...opts }, replacement, files ?? (scoped ? shown.files.map((f) => f.rel) : null))
   }
 
   const name = (p: string) => p.slice(p.lastIndexOf('/') + 1)
@@ -90,7 +104,7 @@
         <input
           bind:this={input}
           bind:value={query}
-          placeholder="Search the vault"
+          placeholder={scoped ? `Search ${paper?.name}` : 'Search the vault'}
           spellcheck="false"
           onkeydown={(e) => e.key === 'Enter' && run(query, { ...opts })}
         />
@@ -99,6 +113,7 @@
           <button class:on={opts.wholeWord} title="Whole word" onclick={() => toggle('wholeWord')}><u>ab</u></button>
           <button class:on={opts.regex} title="Regular expression" onclick={() => toggle('regex')}>.*</button>
           <button class:on={opts.includeComments} title="Include % comments" onclick={() => toggle('includeComments')}>%</button>
+          {#if paper}<button class:on={inPaper} title="Just {paper.name}'s files, in reading order" onclick={() => (inPaper = !inPaper)}>§</button>{/if}
         </span>
       </div>
     </div>
@@ -123,8 +138,8 @@
   <div class="summary">
     {#if result?.error}
       <span class="err">{result.error}</span>
-    {:else if result}
-      {total} result{total === 1 ? '' : 's'} in {result.files.length} file{result.files.length === 1 ? '' : 's'}{result.truncated ? ' (showing the first ones)' : ''}
+    {:else if shown}
+      {total} result{total === 1 ? '' : 's'} in {shown.files.length} file{shown.files.length === 1 ? '' : 's'}{scoped ? ` of ${paper?.name}` : ''}{shown.truncated ? ' (showing the first ones)' : ''}
       {#if busy}…{/if}
     {:else if busy}
       Searching…
@@ -132,7 +147,7 @@
   </div>
 
   <div class="results">
-    {#each result?.files ?? [] as f (f.rel)}
+    {#each shown?.files ?? [] as f (f.rel)}
       <div class="file">
         <button class="file-row" onclick={() => toggleFile(f.rel)} title={f.rel}>
           <span class="tri">{collapsed.has(f.rel) ? '▸' : '▾'}</span>

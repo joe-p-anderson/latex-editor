@@ -16,6 +16,7 @@ const api: Api & { onMenuOpenVault(cb: () => void): () => void } = {
   trashFile: (rel) => ipcRenderer.invoke('file:trash', rel),
   compile: (rel) => ipcRenderer.invoke('compile', rel),
   compileDraft: (rel, buffers) => ipcRenderer.invoke('compile:draft', rel, buffers),
+  compileSection: (rel, buffers, target, saving) => ipcRenderer.invoke('compile:section', rel, buffers, target, saving),
   readPdf: (abs) => ipcRenderer.invoke('pdf:read', abs),
   syncForward: (pdf, rel, line) => ipcRenderer.invoke('synctex:forward', pdf, rel, line),
   syncInverse: (pdf, page, x, y) => ipcRenderer.invoke('synctex:inverse', pdf, page, x, y),

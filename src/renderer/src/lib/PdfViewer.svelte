@@ -15,12 +15,18 @@
     version,
     onsyncclick,
     onclose,
+    scope = null,
   }: {
     pdf: string | null
     version: number
     onsyncclick: (page: number, x: number, y: number) => void
     /** The control label's ×. */
     onclose: () => void
+    /**
+     * For a file of a multi-part paper: whether previews build just its
+     * section (`label`, e.g. §III) or the whole paper, and the switch.
+     */
+    scope?: { label: string; section: boolean; onchange: (section: boolean) => void } | null
   } = $props()
 
   let scroller: HTMLDivElement
@@ -145,7 +151,12 @@
 <div class="viewer">
   <!-- The controls sit outside the scrolling area, so they never move. -->
   <div class="bar">
-    {#if pdf}<span class="what" title={pdf}>{pdf.split(/[\\/]/).pop()}{#if pageCount} · {pageCount} {pageCount === 1 ? 'page' : 'pages'}{/if}</span>{/if}
+    {#if scope}
+      <span class="scope" role="group" aria-label="What to build">
+        <button class:on={scope.section} onclick={() => scope.onchange(true)} title="Build just this section as you work, numbered as in the paper">{scope.label}</button>
+        <button class:on={!scope.section} onclick={() => scope.onchange(false)} title="Build the whole paper{pageCount ? ` (showing ${pageCount} page${pageCount === 1 ? '' : 's'})` : ''}">Paper</button>
+      </span>
+    {:else if pdf}<span class="what" title={pdf}>{pdf.split(/[\\/]/).pop()}{#if pageCount} · {pageCount} {pageCount === 1 ? 'page' : 'pages'}{/if}</span>{/if}
     <button onclick={() => (zoom = Math.max(0.4, zoom - 0.1))} title="Zoom out">−</button>
     <button onclick={() => (zoom = 1)} title="Fit the width ({Math.round(zoom * 100)}% now)">Fit</button>
     <button onclick={() => (zoom = Math.min(3, zoom + 0.1))} title="Zoom in">+</button>
@@ -166,6 +177,23 @@
     position: relative;
     /* the PDF lies on the vault's endpaper */
     background: var(--marbleimg) center / cover, var(--desk);
+  }
+  .scope {
+    display: inline-flex;
+    margin-left: -8px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--chrome-ink) 30%, transparent);
+  }
+  .scope button {
+    border: 0;
+    border-radius: 0;
+    padding: 1px 10px;
+    background: none;
+    color: inherit;
+  }
+  .scope button.on {
+    background: color-mix(in srgb, var(--chrome-ink) 22%, transparent);
   }
   .bar {
     position: absolute;
