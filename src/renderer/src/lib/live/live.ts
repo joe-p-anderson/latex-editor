@@ -19,6 +19,7 @@ import { refreshMath, type RenderFn } from '../mathPreview'
 import { liveTheme } from './theme'
 import {
   FenceWidget,
+  FrontWidget,
   CiteWidget,
   FigureWidget,
   HeadingNumberWidget,
@@ -58,6 +59,9 @@ export interface LivePaper {
 /** The vault-relative file an editor state holds (set when the state is made). */
 export const liveFile = Facet.define<string, string | null>({ combine: (v) => v[0] ?? null })
 
+/** Live mode is for LaTeX documents only: not classes, packages, .bib or text files. */
+const liveable = (state: EditorState) => /\.tex$/i.test(state.facet(liveFile) ?? '')
+
 /** Turns live mode on or off for one editor state. */
 export const setLive = StateEffect.define<boolean>()
 
@@ -68,6 +72,7 @@ export function isLive(state: EditorState): boolean {
 
 /** Flips live mode, as Ctrl+Shift+L does. */
 export function toggleLive(view: EditorView): boolean {
+  if (!liveable(view.state)) return false
   view.dispatch({ effects: setLive.of(!isLive(view.state)) })
   return true
 }
@@ -75,6 +80,8 @@ export function toggleLive(view: EditorView): boolean {
 const liveOn = StateField.define<boolean>({
   create: () => true,
   update(value, tr) {
+    // A file renamed away from .tex leaves live mode.
+    if (!liveable(tr.state)) return false
     for (const e of tr.effects) if (e.is(setLive)) value = e.value
     return value
   },
@@ -113,7 +120,7 @@ export function liveMode(hooks: LiveHooks, on: () => boolean): Extension {
   })
 
   return [
-    liveOn.init(on),
+    liveOn.init((state) => liveable(state) && on()),
     model,
     decorations,
     // The source block's lines are numbered in the margin; other line numbers stay hidden in live mode.
@@ -185,6 +192,13 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
     if (n.kind === 'item' && firstOnLine) itemLines.add(line.number)
     if (n.kind === 'fence' && firstOnLine && !text(n.to, line.to).trim()) fenceLines.add(line.number)
   }
+  // An abstract's lines, set in from both sides (not its \begin and \end lines).
+  for (const b of model.insets) {
+    const first = doc.lineAt(b.from).number + (text(b.from, doc.lineAt(b.from).to).trim() ? 0 : 1)
+    const last = doc.lineAt(b.to).number - (text(doc.lineAt(b.to).from, b.to).trim() ? 0 : 1)
+    for (let n = first; n <= last; n++) out.push(Decoration.line({ class: 'cm-live-inset' }).range(doc.line(n).from))
+  }
+
   for (const [n, depth] of listDepth) {
     const line = doc.line(n)
     if (!line.text.trim()) continue
@@ -202,6 +216,11 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
       case 'preamble': {
         if (touches(n.from, n.to)) tint(n.from, n.to, 'cm-live-src')
         else widget(n.from, n.to, () => new PreambleWidget(n.docclass, n.packages, n.macros))
+        break
+      }
+      case 'front': {
+        if (touches(n.from, n.to)) tint(n.from, n.to, 'cm-live-src')
+        else widget(n.from, n.to, () => new FrontWidget(n.parts, render))
         break
       }
       case 'heading': {

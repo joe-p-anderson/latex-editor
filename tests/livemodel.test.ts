@@ -136,6 +136,61 @@ describe('liveModel', () => {
     ])
   })
 
+  it('makes one title block of a run of front-matter commands, comments and all', () => {
+    const text = [
+      '\\begin{document}',
+      '\\title{A \\\\ B}',
+      '\\author{Ann}\\altaffiliation[Now at: ]{Elsewhere}\\email{a@b.c}',
+      ' \\affiliation{Uni}% a note',
+      '',
+      '\\date{\\today}% always today,',
+      '   % but any date will do',
+      '\\begin{abstract}',
+      'Short $x$.',
+      '\\end{abstract}',
+      '\\maketitle',
+    ].join('\n')
+    const [front] = of(text, 'front')
+    expect(front.parts.map((p) => [p.cmd, p.opt, p.arg])).toEqual([
+      ['title', null, 'A \\\\ B'],
+      ['author', null, 'Ann'],
+      ['altaffiliation', 'Now at: ', 'Elsewhere'],
+      ['email', null, 'a@b.c'],
+      ['affiliation', null, 'Uni'],
+      ['date', null, '\\today'],
+    ])
+    expect(text.slice(front.from, front.to)).toBe(text.slice(text.indexOf('\\title'), text.indexOf('\n\\begin{abstract}')))
+    expect(of(text, 'fence').map((f) => [f.env, f.begin])).toEqual([
+      ['abstract', true],
+      ['abstract', false],
+      ['maketitle', true],
+    ])
+    const [inset] = model(text).insets
+    expect(text.slice(inset.from, inset.to)).toBe('\nShort $x$.\n')
+    expect(of(text, 'math')).toHaveLength(1)
+  })
+
+  it('stops the preamble fold where front matter written in the preamble starts', () => {
+    const text = '\\documentclass{revtex4-2}\n\\usepackage{amsmath}\n\n\\title{T}\n\\begin{document}\n\\maketitle\n\\end{document}'
+    const [pre] = of(text, 'preamble')
+    expect(text.slice(pre.from, pre.to)).toBe('\\documentclass{revtex4-2}\n\\usepackage{amsmath}')
+    expect(of(text, 'front')).toHaveLength(1)
+    expect(of(text, 'fence').map((f) => [f.env, f.begin])).toEqual([
+      ['document', true],
+      ['maketitle', true],
+      ['document', false],
+    ])
+  })
+
+  it('tags subequations at its \\begin and \\end, and numbers its rows', () => {
+    const text = '\\begin{subequations}\n\\begin{align}a\\\\b\\end{align}\n\\end{subequations}'
+    expect(of(text, 'fence').map((f) => [f.env, f.begin])).toEqual([
+      ['subequations', true],
+      ['subequations', false],
+    ])
+    expect(of(text, 'math')[0].tex).toContain('\\tag{1b}')
+  })
+
   it('handles every fixture document without throwing, with sorted nodes', () => {
     const root = resolve(import.meta.dirname, '../fixtures')
     const files: string[] = []

@@ -142,9 +142,11 @@
   }
 
   function makeState(text: string, rel: string): EditorState {
-    // In live mode a file opens past its (folded) preamble. CodeMirror counts
-    // a line break as one character, so the offset is taken with \n breaks.
-    const body = liveDefault() ? /\\begin\s*\{document\}[^\n]*\n/.exec(text.replace(/\r\n/g, '\n')) : null
+    // In live mode a file opens past its (folded) preamble and its title
+    // block. CodeMirror counts a line break as one character, so the offset
+    // is taken with \n breaks.
+    const lf = text.replace(/\r\n/g, '\n')
+    const body = liveDefault() && /\.tex$/i.test(rel) ? (/^[^%\n]*\\maketitle[^\n]*\n/m.exec(lf) ?? /\\begin\s*\{document\}[^\n]*\n/.exec(lf)) : null
     return EditorState.create({
       doc: text,
       selection: body ? { anchor: body.index + body[0].length } : undefined,
@@ -176,10 +178,13 @@
           if (u.docChanged && current) onedit(current)
           if (u.docChanged || u.selectionSet) reportCursor(u.state)
           if (isLive(u.state) !== isLive(u.startState)) {
-            try {
-              localStorage.setItem(LIVE_KEY, String(isLive(u.state)))
-            } catch {
-              // not remembered; fine
+            // Remembered when toggled, not when a rename takes a file out of live mode.
+            if (u.transactions.some((tr) => tr.effects.some((e) => e.is(setLive)))) {
+              try {
+                localStorage.setItem(LIVE_KEY, String(isLive(u.state)))
+              } catch {
+                // not remembered; fine
+              }
             }
             onlivechange(isLive(u.state))
           }

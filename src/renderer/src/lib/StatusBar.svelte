@@ -28,7 +28,8 @@
     section: string | null
     /** Null when no file is open. */
     cursor: { line: number; col: number } | null
-    live: boolean
+    /** Null for files live mode isn't for (anything but .tex). */
+    live: boolean | null
     spelling: boolean
     problems: { errors: number; warnings: number }
     onendpaper: () => void
@@ -48,7 +49,7 @@
   <span class="spacer"></span>
   {#if cursor}
     <span class="sb static">Ln {cursor.line}, Col {cursor.col}</span>
-    <button class="sb" onclick={onlive} title="Switch between the live view and source (Ctrl+Shift+L)">{live ? 'Live' : 'Source'}</button>
+    {#if live !== null}<button class="sb" onclick={onlive} title="Switch between the live view and source (Ctrl+Shift+L)">{live ? 'Live' : 'Source'}</button>{/if}
     <button class="sb" onclick={onspelling} title="Check spelling">Spelling: {spelling ? 'en-US' : 'off'}</button>
   {/if}
   <button class="sb" onclick={onproblems} title="Problems (Ctrl+J)">

@@ -2,7 +2,7 @@
 // compares what it shows, so CodeMirror reuses the DOM (and MathJax isn't
 // rerun) when the document changes somewhere else.
 import { EditorView, WidgetType } from '@codemirror/view'
-import { inlineParts, type ItemStyle, type Tabular } from '@shared/livemodel'
+import { inlineParts, type FrontPart, type ItemStyle, type Tabular } from '@shared/livemodel'
 import { cachedRender, type RenderFn } from '../mathPreview'
 import { thumbnail } from '../thumbnails'
 import { OPEN_LOCATION_EVENT, type OpenLocation } from '../citations'
@@ -23,6 +23,18 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, text?: s
   e.className = cls
   if (text !== undefined) e.textContent = text
   return e
+}
+
+/**
+ * A card's outer box. CodeMirror sizes a block widget by its border box, so
+ * the card's own margins would go uncounted (and a run of cards leave the
+ * page's inner margin short at the bottom). The box is its own formatting
+ * context, so they count toward its height.
+ */
+function spaced(card: HTMLElement): HTMLElement {
+  const box = el('div', 'cm-live-box')
+  box.append(card)
+  return box
 }
 
 const TAG_ICON =
@@ -74,7 +86,83 @@ export class PreambleWidget extends WidgetType {
     dom.append(el('span', 'cm-live-preamble-icon', '⚙'), el('span', 'cm-live-preamble-title', 'Preamble'), el('span', 'cm-live-preamble-info', bits.join(' · ')))
     dom.title = 'Click to show the preamble'
     revealOnClick(dom, view)
-    return dom
+    return spaced(dom)
+  }
+}
+
+/** \today as LaTeX prints it. */
+const today = () => new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+
+/**
+ * The title block a run of \title, \author, \affiliation, … makes, laid out
+ * as revtex does: the title, then each run of authors followed by their
+ * affiliations, then the date. An author's email and other notes go in
+ * small type under their name.
+ */
+export class FrontWidget extends WidgetType {
+  constructor(
+    readonly parts: FrontPart[],
+    readonly render: RenderFn,
+  ) {
+    super()
+  }
+  eq(o: FrontWidget): boolean {
+    return JSON.stringify(o.parts) === JSON.stringify(this.parts) && o.render === this.render
+  }
+  toDOM(view: EditorView): HTMLElement {
+    const dom = el('div', 'cm-live-front')
+    // An author's \thanks is a footnote, not part of the name.
+    const text = (tex: string) => richText(tex.replace(/\\thanks\s*\{[^{}]*\}/g, '').replace(/\\today(?![A-Za-z])/g, today()), this.render)
+    const rich = (cls: string, tex: string) => {
+      const row = el('div', cls)
+      row.append(text(tex))
+      return row
+    }
+    let authors: { names: HTMLElement; notes: HTMLElement } | null = null
+    for (const p of this.parts) {
+      switch (p.cmd) {
+        case 'preprint':
+          dom.prepend(rich('cm-live-front-preprint', p.arg))
+          break
+        case 'title':
+          dom.append(rich('cm-live-front-title', p.arg))
+          authors = null
+          break
+        case 'author':
+        case 'collaboration': {
+          if (!authors) {
+            authors = { names: el('div', 'cm-live-front-authors'), notes: el('div', 'cm-live-front-notes') }
+            dom.append(authors.names, authors.notes)
+          } else authors.names.append(document.createTextNode(', '))
+          authors.names.append(text(p.arg))
+          break
+        }
+        case 'email':
+        case 'homepage':
+        case 'altaffiliation':
+        case 'thanks': {
+          const note = el('div', '')
+          note.append(document.createTextNode(p.opt ?? (p.cmd === 'email' ? 'Email: ' : p.cmd === 'homepage' ? 'URL: ' : '')), text(p.arg))
+          ;(authors?.notes ?? dom).append(note)
+          break
+        }
+        case 'affiliation':
+        case 'address':
+          dom.append(rich('cm-live-front-aff', p.arg))
+          authors = null
+          break
+        case 'date':
+          dom.append(rich('cm-live-front-date', p.arg))
+          authors = null
+          break
+        case 'keywords':
+          dom.append(rich('cm-live-front-date', `Keywords: ${p.arg}`))
+          break
+      }
+    }
+    dom.title = 'Click to edit the title block'
+    revealOnClick(dom, view)
+    return spaced(dom)
   }
 }
 
@@ -276,7 +364,7 @@ export class IncludeWidget extends WidgetType {
       view.dispatch({ selection: { anchor: view.posAtDOM(dom) } })
       view.focus()
     })
-    return dom
+    return spaced(dom)
   }
 }
 
@@ -363,7 +451,7 @@ export class FigureWidget extends WidgetType {
     }
     for (const key of this.labels) dom.append(new LabelWidget(key).toDOM(view))
     revealOnClick(dom, view, 0)
-    return dom
+    return spaced(dom)
   }
 }
 
@@ -421,7 +509,7 @@ export class TableWidget extends WidgetType {
     edit.addEventListener('click', () => view.dom.dispatchEvent(new CustomEvent(EDIT_TABLE_EVENT, { bubbles: true, detail: view.posAtDOM(dom) })))
     dom.append(edit)
     revealOnClick(dom, view)
-    return dom
+    return spaced(dom)
   }
 }
 

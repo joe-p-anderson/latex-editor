@@ -1389,7 +1389,7 @@
     file={active}
     {place}
     {live}
-    canLive={!!active}
+    canLive={!!active?.toLowerCase().endsWith('.tex')}
     {pdfOpen}
     {panelOpen}
     {build}
@@ -1574,7 +1574,7 @@
       {branch}
       section={active?.endsWith('.tex') ? section : null}
       cursor={active ? { line: cursorLine, col: cursorCol } : null}
-      {live}
+      live={active?.toLowerCase().endsWith('.tex') ? live : null}
       spelling={spellOn}
       problems={problemCounts}
       onendpaper={() => showView('appearance')}

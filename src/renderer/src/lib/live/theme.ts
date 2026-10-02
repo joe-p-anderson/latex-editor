@@ -90,10 +90,25 @@ export const liveTheme = EditorView.baseTheme({
     cursor: 'pointer',
   },
   '.cm-live-preamble-title': { fontWeight: '600', color: 'var(--ink)' },
+  // Around each card (see spaced() in widgets.ts): holds its margins in.
+  '.cm-live-box': { display: 'flow-root' },
+
+  // The title block, as \maketitle sets it.
+  '.cm-live-front': { padding: '6px 0 14px', textAlign: 'center', textIndent: '0', hyphens: 'none', cursor: 'text' },
+  '.cm-live-front-preprint': { fontFamily: ui, fontSize: 'calc(var(--page-size) * 0.66)', color: muted, textAlign: 'right' },
+  '.cm-live-front-title': { fontSize: '1.3em', fontWeight: '700', lineHeight: '1.3', margin: '0.4em 1.5em 0.7em' },
+  '.cm-live-front-authors': { marginTop: '0.35em' },
+  '.cm-live-front-notes': { fontFamily: ui, fontSize: 'calc(var(--page-size) * 0.66)', color: muted, lineHeight: '1.45' },
+  '.cm-live-front-aff': { fontStyle: 'italic', fontSize: '0.88em', color: muted },
+  '.cm-live-front-date': { fontSize: '0.85em', color: muted, marginTop: '0.45em' },
+
+  // An abstract's text, set in from both sides and a touch smaller.
+  '&.cm-live .cm-live-inset': { paddingLeft: '2.2em', paddingRight: '2.2em', fontSize: '0.92em' },
+
 
   // An \input'ed file of a paper: its name and numbered headings.
   '.cm-live-include': {
-    margin: '6px 0',
+    margin: '4px 0',
     padding: '5px 12px 6px',
     fontFamily: ui,
     fontSize: '12px',

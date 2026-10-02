@@ -61,6 +61,15 @@ export type LiveNode =
   | { kind: 'symbol'; from: number; to: number; text: string; faint: boolean }
   /** \input{arg} and its relatives (\import's folder in `dir`). */
   | { kind: 'include'; from: number; to: number; cmd: string; dir: string; arg: string }
+  /** A run of front-matter commands (\title, \author, \affiliation, …), shown as the title block they make. */
+  | { kind: 'front'; from: number; to: number; parts: FrontPart[] }
+
+/** One front-matter command: \altaffiliation[Now at: ]{Elsewhere} is { cmd: 'altaffiliation', opt: 'Now at: ', arg: 'Elsewhere' }. */
+export interface FrontPart {
+  cmd: string
+  opt: string | null
+  arg: string
+}
 
 export type LabelKind = 'section' | 'equation' | 'figure' | 'table' | 'question' | 'item'
 
@@ -117,6 +126,8 @@ export interface LiveModel {
   nodes: LiveNode[]
   /** List environment bodies (between \begin and \end), with how deeply nested they are (1 = outermost). */
   lists: { from: number; to: number; depth: number }[]
+  /** Abstract bodies (between \begin and \end), set in from both sides. */
+  insets: { from: number; to: number }[]
   labels: Map<string, LabelTarget>
   /** The counters at the end. */
   end: Counters
@@ -146,6 +157,10 @@ const roman = (n: number) => {
   return s
 }
 const INCLUDES = /^(input|include|subfile|import|subimport|inputfrom|includefrom|subinputfrom|subincludefrom)$/
+/** The commands a title block is made of (revtex's and the standard classes'). */
+const FRONT = /^(title|author|affiliation|altaffiliation|address|email|homepage|thanks|date|preprint|keywords|collaboration|noaffiliation)$/
+/** Environments shown with a faint tag at \begin and \end, like lists. */
+const TAGGED = /^(abstract|subequations|document)$/
 
 /**
  * A heading's numbers under `style`: what its title shows (`display`) and
@@ -185,6 +200,9 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
   const src = blankComments(text)
   const nodes: LiveNode[] = []
   const listBodies: LiveModel['lists'] = []
+  const insets: LiveModel['insets'] = []
+  /** The title block being read, while front-matter commands keep coming. */
+  let front = null as Extract<LiveNode, { kind: 'front' }> | null
   const labels = new Map<string, LabelTarget>()
   const tokens = envTokens(text)
   const tokenAt = new Map<number, EnvToken>(tokens.map((t) => [t.from, t]))
@@ -212,9 +230,14 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
     let packages = 0
     for (const m of pre.matchAll(/\\(?:usepackage|RequirePackage)\s*(?:\[[^\]]*\])?\s*\{([^}]*)\}/g)) packages += m[1].split(',').filter((s) => s.trim()).length
     const macros = [...pre.matchAll(/\\(?:newcommand|renewcommand|providecommand|def|DeclareMathOperator|newenvironment|DeclareSIUnit)(?![A-Za-z])/g)].length
-    nodes.push({ kind: 'preamble', from: 0, to: doc.to, docclass: cls ? cls[1].trim() : null, packages, macros })
+    // Front matter written in the preamble (revtex allows \title and the rest
+    // there) is shown, not folded: the fold stops at the line it starts on.
+    const fm = /\\(?:title|author|affiliation|preprint|date|keywords)(?![A-Za-z])|\\begin\s*\{abstract\}/.exec(pre)
+    const lineStart = fm ? text.lastIndexOf('\n', fm.index) + 1 : -1
+    const to = fm ? text.slice(0, lineStart).trimEnd().length : doc.to
+    if (to > 0) nodes.push({ kind: 'preamble', from: 0, to, docclass: cls ? cls[1].trim() : null, packages, macros })
     if (!opts.style) style = numberStyleOf(cls ? cls[1] : null)
-    start = doc.to
+    start = fm ? lineStart : doc.to
   }
 
   const re = /\\([A-Za-z@]+)(\*?)|\\([^A-Za-z@\s])|---?|``|''|~/g
@@ -261,6 +284,16 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
 
     if (name in SECTION_LEVEL) {
       heading(name, star === '*', p, end)
+      continue
+    }
+
+    if (FRONT.test(name)) {
+      frontPart(name, p, end)
+      continue
+    }
+
+    if (name === 'maketitle') {
+      nodes.push({ kind: 'fence', from: p, to: end, env: 'maketitle', begin: true })
       continue
     }
 
@@ -358,7 +391,7 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
 
   // Math, in order, except where it's part of something shown whole (a
   // figure's caption, a table cell) or not shown at all (the preamble).
-  const opaque = nodes.filter((n) => n.kind === 'preamble' || n.kind === 'figure' || n.kind === 'table' || n.kind === 'verbatim')
+  const opaque = nodes.filter((n) => n.kind === 'preamble' || n.kind === 'front' || n.kind === 'figure' || n.kind === 'table' || n.kind === 'verbatim')
   for (const r of math) {
     if (r.closed && r.from >= start && !made.has(r.from) && !opaque.some((o) => o.from <= r.from && r.from < o.to)) mathNode(r.from, r.to, r.tex, r.display)
   }
@@ -375,7 +408,7 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
   for (const h of headings) h.node.level = Math.min(3, h.level - topLevel + 1) as 1 | 2 | 3
 
   nodes.sort((a, b) => a.from - b.from)
-  return { nodes, lists: listBodies, labels, end: c, style }
+  return { nodes, lists: listBodies, insets, labels, end: c, style }
 
   function group(at: number): { body: string; end: number } | null {
     const ws = /^\s*/.exec(src.slice(at, at + 20))![0].length
@@ -426,8 +459,53 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
     if (open >= 0) re.lastIndex = open + 1 // the title is scanned as usual
   }
 
+  /**
+   * A front-matter command and its arguments. Commands with only blank space
+   * (or comments) between them make one title block; a comment after the
+   * last one (on its line, or on lines of their own right under it) belongs
+   * to the block.
+   */
+  function frontPart(cmd: string, p: number, end: number): void {
+    let j = end
+    let opt: string | null = null
+    for (let o = optional(j); o; o = optional(j)) {
+      opt = o.body
+      j = o.end
+    }
+    const g = cmd === 'noaffiliation' ? null : group(j)
+    if (g) j = g.end
+    else if (cmd !== 'noaffiliation') return
+    const lineEndAt = (at: number) => (src.indexOf('\n', at) < 0 ? src.length : src.indexOf('\n', at))
+    let lineEnd = lineEndAt(j)
+    let to = j
+    if (!src.slice(j, lineEnd).trim()) {
+      // Comment lines right under it (no blank line between) go with it too.
+      while (lineEnd < src.length) {
+        const next = lineEndAt(lineEnd + 1)
+        if (src.slice(lineEnd + 1, next).trim() || !text.slice(lineEnd + 1, next).trim()) break
+        lineEnd = next
+      }
+      to = text.slice(0, lineEnd).trimEnd().length
+    }
+    const part = { cmd, opt, arg: g?.body.trim() ?? '' }
+    if (front && !src.slice(front.to, p).trim()) {
+      front.parts.push(part)
+      front.to = to
+    } else {
+      front = { kind: 'front', from: p, to, parts: [part] }
+      nodes.push(front)
+    }
+    re.lastIndex = j
+  }
+
   function beginEnv(tok: EnvToken): void {
     const env = tok.name
+    if (TAGGED.test(env)) nodes.push({ kind: 'fence', from: tok.from, to: tok.to, env, begin: true })
+    if (env === 'abstract') {
+      const close = matchEnd(tokens, tok)
+      if (close) insets.push({ from: tok.to, to: close.from })
+      return
+    }
     if (env === 'subequations') {
       // One equation number for the lot; its rows are 5a, 5b, …
       const close = matchEnd(tokens, tok)
@@ -462,6 +540,10 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
   }
 
   function endEnv(tok: EnvToken): void {
+    if (TAGGED.test(tok.name)) {
+      nodes.push({ kind: 'fence', from: tok.from, to: tok.to, env: tok.name, begin: false })
+      return
+    }
     const i = stack.findLastIndex((l) => l.env === tok.name)
     if (i < 0) return
     const list = stack[i]
