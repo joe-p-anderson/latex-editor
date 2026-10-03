@@ -151,3 +151,4 @@ export default renderer
   - **Added:** `ctx.showSettings()`, which opens the Plugins view with the plugin's settings and panel unfolded. The status item had been landing on the folded list.
   - **Added:** applying a fix that appends to a file that doesn't exist creates the file. The quick fix had been skipped when the `.bib` was missing.
   - **Declined for now:** a `ctx.host.bibFiles()` API. The plugin reads `\bibliography{…}` itself, and one consumer isn't enough to fix the API's shape.
+  - **Fixed after a live test (with the user's consent):** collection sync sent Better BibTeX a relative path (`endleaf/…`), which it refuses. It now starts with the library's name, read from the local API (`/My Library/endleaf/…`). The mock accepted any path, so the tests had passed; it now rejects relative paths as Better BibTeX does. A real build filled `endleaf/zvault/main` with every cited reference that exists in Zotero.

@@ -26,7 +26,9 @@ export async function syncCollection(o: { zot: Zotero; collection: string; auxPa
     // never synced
   }
   if (before?.collection === o.collection && !keysChanged(before.keys, keys)) return 'unchanged'
-  await o.zot.rpc('collection.scanAUX', [o.collection, o.auxPath])
+  // Better BibTeX wants an absolute path, from the library: /My Library/endleaf/….
+  const path = o.collection.startsWith('/') ? o.collection : `/${await o.zot.libraryName()}/${o.collection}`
+  await o.zot.rpc('collection.scanAUX', [path, o.auxPath])
   await mkdir(o.cacheDir, { recursive: true })
   await writeFile(stateFile, JSON.stringify({ collection: o.collection, keys }))
   return 'synced'

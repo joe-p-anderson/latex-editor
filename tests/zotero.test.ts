@@ -243,7 +243,8 @@ async function mockZotero(opts: { bbt?: boolean; api?: boolean; hang?: boolean }
           return unknown ? fail(`not found: ${unknown}`) : ok(keys.map((k) => blocks[k]).join('\n\n'))
         }
         if (method === 'item.citationkey') return ok(Object.fromEntries((params[0] as string[]).map((id) => [id, { AAAA1111: 'doeExampleStudyLattice2020', CCCC3333: 'Smith2015' }[id] ?? null])))
-        if (method === 'collection.scanAUX') return ok({ key: 'COLL0001', libraryID: 1 })
+        // Like Better BibTeX: the path must start at a library.
+        if (method === 'collection.scanAUX') return String(params[0]).startsWith('/') ? ok({ key: 'COLL0001', libraryID: 1 }) : fail(`collection path "${params[0]}" is not an absolute path`)
         return fail(`unknown method ${method}`)
       }
       send(404, 'not found', 'text/plain')
@@ -456,7 +457,8 @@ describe('collection sync', () => {
     const scans = () => mock.calls.filter((c) => c.method === 'collection.scanAUX')
     await writeFile(aux, '\\citation{a,b}\n')
     expect(await run()).toBe('synced')
-    expect(scans()[0].params).toEqual(['endleaf/V/main', aux])
+    // Better BibTeX's path starts with the library's name, from the local API.
+    expect(scans()[0].params).toEqual(['/My Library/endleaf/V/main', aux])
     expect(await run()).toBe('unchanged')
     await writeFile(aux, '\\citation{b}\n\\citation{a}\n')
     expect(await run()).toBe('unchanged')

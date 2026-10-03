@@ -87,6 +87,22 @@ export class Zotero {
     return http(this.url(path), { headers: { 'Zotero-API-Version': '3' } }, ms)
   }
 
+  /**
+   * The name of the user's own library ("My Library", or its translation),
+   * which starts Better BibTeX's collection paths. From the local API when it
+   * answers; otherwise Zotero's English name.
+   */
+  async libraryName(): Promise<string> {
+    try {
+      const res = await this.get('/api/users/0/items/top?limit=1&format=json')
+      const name = (JSON.parse(res.text) as { library?: { name?: string } }[])[0]?.library?.name
+      if (res.status === 200 && name) return name
+    } catch {
+      // the local API is off, or the library is empty
+    }
+    return 'My Library'
+  }
+
   /** The best provider that is up, or null (Zotero closed, or neither interface on). */
   async provider(maxAgeMs = 0): Promise<RefProvider | null> {
     const s = await this.status(maxAgeMs)
