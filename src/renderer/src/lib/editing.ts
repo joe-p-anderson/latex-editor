@@ -44,6 +44,7 @@ import {
   type Snippet,
 } from '@shared/latexedit'
 import { findMathRegions } from '@shared/mathregions'
+import { headingAt } from '@shared/paperedit'
 import { keyAt } from '@shared/search'
 import { clipboardGrid, tableRangeAt } from '@shared/tablemodel'
 import { latexPairs } from './pairs'
@@ -84,10 +85,91 @@ export interface PaperLabel {
   file: string
 }
 
-export function latexEditing(hooks: EditingHooks): Extension {
+/** What the editor's right-click menu can ask the app for. */
+export interface ContextHooks {
+  /** Show the cursor's line in the PDF. */
+  showInPdf(): void
+  /** Move a section (its heading's line) or exactly a range into a file of its own; `title` names the file. */
+  extract(what: { line: number } | { from: number; to: number }, title: string): void
+}
+
+const slug = (s: string) => s.replace(/%.*$/gm, '').replace(/\\[a-zA-Z]+\*?|[{}$\\]/g, ' ').trim().split(/\s+/).slice(0, 4).join(' ')
+
+/** The right-click menu: the clipboard, formatting, the PDF, and moving text to a file of its own. */
+function contextMenu(hooks: ContextHooks): Extension {
+  return EditorView.domEventHandlers({
+    contextmenu(e, view) {
+      const { from, to } = view.state.selection.main
+      const pos = view.posAtCoords({ x: e.clientX, y: e.clientY })
+      if (pos !== null && (pos < from || pos > to)) view.dispatch({ selection: { anchor: pos } })
+      e.preventDefault()
+      const sel = view.state.selection.main
+      const text = view.state.doc.toString()
+      const heading = sel.empty ? headingAt(text, view.state.doc.lineAt(sel.head).number) : null
+      const canExtract = sel.empty ? !!heading : !!text.slice(sel.from, sel.to).trim()
+      void window.api
+        .contextMenu([
+          { id: 'cut', label: 'Cut', enabled: !sel.empty },
+          { id: 'copy', label: 'Copy', enabled: !sel.empty },
+          { id: 'paste', label: 'Paste' },
+          { id: 'all', label: 'Select All' },
+          { id: '', label: '', separator: true },
+          { id: 'bold', label: 'Bold' },
+          { id: 'italic', label: 'Italic' },
+          { id: '', label: '', separator: true },
+          { id: 'pdf', label: 'Show in PDF' },
+          { id: '', label: '', separator: true },
+          { id: 'extract', label: 'Move to a file of its own…', enabled: canExtract },
+        ])
+        .then(async (id) => {
+          if (!id) return
+          view.focus()
+          const s = view.state.selection.main
+          switch (id) {
+            case 'cut':
+            case 'copy':
+              await navigator.clipboard.writeText(view.state.sliceDoc(s.from, s.to))
+              if (id === 'cut') view.dispatch({ changes: { from: s.from, to: s.to }, userEvent: 'delete.cut' })
+              break
+            case 'paste': {
+              const t = await navigator.clipboard.readText()
+              if (t) view.dispatch({ ...view.state.replaceSelection(t.replace(/\r\n?/g, view.state.lineBreak)), scrollIntoView: true, userEvent: 'input.paste' })
+              break
+            }
+            case 'all':
+              view.dispatch({ selection: { anchor: 0, head: view.state.doc.length } })
+              break
+            case 'bold':
+              format(view, 'textbf', 'boldsymbol', ['mathbf', 'bm'])
+              break
+            case 'italic':
+              format(view, 'textit', 'mathrm', ['mathit', 'textrm'])
+              break
+            case 'pdf':
+              hooks.showInPdf()
+              break
+            case 'extract': {
+              const now = view.state.selection.main
+              if (now.empty) {
+                const h = headingAt(view.state.doc.toString(), view.state.doc.lineAt(now.head).number)
+                if (h) hooks.extract({ line: h.line }, h.title)
+              } else hooks.extract({ from: now.from, to: now.to }, slug(view.state.sliceDoc(now.from, now.to)))
+              break
+            }
+          }
+        })
+        .catch(() => {})
+      return true
+    },
+  })
+}
+
+export function latexEditing(hooks: EditingHooks & ContextHooks): Extension {
   const source = (ctx: CompletionContext) => complete(ctx, hooks)
   const languageData = [{ autocomplete: source, closeBrackets: { brackets: ['(', '[', '{'] } }]
   return [
+    // Below the spelling menu on a misspelled word, which handles its right-click first.
+    Prec.low(contextMenu(hooks)),
     indentUnit.of('    '),
     EditorState.languageData.of(() => languageData),
     Prec.highest(

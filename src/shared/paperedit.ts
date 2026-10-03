@@ -147,6 +147,31 @@ export function extractSection(text: string, line: number, cmd: string, arg: str
   return { changes: [{ from: span.from, to: span.to, insert: replace }], body: `${header}${section}` }
 }
 
+/** The nearest section heading at or above `line` (1-based), with its title. */
+export function headingAt(text: string, line: number): { line: number; title: string } | null {
+  const lines = text.split('\n')
+  for (let i = Math.min(line, lines.length); i >= 1; i--) {
+    if (!HEADING.test(lines[i - 1])) continue
+    const m = /^[ \t]*\\[a-z]+\*?\s*(?:\[[^\]]*\])?\s*\{((?:[^{}]|\{[^{}]*\})*)\}/.exec(lines[i - 1])
+    return { line: i, title: m ? m[1].replace(/\\[a-zA-Z]+\s*|[{}]/g, '').trim() : '' }
+  }
+  return null
+}
+
+/**
+ * Moves exactly the text from `from` to `to` into a file of its own, leaving
+ * `\cmd{arg}` on a line of its own in its place (the lines around it stay
+ * apart). `body` is the new file's text, after `header`.
+ */
+export function extractRange(text: string, from: number, to: number, cmd: string, arg: string, header: string): { changes: Change[]; body: string } | null {
+  if (to <= from || !text.slice(from, to).trim()) return null
+  let part = text.slice(from, to)
+  const before = from > 0 && text[from - 1] !== '\n' ? '\n' : ''
+  const after = part.endsWith('\n') || (to < text.length && text[to] !== '\n') ? '\n' : ''
+  if (!part.endsWith('\n')) part += '\n'
+  return { changes: [{ from, to, insert: `${before}\\${cmd}{${arg}}${after}` }], body: `${header}${part}` }
+}
+
 /**
  * Puts a file's text back in place of the include that brings it in (the
  * reverse of extractSection). Its own % !TEX root line is left out.

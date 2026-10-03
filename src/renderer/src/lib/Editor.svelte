@@ -34,6 +34,7 @@
     onedit,
     onopenlocation,
     livePaper,
+    onextract,
   }: {
     onsave: (rel: string, text: string) => void
     ondirtychange: (rel: string, dirty: boolean) => void
@@ -57,6 +58,8 @@
     onopenlocation: (loc: OpenLocation) => void
     /** A file's place in its multi-part paper, for the live view's numbers and cards. */
     livePaper: (rel: string | null) => LivePaper | null
+    /** Right-click, "Move to a file of its own": a section by its heading's line, or a range of the text. */
+    onextract: (rel: string, what: { line: number } | { from: number; to: number }, title: string) => void
   } = $props()
 
   let host: HTMLDivElement
@@ -100,6 +103,8 @@
     citations: () => editingHooks.citations(),
     openCitePicker: () => editingHooks.openCitePicker(),
     paperLabels: () => editingHooks.paperLabels(),
+    showInPdf: () => onsyncforward(),
+    extract: (what, title) => current && onextract(current, what, title),
   })
   const spelling = spellcheck({
     // Documents only: not classes, packages or the vault's settings files.
