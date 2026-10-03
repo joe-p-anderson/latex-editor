@@ -46,7 +46,7 @@ What would make this a better LaTeX editor, roughly in order of payoff. Items ma
 ## Plugins
 
 - **A plugin engine (done).** Optional features switched on per vault, from the Plugins view; see `docs/design/PLUGINS.md`. Symbols is the first plugin.
-  - Planned: Problem bank, Zotero (then Mendeley).
+  - Problem bank (done) and Zotero (done) are plugins too. Next could be Mendeley as a second reference provider.
 
 ## Decided against
 

@@ -2,11 +2,11 @@
 // It decides which plugins are on for the open vault, starts and stops
 // their main halves, and gives each a MainContext: the vault's files, its
 // settings, a cache folder, build hooks, and a channel to its renderer half.
-import type { BrowserWindow } from 'electron'
+import { shell, type BrowserWindow } from 'electron'
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import type { CompileResult } from '../shared/api'
-import { pluginStates, validSetting, type PluginManifest, type PluginState, type SettingField, type SettingValues } from '../shared/plugin'
+import { linkAllowed, pluginStates, validSetting, type PluginManifest, type PluginState, type SettingField, type SettingValues } from '../shared/plugin'
 import { MANIFESTS } from '../plugins/manifests'
 import { MAIN } from '../plugins/main'
 import { onAfterBuild, onBeforeBuild, onProblemFixes, type AfterBuild, type BeforeBuild, type ProblemFixer } from './buildhooks'
@@ -119,6 +119,12 @@ export class PluginHost {
     const states = await this.states()
     this.win()?.webContents.send('plugins:changed', states)
     return states
+  }
+
+  /** Opens `url` in the browser if the plugin's manifest lists it under `links`. */
+  openLink(id: string, url: string): void {
+    if (!linkAllowed(this.manifest(id).links, url)) throw new Error(`The ${id} plugin may not open ${url}`)
+    void shell.openExternal(url)
   }
 
   /** Calls a handler a plugin's main half registered. */

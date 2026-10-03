@@ -33,6 +33,13 @@ export interface PluginManifest {
   when?: PluginWhen
   /** Settings shared by every vault (settings.json) and per vault (.vault.json). */
   settings?: { global?: SettingField[]; vault?: SettingField[] }
+  /** https:// addresses (or prefixes of them) the plugin may open in the browser, e.g. its download and help pages. */
+  links?: string[]
+}
+
+/** Whether `url` is one of `links` (or starts with one), over https. */
+export function linkAllowed(links: string[] | undefined, url: string): boolean {
+  return /^https:\/\//.test(url) && !!links?.some((l) => /^https:\/\//.test(l) && url.startsWith(l))
 }
 
 /** Conditions for a contextual view; all given ones must hold. */

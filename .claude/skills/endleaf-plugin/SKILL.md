@@ -67,6 +67,8 @@ Engine changes are made by the reviewer, who then removes the workaround.
 
 Use a copy of a fixture vault and a throwaway user-data folder, so the user's settings and recent vaults are untouched. Turn your plugin on in the copy's `.vault.json` (`"plugins": { "<id>": true }`).
 
+Put them under the **long** temp path (`/c/Users/<you>/AppData/Local/Temp/…`). `$TEMP` and the scratchpad may be 8.3 short paths such as `JANDER~1`, and TeX can't read a path with a `~`.
+
 ```bash
 npx electron-vite dev --remoteDebuggingPort 9233 -- --vault="$SCRATCH/vault" --user-data-dir="$SCRATCH/userdata"   # in the background
 node .claude/skills/endleaf-plugin/drive.mjs evalfile steps.js   # run JS in the window
@@ -77,7 +79,10 @@ node .claude/skills/endleaf-plugin/drive.mjs shot shot.png       # then Read the
 - The CodeMirror view is `document.querySelector('.cm-content').cmTile?.view` (older builds: `.cmView.view`).
 - Run a command by sending Ctrl+Shift+P to `view.contentDOM` (`new KeyboardEvent('keydown', { key: 'P', ctrlKey: true, shiftKey: true, bubbles: true })`). Then type into `[role=dialog] input` and press Enter. Prompts are `[role=dialog] input` too.
 - Save with a Ctrl+S keydown on `view.contentDOM`.
-- **Stopping:** stopping the background `npx` leaves Electron running and holding the port. Afterwards, find the owner of the port (`netstat -ano | grep ":9233 " | grep LISTEN`) and stop that process. Stop only that one: other sessions and the user run their own.
+- `await window.api.compile('<root>.tex')` returns the full build's problems with their `fixes`. It's the quickest way to check a `ctx.build.fixes` contribution. A save may run only a preview or section build.
+- Open the Problems panel by clicking the status bar's ⚠ item (`.statusbar .sb` containing ⚠). Each problem's fixes are buttons in it.
+- A plugin's `ctx.panel` content shows under its entry in the Plugins view once the entry is unfolded. `document.getElementById('plugin-<id>')` is the entry; click its "Settings" button.
+- **Stopping:** stopping the background `npx` leaves Electron running and holding the port. Afterwards, find the owner of the port (`netstat -ano | grep ":9233 " | grep LISTEN`) and stop that process. Stop only that one: other sessions and the user run their own. In PowerShell `Stop-Process -Id <pid> -Force` works where `taskkill` from Bash may not.
 
 ## Final report format
 
@@ -95,6 +100,16 @@ From round 1, the problem bank. It was complete and well tested, but it was neve
 - **Run the app before reporting.** The two other bugs found in review were invisible to unit tests: a second prompt never opening, and live cards not appearing until the next edit.
 - **Don't over-reach the brief.** Optional items ("only if time allows") are fine to build, but say so and keep them small.
 - The skill and the docs were missing four things, all filled in above: the `@shared` alias, types shared between halves, `.svelte.ts` stores, and the fixture's templates path.
+
+From round 2, Zotero, built with the round-1 skill. The lessons transferred: the subagent ran the app and drove it against the real outside program. It reported its one workaround (marked `ENGINE-GAP`) and hid none in tests. It also caught a real-world quirk the docs don't mention: BBT 9's `item.search` needs the tuple form.
+
+- **Talking to an outside program:**
+  - Allow read-only calls against the user's real install to learn real response shapes.
+  - Forbid anything that writes to their data; test writes against a `node:http` mock.
+  - Record trimmed, fabricated-but-real-shaped fixtures in `tests/fixtures/<id>/`.
+- **Cite-source hits pass through Svelte state:** object identity is lost. Extra fields you put on a hit (an item id, say) survive but aren't typed, so cast in `pick`.
+- **Untyped extras:** see the `ctx.build.fixes` row in PLUGINS.md for what a build carries.
+- **Things still awkward,** recorded in the PLUGINS.md changelog: no way to trigger a full build from a plugin, and no notice when the cite picker is cancelled.
 
 ## Prompt template that worked
 

@@ -4,5 +4,6 @@
 import type { PluginManifest } from '../shared/plugin'
 import problemBank from './problem-bank/manifest'
 import symbols from './symbols/manifest'
+import zotero from './zotero/manifest'
 
-export const MANIFESTS: PluginManifest[] = [symbols, problemBank]
+export const MANIFESTS: PluginManifest[] = [symbols, problemBank, zotero]

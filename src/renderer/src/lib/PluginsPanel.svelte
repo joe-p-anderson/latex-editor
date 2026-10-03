@@ -4,7 +4,7 @@
    * default for vaults that haven't chosen, its settings, and anything the
    * plugin shows here itself (e.g. a setup checklist). Changes apply at once.
    */
-  import type { Component } from 'svelte'
+  import { tick, untrack, type Component } from 'svelte'
   import type { PluginState, SettingField, SettingValue } from '@shared/plugin'
   import type { RendererContext } from './plugins.svelte'
   import Icon from './Icon.svelte'
@@ -13,14 +13,23 @@
     states,
     panels,
     vaultName,
+    focus = null,
   }: {
     states: PluginState[]
     panels: { plugin: string; component: Component<{ ctx: RendererContext }>; ctx: RendererContext }[]
     vaultName: string
+    /** A plugin to unfold and scroll to (`at` makes asking again count). */
+    focus?: { id: string; at: number } | null
   } = $props()
 
   // Which plugins' settings are unfolded.
   let open = $state(new Set<string>())
+  $effect(() => {
+    if (!focus) return
+    const id = focus.id
+    untrack(() => (open = new Set(open).add(id)))
+    tick().then(() => document.getElementById(`plugin-${id}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' }))
+  })
   const toggleOpen = (id: string) => {
     const next = new Set(open)
     if (!next.delete(id)) next.add(id)
@@ -67,7 +76,7 @@
       {@const m = s.manifest}
       {@const fields = [...(m.settings?.vault ?? []), ...(m.settings?.global ?? [])]}
       {@const own = panels.filter((p) => p.plugin === m.id)}
-      <section class="plugin" class:on={s.enabled}>
+      <section class="plugin" class:on={s.enabled} id="plugin-{m.id}">
         <div class="top">
           <span class="icon"><Icon name={m.icon} size={20} /></span>
           <div class="text">

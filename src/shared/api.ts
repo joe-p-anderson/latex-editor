@@ -283,6 +283,8 @@ export interface Api {
   ): Promise<PluginState[]>
   /** Calls a handler a plugin's main half registered with ctx.handle. */
   pluginInvoke(id: string, name: string, args: unknown[]): Promise<unknown>
+  /** Opens one of the plugin's manifest `links` in the browser. */
+  pluginOpenLink(id: string, url: string): Promise<void>
   /** The plugin commands to list in the Tools menu. */
   setPluginMenu(commands: { id: string; title: string; plugin: string; key?: string }[]): Promise<void>
   /** Plugins were switched or their settings changed. */

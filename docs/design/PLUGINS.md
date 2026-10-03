@@ -56,6 +56,7 @@ export default {
     vault: [{ key: 'bank', label: 'Bank folder', type: 'vaultDir', default: 'Problems' }],
     global: [{ key: 'library', label: 'Shared library', type: 'path', default: '' }],
   },
+  links: ['https://www.zotero.org/download/'],  // optional: https pages ctx.openLink may open
 } satisfies PluginManifest
 ```
 
@@ -79,7 +80,7 @@ export default main
 | `ctx.emit(event, data)` | Delivered to the renderer half's `ctx.on(event, …)`. |
 | `ctx.build.before(f)` | Runs before a build's first pass, with `{ kind: 'full' \| 'draft' \| 'section', vault, root, cacheDir, name, buffers }`. It may write files the build reads. |
 | `ctx.build.after(f)` | Runs after a build is diagnosed, with the above plus `auxPath` and `result`. It may return extra `Problem`s. |
-| `ctx.build.fixes(f)` | `(problem, build) => QuickFix[]`: extra fixes for any problem, e.g. "Add from Zotero" on an undefined citation. |
+| `ctx.build.fixes(f)` | `(problem, build) => QuickFix[]`: extra fixes for any problem, e.g. "Add from Zotero" on an undefined citation. `build` has `kind`, `root`, `name`, `cacheDir`, `auxPath` and `result`. A fix that only appends to a file that doesn't exist creates the file. |
 | `ctx.build.scratch(name, source)` | Compiles a generated document in `cacheDir` from the vault root, so the vault's classes and images resolve. It runs alongside any document build, doesn't cancel it, and publishes nothing. Returns a `CompileResult`. |
 | `ctx.onDispose(f)` | Cleanup on switch-off. Registrations made through `ctx` are undone automatically. |
 
@@ -101,7 +102,8 @@ export default renderer
 | `ctx.editor` | `file()`, `text()`, `cursor()`, `selection()`, `insert`, `insertBlock`, `replace(from, to, text)`, `applyTo(rel, changes)`, `textOf(rel)`, `focus()`, `math()` (the open document's MathJax renderer). It also has `extension(ext)`, a CodeMirror extension in every editor. Offsets count a line break as one character. |
 | `ctx.live.decorations((state, file) => Range<Decoration>[])` | Decorations shown only in the live view. They are recomputed when the text, the viewport or the mode changes. It returns `{ refresh() }`: call it when something else the function reads changes, such as the plugin's index. Otherwise open files keep stale decorations until the next edit. |
 | `ctx.cite.source({ label, search(q), pick(hit) })` | The cite picker searches it as you type, below the document's own entries. `pick` makes the hit citable (e.g. appends it to the `.bib`) and returns its key. |
-| `ctx.panel(component)` | Content under the plugin's entry in the Plugins panel (gets `{ ctx }`). |
+| `ctx.panel(component)` | Content under the plugin's entry in the Plugins panel (gets `{ ctx }`). It shows when the entry's settings are unfolded. `ctx.showSettings()` opens the Plugins view with them unfolded, e.g. from a status item. |
+| `ctx.openLink(url)` | Opens a page in the browser, if the manifest's `links` lists it (or a prefix of it). Only https. |
 | `ctx.host` | `vault()`, `files()`, `root()` (the open file's document), `macros()`, `packages.ensure / missing / loaded`, `notify`, `open(rel, line?)`, `prompt({ title, initial?, hint? })` (prompts can follow one another), `cite(keys)`, `reloadBib()`, `showView(id)`. |
 | `ctx.invoke<T>(name, …args)` | `Promise<T>`: calls the main half's `ctx.handle(name, …)`. A handler that throws rejects it with the error's message. |
 | `ctx.settings`, `ctx.on`, `ctx.onDispose` | As in the main half. |
@@ -119,6 +121,7 @@ export default renderer
 ## Worked examples
 
 - `src/plugins/symbols/`: renderer only. One view acts through `ctx.host`.
+- `src/plugins/zotero/`: talks to an outside program from the main half. It has a provider interface, a cite source, quick fixes, a status item, and a setup checklist panel with live checks.
 - `src/plugins/problem-bank/`: both halves. It has:
   - an index in the main half, kept current with `ctx.vault.onFile` and cached in `ctx.cacheDir`;
   - a view and commands sharing a `ui/store.svelte.ts`;
@@ -143,3 +146,8 @@ export default renderer
   - **Added:** `ctx.live.decorations` now returns `{ refresh() }`. Before, a problem added to the bank didn't get its live card until the next edit.
   - **Added:** a command palette (Ctrl+Shift+P, and Tools → Run Command…). Commands with no key were mouse-only before.
   - **Added:** the `@shared` alias in the main process and in vitest.
+- **Round 2 (Zotero, built by a Sonnet subagent with the round-1 skill).** It ran the app and drove it against the live Zotero (read-only). It reported real gaps, with one marked workaround and none hidden in tests.
+  - **Added:** `ctx.openLink(url)` with a manifest `links` allow-list, checked in the main process. This replaced the plugin importing Electron's `shell`.
+  - **Added:** `ctx.showSettings()`, which opens the Plugins view with the plugin's settings and panel unfolded. The status item had been landing on the folded list.
+  - **Added:** applying a fix that appends to a file that doesn't exist creates the file. The quick fix had been skipped when the `.bib` was missing.
+  - **Declined for now:** a `ctx.host.bibFiles()` API. The plugin reads `\bibliography{…}` itself, and one consumer isn't enough to fix the API's shape.

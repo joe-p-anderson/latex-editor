@@ -67,6 +67,8 @@ export interface HostServices {
   reloadBib(): void
   /** Shows a sidebar view. */
   showView(id: string): void
+  /** Shows the Plugins view with one plugin's settings (and its panel) unfolded. */
+  showPlugin(id: string): void
 }
 
 /** Props every plugin view component gets. */
@@ -176,6 +178,10 @@ export interface RendererContext {
   }
   /** Extra content under the plugin's entry in the Plugins panel (e.g. a setup checklist), while it's on. */
   panel(component: Component<{ ctx: RendererContext }>): void
+  /** Opens the Plugins view on this plugin, its settings and panel unfolded. */
+  showSettings(): void
+  /** Opens one of the manifest's `links` in the browser. */
+  openLink(url: string): Promise<void>
   onDispose(f: () => void): void
 }
 
@@ -330,6 +336,8 @@ export class PluginRuntime {
         this.panels = [...this.panels, entry]
         own(() => (this.panels = this.panels.filter((x) => x !== entry)))
       },
+      showSettings: () => this.host.showPlugin(id),
+      openLink: (url) => window.api.pluginOpenLink(id, url),
       onDispose: (f) => own(f),
     }
     try {

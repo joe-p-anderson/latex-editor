@@ -301,6 +301,7 @@ ipcMain.handle(
   'plugins:change',
   (_e, id: string, c: { vaultEnabled?: boolean | null; defaultEnabled?: boolean; vaultSettings?: SettingValues; globalSettings?: SettingValues }) => plugins.change(id, c),
 )
+ipcMain.handle('plugins:open-link', (_e, id: string, url: string) => plugins.openLink(id, url))
 ipcMain.handle('plugins:invoke', (_e, id: string, name: string, args: unknown[]) => plugins.invoke(id, name, args))
 // The renderer's plugin commands, for the Tools menu.
 ipcMain.handle('plugins:menu', (_e, commands: PluginMenuItem[]) => {

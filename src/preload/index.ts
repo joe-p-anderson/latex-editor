@@ -81,6 +81,7 @@ const api: Api & { onMenuOpenVault(cb: () => void): () => void } = {
   plugins: () => ipcRenderer.invoke('plugins:list'),
   changePlugin: (id, change) => ipcRenderer.invoke('plugins:change', id, change),
   pluginInvoke: (id, name, args) => ipcRenderer.invoke('plugins:invoke', id, name, args),
+  pluginOpenLink: (id, url) => ipcRenderer.invoke('plugins:open-link', id, url),
   setPluginMenu: (commands) => ipcRenderer.invoke('plugins:menu', commands),
   onPluginsChanged: (cb) => {
     const listener = (_e: unknown, states: PluginState[]) => cb(states)

@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   globToRegExp,
+  linkAllowed,
   pluginStates,
   resolveEnabled,
   settingsWithDefaults,
@@ -81,6 +82,17 @@ describe('globs and when', () => {
     expect(whenHolds({ vaultHas: '*.bib' }, files, null)).toBe(true)
     expect(whenHolds({ vaultHas: '*.bib', fileIs: '*.tex' }, files, null)).toBe(false)
     expect(whenHolds({ vaultHas: '*.bib', fileIs: '*.tex' }, files, 'a.tex')).toBe(true)
+  })
+})
+
+describe('linkAllowed', () => {
+  it('opens only https links the manifest lists', () => {
+    const links = ['https://www.zotero.org/download/', 'http://insecure.example/']
+    expect(linkAllowed(links, 'https://www.zotero.org/download/')).toBe(true)
+    expect(linkAllowed(links, 'https://www.zotero.org/download/mac')).toBe(true)
+    expect(linkAllowed(links, 'https://www.zotero.org/')).toBe(false)
+    expect(linkAllowed(links, 'http://insecure.example/')).toBe(false)
+    expect(linkAllowed(undefined, 'https://www.zotero.org/download/')).toBe(false)
   })
 })
 

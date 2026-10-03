@@ -1,0 +1,43 @@
+[
+  {
+    "key": "AAAA1111",
+    "version": 12,
+    "library": { "type": "user", "id": 1234567, "name": "My Library" },
+    "meta": { "creatorSummary": "Doe and Roe", "parsedDate": "2020-05-01", "numChildren": 1 },
+    "data": {
+      "key": "AAAA1111",
+      "itemType": "journalArticle",
+      "title": "An example study of lattice waves",
+      "creators": [
+        { "firstName": "Jane", "lastName": "Doe", "creatorType": "author" },
+        { "firstName": "Richard", "lastName": "Roe", "creatorType": "author" }
+      ],
+      "date": "2020-05-01",
+      "publicationTitle": "Journal of Examples",
+      "citationKey": ""
+    },
+    "bibtex": "\n@article{doeExampleStudyLattice2020,\n\ttitle = {An example study of lattice waves},\n\tjournal = {Journal of Examples},\n\tauthor = {Doe, Jane and Roe, Richard},\n\tyear = {2020},\n}\n"
+  },
+  {
+    "key": "BBBB2222",
+    "version": 13,
+    "meta": { "numChildren": 0 },
+    "data": { "key": "BBBB2222", "itemType": "attachment", "title": "paper.pdf" },
+    "bibtex": ""
+  },
+  {
+    "key": "DDDD4444",
+    "version": 14,
+    "meta": { "creatorSummary": "Lee", "parsedDate": "2018-01-01" },
+    "data": {
+      "key": "DDDD4444",
+      "itemType": "conferencePaper",
+      "title": "Conference notes",
+      "creators": [{ "name": "Lee Group", "creatorType": "author" }],
+      "date": "2018",
+      "proceedingsTitle": "Proc. Example",
+      "citationKey": "lee2018"
+    },
+    "bibtex": "\n@inproceedings{leeConferenceNotes2018,\n\ttitle = {Conference notes},\n}\n"
+  }
+]

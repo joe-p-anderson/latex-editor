@@ -149,6 +149,8 @@
 
   // --- Plugins ----------------------------------------------------------------
 
+  // The plugin the Plugins view should unfold and scroll to (HostServices.showPlugin).
+  let pluginFocus = $state<{ id: string; at: number } | null>(null)
   // A plugin's prompt (HostServices.prompt), answered by PromptDialog.
   let pluginPrompt = $state<{ title: string; initial: string; hint?: string; done: (v: string | null) => void } | null>(null)
   /** Closes the prompt, then answers it (the answer may open the next one). */
@@ -196,6 +198,11 @@
     reloadBib: () => void (active && loadBib(active)),
     showView: (id) => {
       view = id
+      sideOpen = true
+    },
+    showPlugin: (id) => {
+      pluginFocus = { id, at: Date.now() }
+      view = 'plugins'
       sideOpen = true
     },
   }
@@ -1530,6 +1537,8 @@
         flash(`Can't apply: ${file.split(/[\\/]/).pop()} is outside this vault`)
         return
       }
+      // Appending to a file that isn't there yet (e.g. a new .bib) makes it.
+      if (edits.every((e) => 'append' in e) && (await window.api.readOptional(file)) === null) await window.api.writeFile(file, '')
       await openFile(file)
       if (!editor?.applyEdits(edits)) {
         flash(`Couldn't apply "${fix.label}": the text has changed since the last compile`)
@@ -1696,7 +1705,7 @@
           </div>
         {:else if view === 'plugins'}
           <div class="side-body">
-            <PluginsPanel states={plugins.states} panels={plugins.panels} vaultName={vault.name} />
+            <PluginsPanel states={plugins.states} panels={plugins.panels} vaultName={vault.name} focus={pluginFocus} />
           </div>
         {:else if view === 'appearance'}
           <div class="side-body">
