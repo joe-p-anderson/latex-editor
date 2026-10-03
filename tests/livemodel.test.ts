@@ -107,6 +107,23 @@ describe('liveModel', () => {
     expect(text.slice(f.openTo, f.closeFrom)).toBe('bold $x_{\\textbf{y}}$')
   })
 
+  it('shows accents and special letters as characters', () => {
+    const text = 'G\\"o G\\"{o} Sch{\\"o}n \\AA ngstr\\"om, Stra\\ss{}e \\v{s} \\c c \\u{a} \\"{\\i} {\\v{s}} \\textbf{\\"o} \\o'
+    const syms = of(text, 'symbol')
+    expect(syms.map((s) => s.text)).toEqual(['ö', 'ö', 'ö', 'Å', 'ö', 'ß', 'š', 'ç', 'ă', 'ï', 'š', 'ö', 'ø'])
+    expect(syms.map((s) => text.slice(s.from, s.to)).slice(0, 3)).toEqual(['\\"o', '\\"{o}', '{\\"o}'])
+    expect(text.slice(syms[5].from, syms[5].to)).toBe('\\ss{}')
+    expect(text.slice(syms[10].from, syms[10].to)).toBe('{\\v{s}}')
+    expect(text.slice(syms[11].from, syms[11].to)).toBe('\\"o')
+  })
+
+  it('turns accents into characters in captions', () => {
+    expect(inlineParts('Sch{\\"o}n \\AA{} \\"{\\i} \\v s \\textbf{x}')).toEqual([
+      { text: 'Schön Å ï š ', math: false },
+      { text: 'x', math: false, style: 'bold' },
+    ])
+  })
+
   it('leaves verbatim alone', () => {
     const text = '\\begin{verbatim}\n\\section{no} $x$ --\n\\end{verbatim}'
     expect(model(text).nodes.map((n) => n.kind)).toEqual(['verbatim'])
