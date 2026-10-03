@@ -149,6 +149,17 @@ const NUMBERED_MATH = /^(equation|align|gather|multline|flalign|alignat|eqnarray
 const SYMBOLS: Record<string, string> = { ldots: '…', dots: '…', textdegree: '°', LaTeX: 'LaTeX', TeX: 'TeX', textendash: '–', textemdash: '—' }
 const ESCAPES: Record<string, string> = { '%': '%', '&': '&', $: '$', '#': '#', _: '_', '{': '{', '}': '}' }
 
+/** Accent commands, as the combining mark they put on the next letter. */
+const ACCENTS: Record<string, string> = {
+  '"': '\u0308', "'": '\u0301', '`': '\u0300', '^': '\u0302', '~': '\u0303', '=': '\u0304', '.': '\u0307',
+  u: '\u0306', v: '\u030c', H: '\u030b', c: '\u0327', r: '\u030a', k: '\u0328', d: '\u0323', b: '\u0331',
+}
+const TEXT_LETTERS: Record<string, string> = { AA: 'Å', aa: 'å', o: 'ø', O: 'Ø', ss: 'ß', ae: 'æ', AE: 'Æ', oe: 'œ', OE: 'Œ', l: 'ł', L: 'Ł', i: 'ı', j: 'ȷ' }
+/** What an accent command makes of its letter; \i and \j take their dotted forms under it. */
+const accented = (cmd: string, base: string) => (base.replace(/^\\([ij])$/, '$1') + ACCENTS[cmd]).normalize('NFC')
+const ACCENT_ARG = /^(?:\{\s*(\\[ij]|\p{L})\s*\}|(\p{L}))/u
+const ACCENT_NAMED_ARG = /^(?:\s*\{\s*(\\[ij]|\p{L})\s*\}|\s+(\p{L}))/u
+const ACCENT_ANY = /\\(?:(["'`^~=.])(?:\{\s*(\\[ij]|\p{L})\s*\}|(\p{L}))|([uvHcrkdb])(?:\s*\{\s*(\\[ij]|\p{L})\s*\}|\s+(\p{L}))|(AA|aa|ss|ae|AE|oe|OE|o|O|l|L|i|j)(?![A-Za-z@])(?:\{\})?)/gu
 const alpha = (n: number) => (n >= 1 && n <= 26 ? String.fromCharCode(96 + n) : String(n))
 const roman = (n: number) => {
   const r: [number, string][] = [[1000, 'm'], [900, 'cm'], [500, 'd'], [400, 'cd'], [100, 'c'], [90, 'xc'], [50, 'l'], [40, 'xl'], [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i']]
@@ -264,6 +275,10 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
         if (m[3] in ESCAPES) nodes.push({ kind: 'symbol', from: p, to: end, text: ESCAPES[m[3]], faint: false })
         else if (m[3] === '\\') nodes.push({ kind: 'symbol', from: p, to: end, text: '↵', faint: true })
         else if (m[3] === ',') nodes.push({ kind: 'symbol', from: p, to: end, text: ' ', faint: false })
+        else if (m[3] in ACCENTS) {
+          const a = ACCENT_ARG.exec(src.slice(end, end + 12))
+          if (a) accentNode(p, end + a[0].length, accented(m[3], a[1] ?? a[2]))
+        }
         continue
       }
       const t = m[0]
@@ -382,6 +397,17 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
       continue
     }
 
+    if (name in ACCENTS && name.length === 1) {
+      const a = ACCENT_NAMED_ARG.exec(src.slice(end, end + 20))
+      if (a) accentNode(p, end + a[0].length, accented(name, a[1] ?? a[2]))
+      continue
+    }
+
+    if (name in TEXT_LETTERS) {
+      accentNode(p, src.startsWith('{}', end) ? end + 2 : end, TEXT_LETTERS[name])
+      continue
+    }
+
     if (name in SYMBOLS) {
       const to = src.startsWith('{}', end) ? end + 2 : end
       nodes.push({ kind: 'symbol', from: p, to, text: SYMBOLS[name], faint: false })
@@ -417,6 +443,16 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
     const close = closingBrace(src, open)
     if (close < 0) return null
     return { body: text.slice(open + 1, close), end: close + 1 }
+  }
+
+  /** A letter made by an accent or special-letter command; a bare {group} around it goes too. */
+  function accentNode(from: number, to: number, glyph: string): void {
+    if (src[from - 1] === '{' && src[to] === '}' && !/(?:\\[A-Za-z@]+\*?|[}\]])$/.test(src.slice(Math.max(0, from - 40), from - 1))) {
+      from--
+      to++
+    }
+    nodes.push({ kind: 'symbol', from, to, text: glyph, faint: false })
+    re.lastIndex = to
   }
 
   function optional(at: number): { body: string; end: number } | null {
@@ -849,7 +885,8 @@ export function inlineParts(tex: string): { text: string; math: boolean; style?:
       .replace(/''/g, '”')
       .replace(/\\([%&$#_{}])/g, '$1')
       .replace(/\\\\/g, ' ')
-      .replace(/~/g, ' ')
+      .replace(ACCENT_ANY, (_, a, b1, b2, n, c1, c2, t) => (t ? TEXT_LETTERS[t] : accented(a ?? n, b1 ?? b2 ?? c1 ?? c2)))
+      .replace(/~/g,' ')
       .replace(/\\[A-Za-z@]+\*?(?:\[[^\]]*\])?/g, '')
       .replace(/[{}]/g, '')
     if (clean) out.push({ text: clean, math: false, style })

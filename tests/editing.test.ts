@@ -44,7 +44,12 @@ describe('toggleCommand', () => {
   it('inserts an empty command', () => expect(bold('a | b')).toBe('a \\textbf{|} b'))
   it('unwraps around the cursor', () => expect(bold('a \\textbf{wo|rd} b')).toBe('a wo|rd b'))
   it('unwraps through nested groups', () => expect(bold('\\textbf{x $\\vec{a|}$ y}')).toBe('x $\\vec{a|}$ y'))
-  it('does not unwrap a different command', () => expect(bold('\\emph{wo|rd}')).toBe('\\emph{wo\\textbf{|}rd}'))
+  it('wraps the word around the cursor', () => expect(bold('\\emph{wo|rd}')).toBe('\\emph{\\textbf{wo|rd}}'))
+  it('wraps a word from its middle', () => expect(bold('a bo|ld b')).toBe('a \\textbf{bo|ld} b'))
+  it('wraps a word from its end', () => expect(bold('a bold| b')).toBe('a \\textbf{bold|} b'))
+  it('wraps a word from its start', () => expect(bold('a |bold b')).toBe('a \\textbf{|bold} b'))
+  it('unwraps again', () => expect(bold('\\textbf{bo|ld}')).toBe('bo|ld'))
+  it('does not wrap a command name', () => expect(bold('\\alp|ha')).toBe('\\alp\\textbf{|}ha'))
 
   // Ctrl+B in math: \boldsymbol, which also removes an older \mathbf.
   const mathBold = (s: string) => run(s, (t, f, to) => toggleCommand(t, f, to, 'boldsymbol', ['mathbf', 'bm']))

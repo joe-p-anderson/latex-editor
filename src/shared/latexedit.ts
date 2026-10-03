@@ -256,6 +256,14 @@ export function toggleCommand(text: string, from: number, to: number, cmd: strin
     }
     i = brace
   }
+  // Then the word around the cursor, unless it's a command's name.
+  let ws = from
+  let we = from
+  while (ws > 0 && /[\p{L}\p{N}]/u.test(text[ws - 1])) ws--
+  while (we < text.length && /[\p{L}\p{N}]/u.test(text[we])) we++
+  if (we > ws && text[ws - 1] !== '\\') {
+    return { changes: [{ from: ws, to: we, insert: `${open}${text.slice(ws, we)}}` }], anchor: from + open.length }
+  }
   return { changes: [{ from, to, insert: `${open}}` }], anchor: from + open.length }
 }
 
