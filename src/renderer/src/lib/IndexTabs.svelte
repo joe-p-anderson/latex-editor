@@ -3,7 +3,8 @@
    * The Bench look's file tabs: paper index tabs sticking out of the book's
    * left edge, or standing up from its head. They stay in view as the book
    * scrolls. Hover nudges a tab out and shows its ×; middle-click closes it.
-   * The active tab is in the page's own paper.
+   * The active tab is in the page's own paper and runs on over the board
+   * into the page, as if cut from it.
    */
   let {
     tabs,
@@ -76,8 +77,6 @@
     top: 0;
     left: calc(var(--book-x) - 138px);
     width: 138px;
-    /* the tabs tuck under the book's edge; their shadows still fall on the desk */
-    clip-path: inset(-10px 0 -10px -10px);
     flex-direction: column;
     gap: 5px;
     padding-top: 94px;
@@ -126,12 +125,18 @@
     border-radius: 7px 0 0 7px;
     box-shadow: -1px 1px 0 rgba(0, 0, 0, 0.12), -2px 2px 5px rgba(0, 0, 0, 0.28);
     transform: translateX(8px);
+    /* tucked under the book's edge; the shadow still falls on the desk */
+    clip-path: inset(-10px 8px -10px -10px);
   }
   .left .itab:hover {
     transform: translateX(3px);
+    clip-path: inset(-10px 3px -10px -10px);
   }
   .left .itab.on {
     transform: none;
+    width: calc(138px + var(--board-l));
+    padding-right: calc(16px + var(--board-l));
+    clip-path: inset(-10px -10px -10px -10px);
   }
   .top .itab {
     height: 29px;
@@ -143,7 +148,9 @@
     transform: translateY(-3px);
   }
   .top .itab.on {
-    height: 35px;
+    height: calc(35px + 18px);
+    margin-bottom: -18px;
+    padding-bottom: 18px;
     transform: none;
   }
   .itab.on {
