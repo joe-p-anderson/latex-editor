@@ -30,7 +30,8 @@
     display: grid;
     place-items: center;
     padding: 24px;
-    background: var(--marbleimg) center / cover, var(--desk);
+    /* sized to the window, not the pane, so it holds still as the panes change */
+    background: var(--marbleimg) center / cover fixed, var(--desk);
   }
   .plate {
     position: relative;

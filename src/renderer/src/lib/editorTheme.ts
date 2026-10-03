@@ -20,8 +20,7 @@ const page = EditorView.theme({
     backgroundColor: 'var(--paper)',
     color: 'var(--pencil)',
     border: 'none',
-    // the inner margin, plus the left board in the Bench look (drawn in its border)
-    minWidth: 'calc(var(--pad-l) + var(--board-l, 0px))',
+    minWidth: 'var(--pad-l)', // the inner margin (Bench's boards sit outside, bench.css)
     boxSizing: 'border-box',
     justifyContent: 'flex-end',
     paddingRight: '6px',
@@ -29,7 +28,7 @@ const page = EditorView.theme({
   '.cm-content': {
     caretColor: 'var(--ink)',
     flex: '0 0 auto',
-    width: 'calc(var(--leaf-w) - var(--pad-l) + var(--board-r, 0px))',
+    width: 'calc(var(--leaf-w) - var(--pad-l))',
     boxSizing: 'border-box',
     backgroundColor: 'var(--paper)',
     padding: '60px var(--pad-r) 110px 0',

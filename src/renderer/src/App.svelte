@@ -44,7 +44,6 @@
   import Welcome from './lib/Welcome.svelte'
   import EmptyPlate from './lib/EmptyPlate.svelte'
   import IndexTabs from './lib/IndexTabs.svelte'
-  import Riffle from './lib/Riffle.svelte'
   import { tick } from 'svelte'
   import {
     DEFAULT_APP_APPEARANCE,
@@ -99,6 +98,8 @@
   /** Editor share of the editor+PDF area, adjusted by dragging the splitter. */
   let split = $state<number>(savedLayout.split ?? 0.6)
   let pdfOpen = $state<boolean>(savedLayout.pdfOpen ?? false)
+  // With no file open the plate fills the pane; the PDF comes back with a file.
+  const showPdf = $derived(pdfOpen && !!active)
   let sideOpen = $state<boolean>(savedLayout.sideOpen ?? true)
   let sideWidth = $state<number>(savedLayout.sideWidth ?? 272)
   let panelOpen = $state(false)
@@ -583,6 +584,8 @@
     if (!started) return // the endpaper isn't known yet; don't marble a sheet for nothing
     const tokens = applyAppearance(appearance, endpaper)
     window.api.setWindowChrome(tokens.chrome, tokens['chrome-ink-soft'])
+    // The page's geometry may have moved under the editor; its selection and clicks follow it after layout.
+    requestAnimationFrame(() => editor?.remeasure())
   })
 
   // Dragging the line-length slider changes it many times a second; it's saved once it settles.
@@ -842,8 +845,6 @@
     await window.api.closeVault()
   }
 
-  let riffle = $state<{ n: number; forward: boolean } | null>(null)
-
   /** Forgets the open vault's files, build and tabs. */
   function reset(): void {
     for (const rel of tabs) editor?.close(rel)
@@ -870,10 +871,6 @@
     }
     if (!TEXT_FILE.test(rel)) return
     const previous = active
-    // The Bench look riffles the pages: later tabs turn leaves away, earlier ones bring them in.
-    if (appearance.look === 'bench' && previous && previous !== rel && tabs.includes(previous) && tabs.includes(rel)) {
-      riffle = { n: (riffle?.n ?? 0) + 1, forward: tabs.indexOf(rel) > tabs.indexOf(previous) }
-    }
     await editor?.open(rel)
     active = rel
     // A new tab goes just after the one that was showing.
@@ -1661,7 +1658,7 @@
       <div class="splitter v" hidden={!sideOpen} role="separator" aria-orientation="vertical" onpointerdown={dragSidebar}></div>
 
       <div class="main" bind:this={mainArea} style:grid-template-rows="minmax(0, 1fr) {panelOpen ? `0 ${panelHeight}px` : '0 0'}">
-        <div class="editors" class:spread={pdfOpen} bind:this={editors} style:grid-template-columns={pdfOpen ? `${split}fr 0 ${1 - split}fr` : '1fr 0 0'}>
+        <div class="editors" class:spread={showPdf} bind:this={editors} style:grid-template-columns={showPdf ? `${split}fr 0 ${1 - split}fr` : '1fr 0 0'}>
           <section class="editor-pane">
             {#if offerMove && active}
               {@const file = active.split('/').pop()}
@@ -1679,7 +1676,6 @@
             <div class="editor">
               {#if appearance.look === 'bench'}
                 <IndexTabs {tabs} {active} {dirty} papers={paperTabs} edge={appearance.tabs} onselect={(rel) => go(rel)} onclose={closeTab} />
-                <Riffle run={riffle} />
               {/if}
               <Editor
                 bind:this={editor}
@@ -1704,8 +1700,8 @@
             {#if !active}<EmptyPlate logo={logoUrl(endpaper.palette, 'mid')} />{/if}
             {#if note}<div class="note">{note}</div>{/if}
           </section>
-          <div class="splitter v" hidden={!pdfOpen} role="separator" aria-orientation="vertical" onpointerdown={startDrag}></div>
-          <section class="pdf-pane" hidden={!pdfOpen}>
+          <div class="splitter v" hidden={!showPdf} role="separator" aria-orientation="vertical" onpointerdown={startDrag}></div>
+          <section class="pdf-pane" hidden={!showPdf}>
             <PdfViewer bind:this={viewer} {pdf} version={pdfVersion} scope={pdfScope} onsyncclick={syncInverse} onclose={() => (pdfOpen = false)} />
           </section>
         </div>
@@ -1975,6 +1971,15 @@
     min-height: 0;
     min-width: 0;
   }
+  /*
+   * The page column's geometry (docs/design/ENDLEAF.md, "The page column"),
+   * from the measure (--textw) and this pane's width, so the tab bar above
+   * the editor can line up with the page too:
+   *   page  = textw / (1 − 7.5 % − 11 %), no wider than the desk allows
+   *   inner = 7.5 % of the page, 24–64 px; outer = 11 %, 30–104 px
+   * Bench adds the boards (and the edge stack on the right), and room for
+   * the index tabs on the left.
+   */
   .editor-pane {
     grid-column: 1;
     background: var(--desk);
@@ -1983,20 +1988,6 @@
     min-height: 0;
     min-width: 0;
     position: relative;
-  }
-  /*
-   * The page column's geometry (docs/design/ENDLEAF.md, "The page column"),
-   * from the measure (--textw) and this container's width:
-   *   page  = textw / (1 − 7.5 % − 11 %), no wider than the desk allows
-   *   inner = 7.5 % of the page, 24–64 px; outer = 11 %, 30–104 px
-   * Bench adds the boards (and the edge stack on the right), and room for
-   * the index tabs on the left.
-   */
-  .editor {
-    flex: 1;
-    min-height: 0;
-    position: relative;
-    overflow: hidden; /* the riffle's turning leaves stay inside */
     container-type: inline-size;
     --room-l: min(50px, 4cqw);
     --room-r: min(50px, 4cqw);
@@ -2011,21 +2002,31 @@
     --pad-l: clamp(24px, calc(var(--leaf-w) * 0.075), 64px);
     --pad-r: clamp(30px, calc(var(--leaf-w) * 0.11), 104px);
   }
-  :global(:root[data-look='bench']) .editor {
+  :global(:root[data-look='bench']) .editor-pane {
     --board-l: 18px;
     --board-r: 26px;
   }
-  :global(:root[data-look='bench'][data-tabs='left']) .editor {
+  :global(:root[data-look='bench'][data-tabs='left']) .editor-pane {
     --room-l: 156px;
   }
   /* The open book: the page runs to the spine, its outer margin now on the left. */
-  :global(:root[data-look='bench']) .editors.spread .editor {
+  :global(:root[data-look='bench']) .editors.spread .editor-pane {
     --room-r: 0px;
     --board-r: 0px;
     --leaf-w: max(260px, calc(100cqw - 14px - var(--room-l) - var(--board-l)));
     --book-x: var(--room-l);
     --pad-l: clamp(30px, calc(var(--leaf-w) * 0.11), 104px);
     --pad-r: clamp(24px, calc(var(--leaf-w) * 0.075), 64px);
+  }
+  .editor {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  /* Plain: the page starts at the tab bar, so the open tab runs on into it. */
+  :global(:root[data-look='plain'] .cm-scroller) {
+    padding-top: 0;
   }
   .pdf-pane {
     min-width: 0;

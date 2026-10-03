@@ -319,6 +319,11 @@
     view.focus()
   }
 
+  /** Measures the page again: its geometry changed without the editor resizing (a new look, text size or measure). */
+  export function remeasure(): void {
+    view.requestMeasure()
+  }
+
   /** Inserts text at the cursor (replacing any selection). */
   export function insertAtCursor(text: string): void {
     const { from, to } = view.state.selection.main

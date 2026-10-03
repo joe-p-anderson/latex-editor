@@ -105,14 +105,18 @@
 {/if}
 
 <style>
-  /* The Plain look's conventional tab bar, over a thin marbled rule. */
+  /*
+   * The Plain look's tab bar, over a thin marbled rule. The tabs stand on
+   * the page's top edge (the editor's --book-x), and the open one is cut
+   * from the page: paper, over the rule, running on into the page below.
+   */
   .tabs {
     display: flex;
     overflow-x: auto;
-    background: var(--tabpaper);
-    border-bottom: 4px solid transparent;
-    border-image: var(--marbleimg) 1;
-    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
+    padding-left: var(--book-x, 0px);
+    background:
+      var(--marbleimg) left bottom / 100% 4px no-repeat,
+      var(--tabpaper);
     scrollbar-width: none;
     flex: none;
     height: 40px;
@@ -121,7 +125,7 @@
     display: flex;
     align-items: center;
     gap: 7px;
-    padding: 0 6px 0 14px;
+    padding: 0 6px 4px 14px;
     border-right: 1px solid var(--line);
     cursor: pointer;
     white-space: nowrap;
@@ -138,8 +142,11 @@
     color: var(--detail);
     font: 600 13px var(--f-page);
   }
+  .tab:first-child {
+    border-left: 1px solid var(--line);
+  }
   .tab.active {
-    background: var(--desk);
+    background: var(--paper);
     color: var(--ink);
   }
   /* the active tab's foil line */

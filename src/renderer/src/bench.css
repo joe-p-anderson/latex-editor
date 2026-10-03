@@ -72,28 +72,49 @@
  * ---- The book: one tall page. The gutters (inner margin) and content are
  * the page; marbled boards show around it, with a 6 px stack of trimmed page
  * edges on the right and bottom (the left edge is plain), and a soft contact
- * shadow on the desk. Borders hold the boards and edges, so both halves of
- * the page have the same top and bottom and their lines stay level.
+ * shadow on the desk. The boards are drawn on ::before, behind the text, in
+ * room the margins keep: CodeMirror measures the page from its padding and
+ * would be thrown off by borders (clicks, arrow keys and the selection land
+ * off the text). Both halves have the same margins, so their lines stay level.
  */
+:root[data-look='bench'] .cm-scroller {
+  isolation: isolate;
+}
 :root[data-look='bench'] .cm-gutters,
 :root[data-look='bench'] .cm-content {
-  border-style: solid;
-  border-color: transparent;
-  border-width: 18px 0 25px 0;
-  background-blend-mode: soft-light, normal, normal, normal;
+  position: relative;
+  margin-top: 18px;
+  margin-bottom: 25px;
+  background: none;
 }
 :root[data-look='bench'] .cm-gutters {
-  border-left-width: 18px;
+  margin-left: 18px;
+}
+:root[data-look='bench'] .cm-content {
+  margin-right: 26px;
+}
+:root[data-look='bench'] :is(.cm-gutters, .cm-content)::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  border-style: solid;
+  border-color: transparent;
+  background-blend-mode: soft-light, normal, normal, normal;
+}
+:root[data-look='bench'] .cm-gutters::before {
+  inset: -18px 0 -25px -18px;
+  border-width: 18px 0 25px 18px;
   background:
     var(--grainimg) 0 0 / 512px padding-box,
     linear-gradient(var(--paper), var(--paper)) padding-box,
     linear-gradient(transparent, rgba(0, 0, 0, 0.14)) left 18px bottom 20px / 100% 5px no-repeat border-box,
     var(--marbleimg) 0 0 / 1500px auto border-box;
-  background-color: transparent;
   box-shadow: -2px 14px 24px -14px rgba(0, 0, 0, 0.55);
 }
-:root[data-look='bench'] .cm-content {
-  border-right-width: 26px;
+:root[data-look='bench'] .cm-content::before {
+  inset: -18px -26px -25px 0;
+  border-width: 18px 26px 25px 0;
   background:
     var(--grainimg) 0 0 / 512px padding-box,
     linear-gradient(var(--paper), var(--paper)) padding-box,
@@ -112,13 +133,16 @@
   flex: 1 1 0;
   width: auto;
   min-width: 0;
+  margin-right: 0;
+}
+:root[data-look='bench'] .editors.spread .cm-content::before {
+  inset: -18px 0 -25px 0;
   border-right-width: 0;
   background:
     var(--grainimg) 0 0 / 512px padding-box,
     linear-gradient(var(--paper), var(--paper)) padding-box,
     linear-gradient(270deg, rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0)) right top / 34px 100% no-repeat padding-box,
     var(--marbleimg) 0 0 / 1500px auto border-box;
-  background-blend-mode: soft-light, normal, normal, normal;
 }
 
 /* ---- The PDF, as the open book's back endpaper. */
