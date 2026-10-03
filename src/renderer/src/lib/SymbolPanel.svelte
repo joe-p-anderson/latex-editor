@@ -789,6 +789,10 @@ Click to copy, double-click to insert, right-click for more"
     max-width: 56px;
     object-fit: contain;
   }
+  :global(:root[data-page='black']) .tile img,
+  :global(:root[data-page='black']) .menu-head img {
+    filter: invert(0.9);
+  }
   .tile .cmd {
     font-family: Consolas, 'Cascadia Mono', monospace;
     font-size: 10px;

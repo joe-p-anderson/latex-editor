@@ -179,6 +179,10 @@ export interface Api {
   /** Closes the vault, back to the welcome screen. */
   closeVault(): Promise<void>
   readFile(rel: string): Promise<string>
+  /** Like readFile, but null when the file doesn't exist. */
+  readOptional(rel: string): Promise<string | null>
+  /** The snippet files in the app's data folder, null where missing. */
+  globalSnippets(): Promise<{ snippets: string | null; mathSnippets: string | null }>
   writeFile(rel: string, text: string): Promise<void>
   /** Renames a vault file; fails if `to` exists. */
   renameFile(from: string, to: string): Promise<void>

@@ -7,7 +7,7 @@ import { cacheDirFor, compile, compileDraft, compileSection, fullBuildReason, re
 import { discoverPaperOf, paperInfo } from './project'
 import { importImage, saveImage } from './images'
 import { editorContextFor, macrosFor } from './mathmacros'
-import { appAppearance, globalTemplatesDir, loadSettings, migrateSettings, saveAppAppearance, saveSettings } from './settings'
+import { appAppearance, globalSnippets, globalTemplatesDir, loadSettings, migrateSettings, saveAppAppearance, saveSettings } from './settings'
 import { searchVault } from './search'
 import { addWord, misspelled, reloadWords, suggestions } from './spell'
 import { startTouchpad, stopTouchpad } from './touchpad'
@@ -149,6 +149,13 @@ ipcMain.handle('vault:close', async () => {
   await saveSettings({ lastVault: undefined })
 })
 ipcMain.handle('file:read', (_e, rel: string) => readFile(requireVault().abs(rel), 'utf8'))
+ipcMain.handle('file:readOptional', (_e, rel: string) =>
+  readFile(requireVault().abs(rel), 'utf8').catch((e) => {
+    if (e?.code === 'ENOENT') return null
+    throw e
+  })
+)
+ipcMain.handle('snippets:global', () => globalSnippets())
 ipcMain.handle('file:write', (_e, rel: string, text: string) => writeFile(requireVault().abs(rel), text, 'utf8'))
 ipcMain.handle('file:rename', async (_e, from: string, to: string) => {
   const v = requireVault()

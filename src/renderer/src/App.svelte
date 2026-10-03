@@ -19,7 +19,7 @@
   import TabBar from './lib/TabBar.svelte'
   import QuickOpen from './lib/QuickOpen.svelte'
   import type { EditingHooks } from './lib/editing'
-  import { blankComments, parseSnippets, type OutlineItem, type Snippet } from '@shared/latexedit'
+  import { blankComments, mergeTextSnippets, parseSnippets, type OutlineItem, type Snippet } from '@shared/latexedit'
   import { includegraphics, type ImageHooks } from './lib/imageSupport'
   import { clearThumbnails } from './lib/thumbnails'
   import { isImage } from '@shared/images'
@@ -705,9 +705,10 @@
 
   /** Reads the vault's snippet and math shortcut files (none is fine). */
   async function loadSnippets(): Promise<void> {
-    snippets = vault ? parseSnippets(await window.api.readFile(vault.snippets).catch(() => '')) : []
-    const own = parseMathSnippets(vault ? await window.api.readFile(vault.mathSnippets).catch(() => '') : '')
-    mathSnippets = mergeSnippets(BUILTIN_MATH_SNIPPETS, own)
+    const g = await window.api.globalSnippets()
+    snippets = vault ? mergeTextSnippets(parseSnippets(g.snippets ?? ''), parseSnippets((await window.api.readOptional(vault.snippets)) ?? '')) : []
+    const own = parseMathSnippets(vault ? ((await window.api.readOptional(vault.mathSnippets)) ?? '') : '')
+    mathSnippets = mergeSnippets(mergeSnippets(BUILTIN_MATH_SNIPPETS, parseMathSnippets(g.mathSnippets ?? '')), own)
     if (own.errors.length) flash(`${vault?.mathSnippets} line ${own.errors[0].line}: ${own.errors[0].message}`)
   }
 
@@ -724,7 +725,7 @@
   /** Edit → Math Shortcuts: opens the vault's file, creating it (with the built-ins listed) if needed. */
   async function editMathShortcuts(): Promise<void> {
     if (!vault) return
-    const exists = await window.api.readFile(vault.mathSnippets).then(() => true, () => false)
+    const exists = (await window.api.readOptional(vault.mathSnippets)) !== null
     if (!exists) await window.api.writeFile(vault.mathSnippets, mathSnippetsFileTemplate())
     await openFile(vault.mathSnippets)
   }

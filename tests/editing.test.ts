@@ -7,6 +7,7 @@ import {
   listEnter,
   mirrorEnvRename,
   outline,
+  mergeTextSnippets,
   parseSnippets,
   toggleCommand,
   toggleInlineMath,
@@ -181,5 +182,13 @@ describe('commandSignatures', () => {
       { name: 'questionlabel', args: 0, optional: false },
       { name: 'pair', args: 2, optional: true },
     ])
+  })
+})
+
+describe('mergeTextSnippets', () => {
+  it('puts global first and lets the vault win a name clash', () => {
+    const g = [{ name: 'a', description: '', body: 'g' }, { name: 'b', description: '', body: 'g' }]
+    const o = [{ name: 'b', description: '', body: 'o' }]
+    expect(mergeTextSnippets(g, o).map((s) => s.body)).toEqual(['g', 'o'])
   })
 })

@@ -135,7 +135,7 @@ Inside math, some character sequences expand as you type them. Backspace straigh
 
 A letter typed right after a shortcut that ends in a command gets a space first, so `->` then `b` gives `\to b`, not `\tob`.
 
-**Edit → Math Shortcuts…** opens the vault's `math-snippets.txt`. If the file doesn't exist it is created, with every built-in listed for reference. Put one shortcut per line, as `trigger => replacement`:
+**Edit → Math Shortcuts…** opens the vault's `math-snippets.txt`. If the file doesn't exist it is created, with every built-in listed for reference. Shortcuts and snippets can also go in `math-snippets.txt` and `snippets.txt` in the app's data folder; these apply to every vault, and a vault's own file wins. Put one shortcut per line, as `trigger => replacement`:
 
 - `$1`, `$2` and so on are Tab stops, and `$0` is where the cursor ends up.
 - A `/regex/` trigger can use its groups in the replacement as `[[0]]`, `[[1]]` and so on.

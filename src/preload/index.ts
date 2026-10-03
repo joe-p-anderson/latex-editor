@@ -11,6 +11,8 @@ const api: Api & { onMenuOpenVault(cb: () => void): () => void } = {
   newVault: () => ipcRenderer.invoke('vault:new'),
   closeVault: () => ipcRenderer.invoke('vault:close'),
   readFile: (rel) => ipcRenderer.invoke('file:read', rel),
+  readOptional: (rel) => ipcRenderer.invoke('file:readOptional', rel),
+  globalSnippets: () => ipcRenderer.invoke('snippets:global'),
   writeFile: (rel, text) => ipcRenderer.invoke('file:write', rel, text),
   renameFile: (from, to) => ipcRenderer.invoke('file:rename', from, to),
   trashFile: (rel) => ipcRenderer.invoke('file:trash', rel),
