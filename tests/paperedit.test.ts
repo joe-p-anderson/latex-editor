@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  extractRange,
   extractSection,
+  headingAt,
   includeBlock,
   inlineInclude,
   moveInclude,
@@ -71,6 +73,32 @@ describe('new and extracted files', () => {
     expect(parent).toBe(['\\section{A}', 'a', '\\input{a1}', '\\section{B}', 'b', ''].join('\n'))
     expect(out.body).toBe('% !TEX root = main.tex\n\\subsection{A1}\na1\n')
     expect(apply(parent, inlineInclude(parent, inc(parent, 'a1'), out.body))).toBe(text)
+  })
+})
+
+describe('moving a range or the heading above the cursor', () => {
+  const text = ['\\section{A \\emph{b}}', 'a', 'more a', '\\subsection[short]{A1}', 'a1', ''].join('\n')
+  it('finds the nearest heading at or above a line', () => {
+    expect(headingAt(text, 3)).toEqual({ line: 1, title: 'A b' })
+    expect(headingAt(text, 5)).toEqual({ line: 4, title: 'A1' })
+    expect(headingAt('plain\ntext', 2)).toBeNull()
+  })
+  it('moves whole lines, leaving the include on a line of its own', () => {
+    const out = extractRange(text, text.indexOf('a\nmore'), text.indexOf('\\subsection'), 'input', 'x', '% root\n')!
+    expect(apply(text, out.changes)).toBe(['\\section{A \\emph{b}}', '\\input{x}', '\\subsection[short]{A1}', 'a1', ''].join('\n'))
+    expect(out.body).toBe('% root\na\nmore a\n')
+  })
+  it('moves part of a line, adding line breaks around the include', () => {
+    const t = 'one two three\n'
+    const out = extractRange(t, 4, 7, 'input', 'x', '')!
+    expect(apply(t, out.changes)).toBe('one \n\\input{x}\n three\n')
+    expect(out.body).toBe('two\n')
+  })
+  it('moves a range that ends the line without adding a blank one', () => {
+    const t = 'one\ntwo'
+    const out = extractRange(t, 4, 7, 'input', 'x', '')!
+    expect(apply(t, out.changes)).toBe('one\n\\input{x}')
+    expect(extractRange(t, 2, 2, 'input', 'x', '')).toBeNull()
   })
 })
 

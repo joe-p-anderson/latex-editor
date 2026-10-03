@@ -241,6 +241,17 @@ ipcMain.handle('menu:popup', (_e, label: string, x: number, y: number) => {
   const item = Menu.getApplicationMenu()?.items.find((i) => i.label === label)
   if (win && item?.submenu) item.submenu.popup({ window: win, x: Math.round(x), y: Math.round(y) })
 })
+// A right-click menu: the id of the item clicked, or null when it closed without one.
+ipcMain.handle('menu:context', (e, items: { id: string; label: string; enabled?: boolean; separator?: boolean }[]) => {
+  const owner = BrowserWindow.fromWebContents(e.sender) ?? win
+  if (!owner) return null
+  return new Promise<string | null>((resolve) => {
+    const menu = Menu.buildFromTemplate(
+      items.map((i) => (i.separator ? { type: 'separator' as const } : { label: i.label, enabled: i.enabled !== false, click: () => resolve(i.id) })),
+    )
+    menu.popup({ window: owner, callback: () => resolve(null) })
+  })
+})
 // Marbled sheets, rendered once in the renderer and cached here by
 // engine|palette|tone|pattern|seed|size.
 const marblePath = (key: string) => {

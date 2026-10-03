@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import type { BibInfo, CompileResult, EditorContext, PaperInfo, Problem, QuickFix, SectionTarget, TextEdit, TreeNode, VaultInfo } from '@shared/api'
   import { isDocument, magicRoot, parseIncludes, rootComment, type Include } from '@shared/project'
-  import { extractSection, includeBlock, inlineInclude, moveInclude, placeNewFile, renameIncludes, renumberPlan, slugify, toggleInclude } from '@shared/paperedit'
+  import { extractRange, extractSection, includeBlock, inlineInclude, moveInclude, placeNewFile, renameIncludes, renumberPlan, slugify, toggleInclude } from '@shared/paperedit'
   import PaperMap, { type PaperMapActions } from './lib/PaperMap.svelte'
   import { PaperModel } from '@shared/papermodel'
   import { outline as outlineOf } from '@shared/latexedit'
@@ -190,6 +190,7 @@
     }
     return {
       options: model.options(rel),
+      root: paper && paper.root !== rel ? { rel: paper.root, name: paper.root.split('/').pop()! } : null,
       prev: i > 0 ? neighbour(readingOrder[i - 1]) : null,
       next: i >= 0 ? neighbour(readingOrder[i + 1]) : null,
       card: (inc, off) => {
@@ -267,16 +268,7 @@
         run: (title) => newSectionFile(p.root, rel, title),
       }
     },
-    extract(rel, line, title) {
-      const p = paper
-      if (!p) return
-      paperPrompt = {
-        title: `Move "${title}" to a file of its own`,
-        initial: slugify(title),
-        hint: `A file name (no .tex). ${rel.split('/').pop()} keeps an \input in its place.`,
-        run: (name) => extractToFile(p.root, rel, line, name),
-      }
-    },
+    extract: (rel, line, title) => askExtract(rel, { line }, title),
     async inline(rel) {
       const f = fileOf(rel)
       if (!f?.parent) return
@@ -340,16 +332,28 @@
     await openFile(rel)
   }
 
-  /** Moves the section on `line` of `rel` into a new file `name`.tex. */
-  async function extractToFile(root: string, rel: string, line: number, name: string): Promise<void> {
+  /** Asks for the name of the file a section (by its heading's line) or a range of `rel` goes to. */
+  function askExtract(rel: string, what: { line: number } | { from: number; to: number }, title: string): void {
+    const root = paper?.root ?? rel
+    paperPrompt = {
+      title: 'line' in what ? `Move "${title}" to a file of its own` : 'Move the selection to a file of its own',
+      initial: slugify(title),
+      hint: `A file name (no .tex). ${rel.split('/').pop()} keeps an \\input in its place.`,
+      run: (name) => extractToFile(root, rel, what, name),
+    }
+  }
+
+  /** Moves a section (the heading on a line) or a range of `rel` into a new file `name`.tex. */
+  async function extractToFile(root: string, rel: string, what: { line: number } | { from: number; to: number }, name: string): Promise<void> {
     paperPrompt = null
     name = slugify(name.replace(/\.tex$/i, ''))
-    if (!paper || !name) return
-    const siblings = paper.files.filter((f) => f.parent === root && f.include).map((f) => ({ rel: f.rel, arg: f.include!.arg }))
+    if (!name) return
+    const siblings = paper ? paper.files.filter((f) => f.parent === root && f.include).map((f) => ({ rel: f.rel, arg: f.include!.arg })) : []
     const place = placeNewFile(name, root, siblings, taken)
     const text = await currentText(rel)
-    const out = extractSection(text, line, 'input', place.arg, `${rootComment(place.rel, root)}\n`)
-    if (!out) return flash('No section heading on that line')
+    const header = `${rootComment(place.rel, root)}\n`
+    const out = 'line' in what ? extractSection(text, what.line, 'input', place.arg, header) : extractRange(text, what.from, what.to, 'input', place.arg, header)
+    if (!out) return flash('line' in what ? 'No section heading on that line' : 'Nothing selected to move')
     await window.api.writeFile(place.rel, out.body)
     await editAndSave(rel, () => out.changes)
     flash(`Moved to ${place.rel}`)
@@ -1695,6 +1699,7 @@
                 onlivechange={(on) => (live = on)}
                 onedit={schedulePreview}
                 {livePaper}
+                onextract={(rel, what, title) => askExtract(rel, what, title)}
                 onopenlocation={(loc) => go(loc.file, loc.line)}
               />
             </div>

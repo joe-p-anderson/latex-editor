@@ -382,28 +382,48 @@ export class IncludeWidget extends WidgetType {
  */
 export class NeighbourWidget extends WidgetType {
   constructor(
-    readonly rel: string,
+    readonly rel: string | null,
     readonly label: string | null,
     readonly next: boolean,
+    readonly root: { rel: string; name: string } | null = null,
   ) {
     super()
   }
   eq(o: NeighbourWidget): boolean {
-    return o.rel === this.rel && o.label === this.label && o.next === this.next
+    return o.rel === this.rel && o.label === this.label && o.next === this.next && o.root?.rel === this.root?.rel && o.root?.name === this.root?.name
   }
   toDOM(view: EditorView): HTMLElement {
     const dom = el('div', `cm-live-neighbour ${this.next ? 'next' : 'prev'}`)
-    const name = this.rel.split('/').pop()!
-    dom.append(
-      el('span', 'cm-live-neighbour-dir', this.next ? 'Continue' : 'Before this'),
-      el('span', 'cm-live-neighbour-file', `${this.next ? '' : '← '}${name}${this.label ? ` ${this.label}` : ''}${this.next ? ' →' : ''}`),
-    )
-    dom.title = `${this.rel} (${this.next ? 'Alt+PageDown' : 'Alt+PageUp'})`
-    dom.addEventListener('mousedown', (e) => {
-      if (e.button !== 0) return
-      e.preventDefault()
-      view.dom.dispatchEvent(new CustomEvent<OpenLocation>(OPEN_LOCATION_EVENT, { bubbles: true, detail: { file: this.rel, line: 1 } }))
-    })
+    const link = (rel: string, title: string, cls: string, ...kids: HTMLElement[]) => {
+      const a = el('span', cls)
+      a.append(...kids)
+      a.title = title
+      a.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return
+        e.preventDefault()
+        view.dom.dispatchEvent(new CustomEvent<OpenLocation>(OPEN_LOCATION_EVENT, { bubbles: true, detail: { file: rel, line: 1 } }))
+      })
+      return a
+    }
+    const kids: HTMLElement[] = []
+    if (this.rel) {
+      const name = this.rel.split('/').pop()!
+      kids.push(
+        link(
+          this.rel,
+          `${this.rel} (${this.next ? 'Alt+PageDown' : 'Alt+PageUp'})`,
+          'cm-live-neighbour-link',
+          el('span', 'cm-live-neighbour-dir', this.next ? 'Continue' : 'Before this'),
+          el('span', 'cm-live-neighbour-file', `${this.next ? '' : '← '}${name}${this.label ? ` ${this.label}` : ''}${this.next ? ' →' : ''}`),
+        ),
+      )
+    }
+    if (this.root) {
+      const r = link(this.root.rel, this.root.rel, 'cm-live-neighbour-link root', el('span', 'cm-live-neighbour-file', `↑ ${this.root.name}`))
+      if (this.next) kids.unshift(r)
+      else kids.push(r)
+    }
+    dom.append(...kids)
     return spaced(dom)
   }
 }

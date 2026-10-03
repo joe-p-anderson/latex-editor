@@ -261,6 +261,8 @@ export interface Api {
   setWindowChrome(color: string, symbolColor: string): Promise<void>
   /** Opens one of the app's menus (File, Edit, View, Build) at a point in the window. */
   popupMenu(label: string, x: number, y: number): Promise<void>
+  /** Shows a right-click menu at the pointer; the id of the item chosen, or null if it was dismissed. */
+  contextMenu(items: { id: string; label: string; enabled?: boolean; separator?: boolean }[]): Promise<string | null>
   /** A cached marbled sheet (JPEG), or null if it hasn't been rendered yet. */
   marbleGet(key: string): Promise<Uint8Array | null>
   marblePut(key: string, bytes: Uint8Array): Promise<void>

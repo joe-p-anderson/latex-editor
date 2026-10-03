@@ -68,6 +68,7 @@ const api: Api & { onMenuOpenVault(cb: () => void): () => void } = {
   setVaultAppearance: (changes) => ipcRenderer.invoke('appearance:set-vault', changes),
   setWindowChrome: (color, symbolColor) => ipcRenderer.invoke('window:chrome', color, symbolColor),
   popupMenu: (label, x, y) => ipcRenderer.invoke('menu:popup', label, x, y),
+  contextMenu: (items) => ipcRenderer.invoke('menu:context', items),
   gitBranch: () => ipcRenderer.invoke('vault:branch'),
   marbleGet: (key) => ipcRenderer.invoke('marble:get', key),
   marblePut: (key, bytes) => ipcRenderer.invoke('marble:put', key, bytes),
