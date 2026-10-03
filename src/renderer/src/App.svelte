@@ -30,8 +30,9 @@
   import { insertRow, newTable, packagesFor, parseTable, pasteGrid, serializeTable, type TableModel } from '@shared/tablemodel'
   import { normalizeEol } from '@shared/search'
   import { clearSpellingCache, type SpellHooks } from './lib/spellcheck'
-  import SymbolPanel, { type LibrarySymbol, type SymbolActions } from './lib/SymbolPanel.svelte'
-  import { findMathRegions, mathAtCursor } from '@shared/mathregions'
+  import { PluginRuntime, type HostServices } from './lib/plugins.svelte'
+  import PluginsPanel from './lib/PluginsPanel.svelte'
+  import { usePackageLine, type PackageSpec } from '@shared/packages'
   import { BUILTIN_MATH_SNIPPETS, mathSnippetsFileTemplate, mergeSnippets, parseMathSnippets, type MathSnippet } from '@shared/mathsnippets'
   import AppearancePanel from './lib/AppearancePanel.svelte'
   import { applyAppearance, logoUrl, smallLogo } from './lib/appearance'
@@ -44,7 +45,7 @@
   import Welcome from './lib/Welcome.svelte'
   import EmptyPlate from './lib/EmptyPlate.svelte'
   import IndexTabs from './lib/IndexTabs.svelte'
-  import { tick } from 'svelte'
+  import { tick, untrack } from 'svelte'
   import {
     DEFAULT_APP_APPEARANCE,
     defaultVaultAppearance,
@@ -137,19 +138,81 @@
     { id: 'files', icon: 'files', tip: 'Files' },
     { id: 'contents', icon: 'contents', tip: "Contents: the file's sections, or the whole paper's" },
     { id: 'search', icon: 'search', tip: 'Search the vault (Ctrl+Shift+H)' },
-    { id: 'symbols', icon: 'symbols', tip: 'Symbols' },
   ]
 
   // Contextual tools: Citations when the vault has a .bib file.
   const hasBib = $derived(!!vault && allFiles(vault.tree).some((f) => f.toLowerCase().endsWith('.bib')))
   // The paper the open file belongs to: its root and the files it pulls in.
   let paper = $state<PaperInfo | null>(null)
+
+  // --- Plugins ----------------------------------------------------------------
+
+  // A plugin's prompt (HostServices.prompt), answered by PromptDialog.
+  let pluginPrompt = $state<{ title: string; initial: string; hint?: string; done: (v: string | null) => void } | null>(null)
+
+  // What plugins act through (src/renderer/src/lib/plugins.svelte.ts).
+  const host: HostServices = {
+    vault: () => vault,
+    files: () => (vault ? allFiles(vault.tree) : []),
+    editor: {
+      file: () => active,
+      text: () => editor?.docText() ?? '',
+      cursor: () => editor?.cursorPos() ?? 0,
+      selection: () => editor?.selection() ?? { from: 0, to: 0, text: '' },
+      insert: (text) => editor?.insertAtCursor(text),
+      insertBlock: (text) => editor?.insertBlock(text),
+      replace: (from, to, text) => editor?.replaceRange(from, to, text),
+      applyTo: async (rel, changes) => {
+        await editor?.applyChangesTo(rel, changes)
+        addTab(rel)
+      },
+      textOf: (rel) => textOf(rel),
+      focus: () => editor?.focus(),
+      math: () => editor!.mathRenderer(),
+    },
+    root: () => rootOfActive(),
+    macros: async () => (active ? (await window.api.mathMacros(active).catch(() => ({ macros: {} }))).macros : {}),
+    packages: {
+      ensure: (pkgs) => ensurePackages(pkgs),
+      missing: async (pkgs) => (await missingPackages(pkgs))?.missing ?? null,
+      loaded: () => loadedPackages(),
+    },
+    notify: (text) => flash(text),
+    open: (rel, line) => go(rel, line),
+    prompt: (opts) =>
+      new Promise((done) => {
+        pluginPrompt?.done(null)
+        pluginPrompt = { title: opts.title, initial: opts.initial ?? '', hint: opts.hint, done }
+      }),
+    cite: (keys) => insertCitation(keys),
+    reloadBib: () => void (active && loadBib(active)),
+    showView: (id) => {
+      view = id
+      sideOpen = true
+    },
+  }
+  const plugins = new PluginRuntime(host)
+  // Each vault has its own plugins on; the main process has switched them already.
+  $effect(() => {
+    const root = vault?.root
+    untrack(() => (root ? plugins.load() : plugins.stopAll()))
+  })
+  $effect(() => {
+    const [ed, exts] = [editor, plugins.extensions]
+    untrack(() => ed?.setPluginExtensions(exts))
+  })
+
+  // Plugins' views: always-on ones after the core views, contextual ones with the tools.
+  const pluginViews = $derived(plugins.visibleViews(active))
+  const views = $derived<ViewButton[]>([...VIEWS, ...pluginViews.views])
   const tools = $derived<ViewButton[]>([
     ...(hasBib ? [{ id: 'cite', icon: 'cite', tip: 'Citations. Shown because this vault has a .bib file' } as ViewButton] : []),
+    ...pluginViews.tools,
   ])
-  // A tool that's no longer offered falls back to Files.
+  // A view that's no longer offered (a tool out of context, a plugin switched off) falls back to Files.
+  const CORE_VIEWS = ['files', 'contents', 'search', 'appearance', 'plugins']
   $effect(() => {
-    if (view === 'cite' && !hasBib) view = 'files'
+    if (!CORE_VIEWS.includes(view) && !views.some((v) => v.id === view) && !tools.some((v) => v.id === view)) view = 'files'
   })
 
   /** The paper `rel` belongs to (the main process works out its root). */
@@ -798,13 +861,15 @@
     })
     const offMenu = window.api.onMenuOpenVault(openVault)
     const offVault = window.api.onVaultChanged((v) => (vault = v))
+    const offPlugins = window.api.onPluginsChanged((states) => plugins.apply(states))
     const offAppMenu = window.api.onMenu((name, arg) => {
       if (name === 'math-shortcuts') editMathShortcuts()
+      else if (name === 'plugin-command' && vault) plugins.runCommand(String(arg))
       else if (name === 'spellcheck') setSpelling(arg === true)
       else if (vault) menuCommand(name)
     })
     window.api.setSpellcheckMenu(spellOn)
-    return () => (offTree(), offMenu(), offVault(), offClose(), offAppMenu())
+    return () => (offTree(), offMenu(), offVault(), offClose(), offAppMenu(), offPlugins())
   })
 
   /** Menu items the renderer carries out (most also have a shortcut, handled in onkeydown). */
@@ -819,6 +884,7 @@
     else if (name === 'toggle-sidebar') sideOpen = !sideOpen
     else if (name === 'toggle-panel') togglePanel()
     else if (name === 'appearance') showView('appearance')
+    else if (name === 'plugins') showView('plugins')
     else if (name === 'recompile' && active) compile(active)
     else if (name === 'sync-forward') syncForward()
     else if (name === 'close-vault') closeVault()
@@ -1177,9 +1243,6 @@
     await ensurePackages(packagesFor(model))
   }
 
-  /** A package to load, with options only where they matter (\usepackage[T1]{fontenc}). */
-  type PackageSpec = string | { name: string; options: string }
-
   /**
    * The packages of `pkgs` the open document doesn't load yet (itself, or
    * through its class, per the last build's log), and the document to add
@@ -1210,7 +1273,7 @@
     const found = await missingPackages(pkgs)
     if (!found || !found.missing.length) return
     const { root, text, missing } = found
-    const line = (p: PackageSpec) => (typeof p === 'string' ? `\\usepackage{${p}}` : `\\usepackage[${p.options}]{${p.name}}`)
+    const line = usePackageLine
     const begin = text.search(/^[^%\n]*\\begin\s*\{document\}/m)
     const preamble = begin < 0 ? text : text.slice(0, begin)
     const uses = [...preamble.matchAll(/^[^%\n]*\\usepackage.*$/gm)]
@@ -1222,14 +1285,6 @@
     addTab(root)
     flash(`Added ${missing.map(line).join(', ')} to ${root.split('/').pop()}`)
   }
-
-  // --- Symbols ----------------------------------------------------------------
-
-  // textcomp has been part of LaTeX itself since 2020, so it's never added.
-  const symbolPackages = (s: LibrarySymbol): PackageSpec[] => [
-    ...(s.fontenc ? [{ name: 'fontenc', options: s.fontenc }] : []),
-    ...(s.package && s.package !== 'textcomp' ? [s.package] : []),
-  ]
 
   /**
    * The packages and font encodings the open document loads: its own
@@ -1251,27 +1306,6 @@
     for (const m of log.matchAll(/[\\/]([A-Za-z0-9-]+)\.sty\b/g)) packages.add(m[1])
     for (const m of log.matchAll(/[\\/]([A-Za-z0-9]+)enc\.def\b/gi)) encodings.add(m[1].toUpperCase())
     return { packages, encodings }
-  }
-
-  const symbolActions: SymbolActions = {
-    insert(s) {
-      if (!editor || !active) return flash('Open a document to insert a symbol')
-      // A math symbol in text goes in $…$; a text symbol in math, in \text{…}.
-      const text = editor.docText()
-      const pos = editor.cursorPos()
-      const math = !!mathAtCursor(text, findMathRegions(text), pos)
-      let insert = s.mode === 'math' && !math ? `$${s.command}$` : s.mode === 'text' && math ? `\\text{${s.command}}` : s.command
-      // \alpha straight before a letter would run into it.
-      if (/[A-Za-z]$/.test(insert) && /^[A-Za-z]/.test(text.slice(pos, pos + 1))) insert += ' '
-      editor.insertAtCursor(insert)
-      editor.focus()
-      // And what it needs, if the document doesn't load it yet.
-      if (s.package || s.fontenc) ensurePackages(symbolPackages(s))
-    },
-    addPackage: (s) => ensurePackages(symbolPackages(s)),
-    hasPackage: async (s) => ((await missingPackages(symbolPackages(s)))?.missing.length ?? 1) === 0,
-    loadedPackages,
-    note: (message) => flash(message),
   }
 
   /** Unsaved buffers, which search reads instead of the disk copies. */
@@ -1567,7 +1601,7 @@
     {#if note}<div class="note welcome-note">{note}</div>{/if}
   {:else}
     <div class="work" bind:this={work} style:grid-template-columns="52px {sideOpen ? `${sideWidth}px 0` : '0 0'} minmax(0, 1fr)">
-      <ActivityBar views={VIEWS} {tools} current={view} open={sideOpen} {swatch} {logo} onselect={showView} />
+      <ActivityBar {views} {tools} current={view} open={sideOpen} {swatch} {logo} onselect={showView} />
 
       <aside class="sidebar" hidden={!sideOpen}>
         <!-- Each view stays mounted, so search keeps its query and results. -->
@@ -1636,9 +1670,12 @@
             paper={paper?.declared && inPaper(active) ? { name: paper.name, files: paper.files.map((f) => f.rel) } : null}
           />
         </div>
-        <div class="side-body" hidden={view !== 'symbols'}>
-          <SymbolPanel actions={symbolActions} active={sideOpen && view === 'symbols'} docKey="{active}|{pdfVersion}|{searchVersion}|{result?.root}" />
-        </div>
+        <!-- Plugins' views stay mounted while their plugin is on, like the core ones. -->
+        {#each plugins.views as pv (pv.id)}
+          <div class="side-body" hidden={view !== pv.id}>
+            <pv.component ctx={pv.ctx} visible={sideOpen && view === pv.id} docKey="{active}|{pdfVersion}|{searchVersion}|{result?.root}|{vault.tree.length}" />
+          </div>
+        {/each}
         {#if view === 'cite'}
           <div class="side-body">
             <CitationsView
@@ -1646,6 +1683,10 @@
               oncite={(key) => insertCitation([key])}
               onopen={(file, line) => go(file, line)}
             />
+          </div>
+        {:else if view === 'plugins'}
+          <div class="side-body">
+            <PluginsPanel states={plugins.states} panels={plugins.panels} vaultName={vault.name} />
           </div>
         {:else if view === 'appearance'}
           <div class="side-body">
@@ -1727,6 +1768,7 @@
       live={active?.toLowerCase().endsWith('.tex') ? live : null}
       spelling={spellOn}
       problems={problemCounts}
+      items={plugins.status}
       onendpaper={() => showView('appearance')}
       onsection={() => {
         view = 'contents'
@@ -1781,6 +1823,24 @@
   />
 {/if}
 
+{#if pluginPrompt}
+  {@const pp = pluginPrompt}
+  <PromptDialog
+    title={pp.title}
+    initial={pp.initial}
+    hint={pp.hint}
+    onsubmit={(v) => {
+      pluginPrompt = null
+      pp.done(v)
+    }}
+    oncancel={() => {
+      pluginPrompt = null
+      pp.done(null)
+      editor?.focus()
+    }}
+  />
+{/if}
+
 {#if quickOpen}
   <QuickOpen
     files={openable}
@@ -1798,6 +1858,7 @@
 {#if citePicker && bib}
   <CitePicker
     info={bib}
+    sources={plugins.citeSources}
     onpick={insertCitation}
     onclose={() => {
       citePicker = false

@@ -45,7 +45,7 @@
     nav?: { canBack: boolean; canForward: boolean; onback: () => void; onforward: () => void } | null
   } = $props()
 
-  const MENUS = ['File', 'Edit', 'View', 'Build']
+  const MENUS = ['File', 'Edit', 'View', 'Build', 'Tools']
 
   function openMenu(label: string, e: MouseEvent): void {
     const box = (e.currentTarget as HTMLElement).getBoundingClientRect()

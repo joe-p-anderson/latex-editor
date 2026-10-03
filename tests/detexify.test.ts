@@ -4,7 +4,7 @@ import { gunzipSync } from 'node:zlib'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { Classifier, greedyDtw, preprocess, type SampleData, type Stroke } from '../src/shared/detexify'
 
-const ASSETS = resolve(import.meta.dirname, '../src/renderer/src/assets/detexify')
+const ASSETS = resolve(import.meta.dirname, '../src/plugins/symbols/ui/assets')
 let data: SampleData
 let classifier: Classifier
 const symbols = JSON.parse(readFileSync(resolve(ASSETS, 'symbols.json'), 'utf8')) as { id: string; command: string }[]

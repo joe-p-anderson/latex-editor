@@ -11,5 +11,6 @@
     "types": ["svelte", "vite/client"],
     "paths": { "@shared/*": ["./src/shared/*"] }
   },
-  "include": ["src/renderer/**/*", "src/shared/**/*", "src/preload/*.d.ts"]
+  "include": ["src/renderer/**/*", "src/shared/**/*", "src/plugins/**/*", "src/preload/*.d.ts"],
+  "exclude": ["src/plugins/main.ts", "src/plugins/*/main.ts", "src/plugins/*/main/**"]
 }

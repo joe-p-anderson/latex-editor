@@ -1,6 +1,6 @@
 // Imports the symbol library and handwriting samples from Detexify Next
 // (https://github.com/kirel/detexify-next, Daniel Kirsch) at a pinned
-// commit, into src/renderer/src/assets/detexify/:
+// commit, into src/plugins/symbols/ui/assets/:
 //   symbols.json      every symbol: command, package, math/text mode, its SVG
 //   samples.json.gz   the handwriting samples the classifier compares against,
 //                     as integer coordinates (0..1000), strokes flattened
@@ -18,7 +18,7 @@ import { gzipSync } from 'node:zlib'
 
 const COMMIT = process.argv[2] ?? 'ba0742b03b01a7a958110ced23d509a72d85744e'
 const REPO = 'https://github.com/kirel/detexify-next.git'
-const OUT = resolve(import.meta.dirname, '../src/renderer/src/assets/detexify')
+const OUT = resolve(import.meta.dirname, '../src/plugins/symbols/ui/assets')
 const DATA = 'apps/web/public/data'
 
 const work = mkdtempSync(join(tmpdir(), 'detexify-'))

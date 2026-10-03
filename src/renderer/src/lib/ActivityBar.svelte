@@ -1,10 +1,10 @@
 <script lang="ts" module>
-  import type { IconName } from './icons'
-
-  export type View = 'files' | 'contents' | 'search' | 'symbols' | 'cite' | 'appearance'
+  /** A core view ('files', 'contents', 'search', 'cite', 'appearance', 'plugins') or a plugin's ('<plugin>:<id>'). */
+  export type View = string
   export interface ViewButton {
     id: View
-    icon: IconName
+    /** A name from icons.ts, or SVG markup (a plugin's own icon). */
+    icon: string
     tip: string
   }
 </script>
@@ -53,6 +53,9 @@
     {#each tools as v (v.id)}{@render button(v)}{/each}
   {/if}
   <div class="spacer"></div>
+  <button class="act" class:on={open && current === 'plugins'} onclick={() => onselect('plugins')} title="Plugins" aria-label="Plugins">
+    <Icon name="plugin" size={23} />
+  </button>
   <button class="act" onclick={() => onselect('appearance')} title="This vault’s endpaper and paper" aria-label="Endpaper">
     <span class="swatch" style:background-image={swatch}>{#if logo}<img src={logo} alt="" />{/if}</span>
   </button>

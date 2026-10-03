@@ -2,6 +2,7 @@
   import { onMount } from 'svelte'
   import { searchBib, type BibSummary } from '@shared/bibtex'
   import type { BibInfo } from '@shared/api'
+  import type { CiteHit, CiteSource } from './plugins.svelte'
 
   /**
    * A searchable list of the document's bibliography entries. Enter inserts
@@ -9,10 +10,13 @@
    */
   let {
     info,
+    sources = [],
     onpick,
     onclose,
   }: {
     info: BibInfo
+    /** Plugins' reference sources (e.g. Zotero), searched as you type, below the document's own entries. */
+    sources?: CiteSource[]
     onpick: (keys: string[]) => void
     onclose: () => void
   } = $props()
@@ -40,6 +44,37 @@
   })
 
   onMount(() => input.focus())
+
+  // The sources' results for the query, once typing pauses; hits already in the bibliography are left out.
+  let external = $state<{ source: CiteSource; hits: CiteHit[] }[]>([])
+  let externalTimer: ReturnType<typeof setTimeout> | undefined
+  $effect(() => {
+    const q = query.trim()
+    clearTimeout(externalTimer)
+    if (q.length < 2 || !sources.length) {
+      external = []
+      return
+    }
+    const known = new Set(info.entries.map((e) => e.key))
+    externalTimer = setTimeout(async () => {
+      const found = await Promise.all(
+        sources.map(async (source) => ({ source, hits: (await source.search(q).catch(() => [])).filter((h) => !h.key || !known.has(h.key)) })),
+      )
+      if (query.trim() === q) external = found.filter((f) => f.hits.length)
+    }, 250)
+  })
+
+  let picking = $state(false)
+  async function pickExternal(source: CiteSource, hit: CiteHit): Promise<void> {
+    if (picking) return
+    picking = true
+    try {
+      const key = await source.pick(hit)
+      if (key) onpick([key])
+    } finally {
+      picking = false
+    }
+  }
 
   function toggle(key: string): void {
     marked = marked.includes(key) ? marked.filter((k) => k !== key) : [...marked, key]
@@ -132,6 +167,22 @@
         </p>
       {/each}
       {#if results.length > LIMIT}<p class="empty">…and {results.length - LIMIT} more. Type to narrow the list.</p>{/if}
+      {#each external as { source, hits } (source)}
+        <div class="source">From {source.label}: click to add to the bibliography and cite</div>
+        {#each hits as hit, i (i)}
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <div class="row" class:busy={picking} role="option" aria-selected="false" tabindex="-1" onclick={() => pickExternal(source, hit)}>
+            <div class="body">
+              <div class="line1">
+                <span class="who">{hit.authors || '(no author)'}{hit.year ? ` ${hit.year}` : ''}</span>
+                {#if hit.key}<span class="key">{hit.key}</span>{/if}
+              </div>
+              <div class="title">{hit.title || '(untitled)'}</div>
+              {#if hit.detail}<div class="line3"><span class="venue">{hit.detail}</span></div>{/if}
+            </div>
+          </div>
+        {/each}
+      {/each}
     </div>
   </div>
 </div>
@@ -275,5 +326,15 @@
   .empty {
     color: var(--ink-soft);
     text-align: center;
+  }
+  .source {
+    margin: 10px 10px 4px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .row.busy {
+    cursor: progress;
   }
 </style>

@@ -22,6 +22,7 @@ import { labelsIn, sectionDocument } from '../shared/sectiondoc'
 import { citedKeys } from '../shared/bibtex'
 import type { Counters } from '../shared/livemodel'
 import { unshadow, writeShadow } from './shadow'
+import { runAfterBuild, runBeforeBuild, type BuildKind } from './buildhooks'
 import type { Vault } from './vault'
 
 const MAX_PASSES = 4
@@ -106,6 +107,9 @@ async function build(vault: Vault, rel: string, buffers: Record<string, string> 
 
   // A preview runs from a shadow folder holding the unsaved files; the
   // vault root comes next on the search path for everything else.
+  const kind: BuildKind = draft ? 'draft' : 'full'
+  await runBeforeBuild({ kind, vault, root, cacheDir, name, buffers })
+  if (gen !== generation) return stale()
   const shadow = buffers && Object.keys(buffers).length ? await writeShadow(vault.root, buffers) : null
   if (gen !== generation) return stale()
   const cwd = shadow ?? vault.root
@@ -223,7 +227,9 @@ async function build(vault: Vault, rel: string, buffers: Record<string, string> 
     buildFormat(root, cacheDir, name, preamble, vault.root, env).catch(() => {})
   }
 
-  return { ok, root, passes: run.passes, pdf: pdfExists ? cachePdf : null, problems, log, durationMs: Date.now() - started, draft, preloaded: !!format }
+  const result: CompileResult = { ok, root, passes: run.passes, pdf: pdfExists ? cachePdf : null, problems, log, durationMs: Date.now() - started, draft, preloaded: !!format }
+  await runAfterBuild({ kind, vault, root, cacheDir, name, buffers, auxPath: join(cacheDir, `${name}.aux`), result })
+  return result
 }
 
 const errorCount = (log: string) => (log.match(ERROR_LINES) ?? []).length
@@ -326,6 +332,8 @@ export async function compileSection(
   const gen = ++generation
   const draft = true
   const stale = (): CompileResult => ({ ok: false, root, passes: 0, pdf: null, problems: [], log: '', durationMs: Date.now() - started, draft, section: label })
+  await runBeforeBuild({ kind: 'section', vault, root, cacheDir, name, buffers })
+  if (gen !== generation) return stale()
   const shadow = Object.keys(buffers).length ? await writeShadow(vault.root, buffers) : null
   if (gen !== generation) return stale()
 
@@ -375,7 +383,38 @@ export async function compileSection(
   const pdf = join(cacheDir, `${job}.pdf`)
   const pdfExists = await stat(pdf).then(() => true, () => false)
   const ok = pdfExists && !problems.some((p) => p.severity === 'error' && !p.hidden)
-  return { ok, root, passes: 1, pdf: pdfExists ? pdf : null, problems, log, durationMs: Date.now() - started, draft, preloaded, section: label }
+  const result: CompileResult = { ok, root, passes: 1, pdf: pdfExists ? pdf : null, problems, log, durationMs: Date.now() - started, draft, preloaded, section: label }
+  await runAfterBuild({ kind: 'section', vault, root, cacheDir, name, buffers, auxPath: fullAux(vault, root), result })
+  return result
+}
+
+/**
+ * Builds a generated document `source` as `<dir>/<name>.tex`, e.g. a
+ * plugin's preview of one problem. It runs from the vault root (so its
+ * images and classes resolve), alongside any document build rather than
+ * cancelling it, and publishes nothing to pdf/.
+ */
+export async function compileScratch(vault: Vault, dir: string, name: string, source: string): Promise<CompileResult> {
+  const started = Date.now()
+  await mkdir(dir, { recursive: true })
+  const texPath = join(dir, `${name}.tex`)
+  await writeFile(texPath, source)
+  const logPath = join(dir, `${name}.log`)
+  const env = texEnv(vault, '', null)
+  let log = ''
+  let passes = 0
+  for (; passes < 2; ) {
+    passes++
+    await rm(logPath, { force: true }).catch(() => {})
+    await runTool('pdflatex', [...baseArgsFor(dir), texPath], vault.root, env, false).catch(() => {})
+    log = await readFile(logPath, 'utf8').catch(() => '')
+    if (!log || !RERUN.test(log)) break
+  }
+  const problems = await diagnose(parseLog(log), diagnoseContext(vault, texPath, log, join(dir, `${name}.aux`)))
+  const pdf = join(dir, `${name}.pdf`)
+  const pdfExists = await stat(pdf).then(() => true, () => false)
+  const ok = pdfExists && !problems.some((p) => p.severity === 'error' && !p.hidden)
+  return { ok, root: texPath, passes, pdf: pdfExists ? pdf : null, problems, log, durationMs: Date.now() - started, draft: true }
 }
 
 /**
@@ -413,12 +452,16 @@ export function diagnoseContext(vault: Vault, doc: string, log: string, auxPath:
   }
 }
 
-/** Runs one pass of `cmd` (pdflatex, bibtex, biber), cancelling any still in flight from an earlier save. */
-function runTool(cmd: string, args: string[], cwd: string, env: NodeJS.ProcessEnv): Promise<void> {
-  running?.kill()
+/**
+ * Runs one pass of `cmd` (pdflatex, bibtex, biber), cancelling any still in
+ * flight from an earlier save. A pass that isn't `exclusive` neither
+ * cancels nor can be cancelled.
+ */
+function runTool(cmd: string, args: string[], cwd: string, env: NodeJS.ProcessEnv, exclusive = true): Promise<void> {
+  if (exclusive) running?.kill()
   return new Promise((resolvePass, reject) => {
     const child = spawn(cmd, args, { cwd, env, windowsHide: true })
-    running = child
+    if (exclusive) running = child
     const timer = setTimeout(() => child.kill(), PASS_TIMEOUT_MS)
     child.stdout.resume() // everything we need is in the .log; just drain the pipe
     child.stderr.resume()

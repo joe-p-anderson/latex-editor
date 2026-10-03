@@ -62,7 +62,7 @@
   })
 
   async function loadLibrary(): Promise<void> {
-    const mod = await import('../assets/detexify/symbols.json')
+    const mod = await import('./assets/symbols.json')
     const list = mod.default as LibrarySymbol[]
     byId = new Map(list.map((s) => [s.id, s]))
     symbols = list

@@ -1,6 +1,6 @@
 // Handwritten symbol recognition: a port of Detexify's legacy classifier
 // (Detexify Next by Daniel Kirsch, MIT licence; see
-// src/renderer/src/assets/detexify/NOTICE.md).
+// src/plugins/symbols/ui/assets/NOTICE.md).
 //
 // A drawing is cleaned up the way Detexify's training samples were (first
 // 10 strokes; each smoothed, fitted into the unit square keeping its aspect

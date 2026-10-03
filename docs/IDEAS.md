@@ -29,7 +29,7 @@ What would make this a better LaTeX editor, roughly in order of payoff. Items ma
 ## Across a semester
 
 - **Git history for each file.** Show what changed since last year's version and restore old versions. Snapshots on each save would give undo that lasts after you close the file.
-- **Reusing problems.** A question bank: tag `\question` blocks by topic and pull them into a new homework or exam.
+- **Reusing problems.** A question bank: tag `\question` blocks by topic and pull them into a new homework or exam. Being built as the Problem bank plugin (`docs/design/PLUGINS.md`).
 - **Building many documents at once.** Rebuild every document that uses a class after it changes, and report which ones broke.
 - **A bibliography (done).** BibTeX and biber run as part of a build, only when citations or a `.bib` changed. There's a cite picker (search by author, title, year, journal or tag), `\cite` completion, numbered cite chips in the live view, and a "did you mean" fix for a mistyped key.
   - Still to do: other engines (XeLaTeX, LuaLaTeX).
@@ -42,6 +42,11 @@ What would make this a better LaTeX editor, roughly in order of payoff. Items ma
 - **New paper from a journal template.** Recently used classes, the template folder, and a curated journal list (revtex, elsarticle, IEEEtran, …). Each is marked installed or available, and MiKTeX installs a missing class, with progress shown.
 - **Submission bundle.** Flatten the `\input`s into one file, include the `.bbl`, keep only the figures used, and zip it for arXiv or a journal.
 - **Page checks before printing.** Flag an overfull box as a visible marker in the PDF. Warn when a question splits across a page break, and give a page count.
+
+## Plugins
+
+- **A plugin engine (done).** Optional features switched on per vault, from the Plugins view; see `docs/design/PLUGINS.md`. Symbols is the first plugin.
+  - Planned: Problem bank, Zotero (then Mendeley).
 
 ## Decided against
 

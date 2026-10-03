@@ -15,6 +15,7 @@
     live,
     spelling,
     problems,
+    items = [],
     onendpaper,
     onsection,
     onlive,
@@ -32,6 +33,8 @@
     live: boolean | null
     spelling: boolean
     problems: { errors: number; warnings: number }
+    /** Plugins' items, shown before the problem count. */
+    items?: { id: number; text: string; tip?: string; onclick?: () => void }[]
     onendpaper: () => void
     onsection: () => void
     onlive: () => void
@@ -52,6 +55,10 @@
     {#if live !== null}<button class="sb" onclick={onlive} title="Switch between the live view and source (Ctrl+Shift+L)">{live ? 'Live' : 'Source'}</button>{/if}
     <button class="sb" onclick={onspelling} title="Check spelling">Spelling: {spelling ? 'en-US' : 'off'}</button>
   {/if}
+  {#each items as item (item.id)}
+    {#if item.onclick}<button class="sb" onclick={item.onclick} title={item.tip}>{item.text}</button>
+    {:else}<span class="sb static" title={item.tip}>{item.text}</span>{/if}
+  {/each}
   <button class="sb" onclick={onproblems} title="Problems (Ctrl+J)">
     <Icon name="warn" size={13} />{problems.errors}{#if problems.warnings}<span class="soft">· {problems.warnings}</span>{/if}
   </button>

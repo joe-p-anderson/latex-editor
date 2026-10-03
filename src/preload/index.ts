@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { Api, TouchpadEvent, TreeNode, VaultInfo } from '../shared/api'
+import type { PluginState } from '../shared/plugin'
 
 // The renderer's only door to the filesystem and compiler. Everything goes
 // through named IPC channels handled in src/main/index.ts.
@@ -76,6 +77,20 @@ const api: Api & { onMenuOpenVault(cb: () => void): () => void } = {
     const listener = (_e: unknown, vault: VaultInfo) => cb(vault)
     ipcRenderer.on('vault-changed', listener)
     return () => ipcRenderer.removeListener('vault-changed', listener)
+  },
+  plugins: () => ipcRenderer.invoke('plugins:list'),
+  changePlugin: (id, change) => ipcRenderer.invoke('plugins:change', id, change),
+  pluginInvoke: (id, name, args) => ipcRenderer.invoke('plugins:invoke', id, name, args),
+  setPluginMenu: (commands) => ipcRenderer.invoke('plugins:menu', commands),
+  onPluginsChanged: (cb) => {
+    const listener = (_e: unknown, states: PluginState[]) => cb(states)
+    ipcRenderer.on('plugins:changed', listener)
+    return () => ipcRenderer.removeListener('plugins:changed', listener)
+  },
+  onPluginEvent: (cb) => {
+    const listener = (_e: unknown, id: string, event: string, data: unknown) => cb(id, event, data)
+    ipcRenderer.on('plugins:event', listener)
+    return () => ipcRenderer.removeListener('plugins:event', listener)
   },
   onMenuOpenVault: (cb) => {
     const listener = () => cb()

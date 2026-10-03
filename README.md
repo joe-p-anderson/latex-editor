@@ -173,7 +173,7 @@ Each opened file gets a tab, placed after the current one. A dot marks unsaved c
   - add its `\usepackage` (or `\usepackage[T1]{fontenc}`) to the document's preamble, which the menu skips if the document or its class already loads it;
   - copy the `\usepackage` line.
 
-Recognition runs offline in a background worker, in about 10 ms a drawing. The symbol list, the symbol images, the handwriting samples and the recognition method come from [Detexify](https://detexify.kirelabs.org) by Daniel Kirsch, through [Detexify Next](https://github.com/kirel/detexify-next). Hover over **ⓘ Detexify** on the pad for the credit and links. The code is MIT-licensed, and the training data is under the Open Database License; see `src/renderer/src/assets/detexify/NOTICE.md`. `node scripts/import-detexify.mjs [commit]` refreshes the data.
+Recognition runs offline in a background worker, in about 10 ms a drawing. The symbol list, the symbol images, the handwriting samples and the recognition method come from [Detexify](https://detexify.kirelabs.org) by Daniel Kirsch, through [Detexify Next](https://github.com/kirel/detexify-next). Hover over **ⓘ Detexify** on the pad for the credit and links. The code is MIT-licensed, and the training data is under the Open Database License; see `src/plugins/symbols/ui/assets/NOTICE.md`. `node scripts/import-detexify.mjs [commit]` refreshes the data.
 
 ### Search
 
@@ -294,7 +294,7 @@ Per vault, in `.vault.json`:
 - `src/shared/search.ts`: search, replace and label rename, as pure text logic.
 - `src/shared/tablemodel.ts`: parses and writes tables, the grid operations, and reading clipboard data.
 - `src/shared/pairs.ts`, `mathsnippets.ts` and `spellwords.ts`: the text logic for brackets and quotes, math shortcuts (including the built-in list), and finding the prose words to spellcheck.
-- `src/shared/detexify.ts`: handwritten symbol recognition, ported from Detexify. `src/renderer/src/lib/SymbolPanel.svelte` and `detexify.worker.ts` are the panel and its worker, and `src/renderer/src/assets/detexify/` holds the imported library and samples.
+- `src/shared/detexify.ts`: handwritten symbol recognition, ported from Detexify. `src/plugins/symbols/` is the Symbols plugin: `ui/SymbolPanel.svelte` and `ui/detexify.worker.ts` are the panel and its worker, and `src/plugins/symbols/ui/assets/` holds the imported library and samples.
 - `docs/IDEAS.md`: the backlog of feature ideas.
 - `src/shared/api.ts`: the types every layer shares.
 - `fixtures/`: sample vaults (`AngStatsRevTex` is a revtex paper with a Zotero `.bib`), the shared template library and real log files for testing.

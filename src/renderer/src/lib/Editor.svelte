@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { EditorView, basicSetup } from 'codemirror'
-  import { Compartment, EditorState, Prec, type StateEffect } from '@codemirror/state'
+  import { Compartment, EditorState, Prec, type Extension, type StateEffect } from '@codemirror/state'
   import { keymap } from '@codemirror/view'
   import { indentWithTab } from '@codemirror/commands'
   import { StreamLanguage } from '@codemirror/language'
@@ -77,6 +77,9 @@
   const latex = StreamLanguage.define(stex)
   // Which file a state holds, for the live view's place in the paper; changed on rename.
   const fileName = new Compartment()
+  // What plugins add (src/renderer/src/lib/plugins.svelte.ts), swapped as they're switched.
+  const pluginSlot = new Compartment()
+  let pluginExts: Extension[] = []
 
   // Problems from the last compile, by vault-relative file, shown as
   // squiggles and gutter markers in whichever file is open.
@@ -160,6 +163,7 @@
         // with \n, and saving would rewrite every line of a CRLF file.
         EditorState.lineSeparator.of(text.includes('\r\n') ? '\r\n' : '\n'),
         fileName.of(liveFile.of(rel)),
+        pluginSlot.of(pluginExts),
         basicSetup,
         endleafEditorTheme,
         latex,
@@ -329,6 +333,14 @@
     view.requestMeasure()
   }
 
+  /** Swaps in the plugins' extensions, in every open file. */
+  export function setPluginExtensions(exts: Extension[]): void {
+    pluginExts = exts
+    const effect = pluginSlot.reconfigure(exts)
+    for (const [rel, state] of states) if (rel !== current) states.set(rel, state.update({ effects: effect }).state)
+    view?.dispatch({ effects: effect })
+  }
+
   /** Inserts text at the cursor (replacing any selection). */
   export function insertAtCursor(text: string): void {
     const { from, to } = view.state.selection.main
@@ -390,6 +402,12 @@
       effects: EditorView.scrollIntoView(Math.min(from, len), { y: 'center' }),
     })
     view.focus()
+  }
+
+  /** The main selection in the open file (\n offsets). */
+  export function selection(): { from: number; to: number; text: string } {
+    const { from, to } = view.state.selection.main
+    return { from, to, text: view.state.sliceDoc(from, to) }
   }
 
   /** The selected text in the open file ('' when nothing is selected). */

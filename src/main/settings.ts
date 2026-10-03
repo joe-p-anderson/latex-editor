@@ -4,6 +4,7 @@ import { app } from 'electron'
 import { copyFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { normalizeAppAppearance, type AppAppearance } from '../shared/appearance'
+import type { GlobalPluginEntry } from '../shared/plugin'
 
 export interface AppSettings {
   /** The vault opened last, reopened at launch. */
@@ -14,6 +15,8 @@ export interface AppSettings {
   templates?: string
   /** Look, page and type (docs/design/ENDLEAF.md); read through appAppearance(). */
   appearance?: Partial<AppAppearance>
+  /** Each plugin's default for vaults that haven't said, and its global settings. */
+  plugins?: Record<string, GlobalPluginEntry>
 }
 
 const settingsPath = () => join(app.getPath('userData'), 'settings.json')

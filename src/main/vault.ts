@@ -4,6 +4,7 @@ import { watch, type FSWatcher } from 'chokidar'
 import type { TreeNode, VaultInfo } from '../shared/api'
 import { DEFAULT_LISTS } from '../shared/latexedit'
 import { normalizeVaultAppearance, type VaultAppearance } from '../shared/appearance'
+import type { SettingValues, VaultPluginEntry } from '../shared/plugin'
 
 /** Optional per-vault settings, read from <vault>/.vault.json. */
 interface VaultSettings {
@@ -25,6 +26,8 @@ interface VaultSettings {
   appearance?: Partial<VaultAppearance>
   /** Root documents marked as multi-part papers, vault-relative. */
   papers?: string[]
+  /** Plugins on or off in this vault, and their vault settings (src/shared/plugin.ts). */
+  plugins?: Record<string, VaultPluginEntry>
 }
 
 // Where images go when none is configured: the first of these that exists.
@@ -56,7 +59,11 @@ export class Vault {
   appearance: VaultAppearance
   /** Root documents marked as multi-part papers. */
   papers: string[] = []
+  /** Plugin entries from .vault.json. */
+  plugins: Record<string, VaultPluginEntry> = {}
   private watcher: FSWatcher | null = null
+  /** Called with each file added, changed or removed (vault-relative), for plugins. */
+  private fileListeners = new Set<(event: 'add' | 'change' | 'unlink', rel: string) => void>()
 
   /** `globalTemplates` is the per-install template library shared by every vault. */
   constructor(
@@ -101,6 +108,34 @@ export class Vault {
     this.words = settings.words ?? 'words.txt'
     this.appearance = normalizeVaultAppearance(settings.appearance, this.name)
     this.papers = Array.isArray(settings.papers) ? settings.papers.filter((p) => typeof p === 'string') : []
+    this.plugins = settings.plugins && typeof settings.plugins === 'object' ? settings.plugins : {}
+  }
+
+  /**
+   * Sets a plugin on or off here (`enabled`; null follows the default) and/or
+   * merges `settings` into its vault settings, in .vault.json.
+   */
+  async savePlugin(id: string, change: { enabled?: boolean | null; settings?: SettingValues }): Promise<void> {
+    const settings = await this.readSettings()
+    const old = this.plugins[id]
+    const entry: { enabled?: boolean; settings?: SettingValues } = typeof old === 'object' && old ? { ...old } : typeof old === 'boolean' ? { enabled: old } : {}
+    if (change.enabled === null) delete entry.enabled
+    else if (change.enabled !== undefined) entry.enabled = change.enabled
+    if (change.settings) entry.settings = { ...entry.settings, ...change.settings }
+    const plugins = { ...this.plugins }
+    // A bare on/off reads best as true/false in the file.
+    if (entry.settings && Object.keys(entry.settings).length) plugins[id] = entry
+    else if (entry.enabled !== undefined) plugins[id] = entry.enabled
+    else delete plugins[id]
+    this.plugins = plugins
+    settings.plugins = plugins
+    await writeFile(this.settingsPath, JSON.stringify(settings, null, 2) + '\n')
+  }
+
+  /** Calls `f` with each file added, changed or removed in the vault (not in hidden folders). */
+  onFile(f: (event: 'add' | 'change' | 'unlink', rel: string) => void): () => void {
+    this.fileListeners.add(f)
+    return () => this.fileListeners.delete(f)
   }
 
   /**
@@ -198,7 +233,11 @@ export class Vault {
       ignoreInitial: true,
       ignored: (p) => p.split(sep).some((part) => HIDDEN_DIRS.has(part)),
     })
-    this.watcher.on('all', (event) => {
+    this.watcher.on('all', (event, path) => {
+      if (event === 'add' || event === 'change' || event === 'unlink') {
+        const rel = this.rel(resolve(this.root, path))
+        if (rel) for (const f of this.fileListeners) f(event, rel)
+      }
       if (event === 'change') return // content edits don't change the tree
       clearTimeout(timer)
       timer = setTimeout(onChange, 150)

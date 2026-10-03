@@ -5,6 +5,7 @@ import type { MacroDefs } from './mathrender'
 import type { PaperFile } from './project'
 import type { Counters } from './livemodel'
 import type { SearchOptions, SearchResult } from './search'
+import type { PluginState, SettingValues } from './plugin'
 
 // Types shared by the main process, the preload bridge and the renderer.
 // Paths called `rel` are vault-relative with forward slashes; paths called
@@ -270,4 +271,22 @@ export interface Api {
   gitBranch(): Promise<string | null>
   /** The vault's settings changed (e.g. a new global template folder). */
   onVaultChanged(cb: (vault: VaultInfo) => void): () => void
+  /** Every plugin, and whether it's on for the open vault (src/shared/plugin.ts). */
+  plugins(): Promise<PluginState[]>
+  /**
+   * Switches a plugin for this vault (`vaultEnabled`; null follows the default)
+   * or for new vaults (`defaultEnabled`), or changes its settings. Returns every plugin's state.
+   */
+  changePlugin(
+    id: string,
+    change: { vaultEnabled?: boolean | null; defaultEnabled?: boolean; vaultSettings?: SettingValues; globalSettings?: SettingValues },
+  ): Promise<PluginState[]>
+  /** Calls a handler a plugin's main half registered with ctx.handle. */
+  pluginInvoke(id: string, name: string, args: unknown[]): Promise<unknown>
+  /** The plugin commands to list in the Tools menu. */
+  setPluginMenu(commands: { id: string; title: string; plugin: string; key?: string }[]): Promise<void>
+  /** Plugins were switched or their settings changed. */
+  onPluginsChanged(cb: (states: PluginState[]) => void): () => void
+  /** A plugin's main half sent its renderer half an event (ctx.emit). */
+  onPluginEvent(cb: (id: string, event: string, data: unknown) => void): () => void
 }

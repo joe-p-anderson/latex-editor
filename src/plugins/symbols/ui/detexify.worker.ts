@@ -3,7 +3,7 @@
 // data URL: the page runs from file://, where fetch() can't load files) and
 // unpacked the first time a drawing arrives.
 import { Classifier, type Stroke } from '@shared/detexify'
-import samplesUrl from '../assets/detexify/samples.json.gz?inline'
+import samplesUrl from './assets/samples.json.gz?inline'
 
 export type WorkerRequest = { seq: number; strokes: Stroke[]; limit: number }
 export type WorkerResponse = { seq: number; results: { id: string; score: number }[] } | { seq: number; error: string }

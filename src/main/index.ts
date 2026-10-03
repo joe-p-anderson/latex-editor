@@ -13,6 +13,8 @@ import { addWord, misspelled, reloadWords, suggestions } from './spell'
 import { startTouchpad, stopTouchpad } from './touchpad'
 import { forward, inverse } from './synctex'
 import { Vault } from './vault'
+import { PluginHost } from './plugins'
+import type { SettingValues } from '../shared/plugin'
 import { isImage } from '../shared/images'
 import type { SearchOptions } from '../shared/search'
 import { normalizeVaultAppearance, PALETTES, type AppAppearance, type VaultAppearance } from '../shared/appearance'
@@ -22,12 +24,14 @@ let win: BrowserWindow | null = null
 let vault: Vault | null = null
 // Set once the renderer has dealt with unsaved files, so the next close goes through.
 let closeConfirmed = false
+const plugins = new PluginHost(() => win)
 
 async function openVault(root: string): Promise<Vault> {
   await vault?.close()
   vault = new Vault(resolve(root), await globalTemplatesDir())
   await vault.load()
   vault.watch(async () => win?.webContents.send('tree-changed', await vault!.tree()))
+  await plugins.open(vault)
   const recent = (await loadSettings()).recentVaults ?? []
   await saveSettings({
     lastVault: vault.root,
@@ -146,6 +150,7 @@ ipcMain.handle('vault:new', async () => (await newVault())?.info() ?? null)
 ipcMain.handle('vault:close', async () => {
   await vault?.close()
   vault = null
+  await plugins.open(null)
   await saveSettings({ lastVault: undefined })
 })
 ipcMain.handle('file:read', (_e, rel: string) => readFile(requireVault().abs(rel), 'utf8'))
@@ -217,8 +222,11 @@ ipcMain.handle('spell:check', (_e, words: string[]) => misspelled(requireVault()
 ipcMain.handle('spell:suggest', (_e, word: string) => suggestions(requireVault(), word))
 ipcMain.handle('spell:add', (_e, word: string) => addWord(requireVault(), word))
 ipcMain.handle('spell:reload', () => reloadWords(requireVault()))
-// The renderer remembers whether spelling is on; the menu's tick follows it.
+// The renderer remembers whether spelling is on; the menu's tick follows it
+// (and survives the menu being rebuilt for plugin commands).
+let spellChecked = true
 ipcMain.handle('menu:set-spellcheck', (_e, on: boolean) => {
+  spellChecked = on
   const item = Menu.getApplicationMenu()?.getMenuItemById('spellcheck')
   if (item) item.checked = on
 })
@@ -288,6 +296,17 @@ ipcMain.handle('paper:info', async (_e, rel: string) => {
   const found = await discoverPaperOf(v, rel)
   return found ? paperInfo(v, found) : null
 })
+ipcMain.handle('plugins:list', () => plugins.states())
+ipcMain.handle(
+  'plugins:change',
+  (_e, id: string, c: { vaultEnabled?: boolean | null; defaultEnabled?: boolean; vaultSettings?: SettingValues; globalSettings?: SettingValues }) => plugins.change(id, c),
+)
+ipcMain.handle('plugins:invoke', (_e, id: string, name: string, args: unknown[]) => plugins.invoke(id, name, args))
+// The renderer's plugin commands, for the Tools menu.
+ipcMain.handle('plugins:menu', (_e, commands: PluginMenuItem[]) => {
+  pluginCommands = commands
+  buildMenu()
+})
 ipcMain.handle('paper:declare', (_e, root: string, on: boolean) => requireVault().savePaper(root, on))
 
 /** The checked-out branch of the git repository containing `dir`, or null. */
@@ -308,6 +327,29 @@ const send = (name: string, arg?: unknown) => () => win?.webContents.send('menu'
 // registered here (registerAccelerator: false), so the editor keeps them
 // where it wants to (e.g. Ctrl+B is bold in the editor).
 const shown = (accelerator: string) => ({ accelerator, registerAccelerator: false })
+
+/** A plugin command in the Tools menu; clicking it sends 'plugin-command' with its id. */
+interface PluginMenuItem {
+  id: string
+  title: string
+  /** The plugin's name, which groups its commands. */
+  plugin: string
+  /** Shown only; the renderer handles the key. */
+  key?: string
+}
+let pluginCommands: PluginMenuItem[] = []
+
+/** The Tools menu: the Plugins panel, then each plugin's commands under its name. */
+function toolsMenu(): Electron.MenuItemConstructorOptions[] {
+  const items: Electron.MenuItemConstructorOptions[] = [{ label: 'Plugins…', click: send('plugins') }]
+  const byPlugin = new Map<string, PluginMenuItem[]>()
+  for (const c of pluginCommands) byPlugin.set(c.plugin, [...(byPlugin.get(c.plugin) ?? []), c])
+  for (const [plugin, commands] of byPlugin) {
+    items.push({ type: 'separator' }, { label: plugin, enabled: false })
+    for (const c of commands) items.push({ label: c.title, ...(c.key ? shown(c.key) : {}), click: send('plugin-command', c.id) })
+  }
+  return items
+}
 
 function buildMenu(): void {
   Menu.setApplicationMenu(
@@ -355,8 +397,11 @@ function buildMenu(): void {
             label: 'Check Spelling',
             type: 'checkbox',
             id: 'spellcheck',
-            checked: true,
-            click: (item) => win?.webContents.send('menu', 'spellcheck', item.checked),
+            checked: spellChecked,
+            click: (item) => {
+              spellChecked = item.checked
+              win?.webContents.send('menu', 'spellcheck', item.checked)
+            },
           },
           { type: 'separator' },
           { label: 'Live View', ...shown('CmdOrCtrl+Shift+L'), click: send('toggle-live') },
@@ -380,6 +425,7 @@ function buildMenu(): void {
           { label: 'Show Cursor in PDF', ...shown('CmdOrCtrl+Alt+J'), click: send('sync-forward') },
         ],
       },
+      { label: 'Tools', submenu: toolsMenu() },
     ]),
   )
 }
