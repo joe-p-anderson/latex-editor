@@ -472,6 +472,12 @@ export function parseSnippets(text: string): Snippet[] {
   return out
 }
 
+/** Global snippets then the vault's own; the vault wins on a name clash. */
+export function mergeTextSnippets(global: Snippet[], own: Snippet[]): Snippet[] {
+  const names = new Set(own.map((s) => s.name))
+  return [...global.filter((s) => !names.has(s.name)), ...own]
+}
+
 export interface CommandSig {
   name: string
   /** Required arguments. */

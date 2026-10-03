@@ -32,6 +32,12 @@ export async function saveSettings(changes: Partial<AppSettings>): Promise<void>
   await writeFile(settingsPath(), JSON.stringify(s, null, 2))
 }
 
+/** The global snippet files, null where missing. */
+export async function globalSnippets(): Promise<{ snippets: string | null; mathSnippets: string | null }> {
+  const read = (name: string) => readFile(join(app.getPath('userData'), name), 'utf8').catch(() => null)
+  return { snippets: await read('snippets.txt'), mathSnippets: await read('math-snippets.txt') }
+}
+
 /** The global template library, created if it doesn't exist yet. */
 export async function globalTemplatesDir(): Promise<string> {
   const dir = (await loadSettings()).templates ?? join(app.getPath('userData'), 'templates')

@@ -81,6 +81,7 @@
     const token = ++renderToken
     if (!doc || width === 0) return
     const ratio = keepScroll ? scroller.scrollTop / (scroller.scrollHeight || 1) : 0
+    const xRatio = keepScroll ? (scroller.scrollLeft + scroller.clientWidth / 2) / (scroller.scrollWidth || 1) : 0.5
     const cssWidth = Math.max(200, (width - 32) * zoom)
     const dpr = window.devicePixelRatio || 1
     const next: HTMLDivElement[] = []
@@ -107,6 +108,7 @@
     pageScale = scales
     pageCount = doc.numPages
     scroller.scrollTop = ratio * scroller.scrollHeight
+    scroller.scrollLeft = xRatio * scroller.scrollWidth - scroller.clientWidth / 2
     if (pending) {
       const target = pending
       pending = null
@@ -237,6 +239,9 @@
     align-items: center;
     gap: 12px;
     padding: 52px 16px 30px;
+    width: max-content;
+    min-width: 100%;
+    box-sizing: border-box;
   }
   .pages :global(.page) {
     position: relative;
