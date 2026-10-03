@@ -34,7 +34,10 @@ src/plugins/
 ```
 
 - The tsconfigs enforce the split. `tsconfig.node.json` excludes `renderer.ts` and `ui/`, and `tsconfig.web.json` excludes `main.ts` and `main/`.
+- Types both halves use, such as the shape of an index the main half serves, belong in a pure module. The renderer half can't import from `main.ts`.
+- State shared by a plugin's view and its commands goes in a rune module, `ui/store.svelte.ts`. It is renderer-only, and the problem bank does this.
 - Pure logic that both halves need, or that unit tests reach, can also go in `src/shared/`.
+- `@shared/…` resolves in both processes and in tests. Imports of the engine's own types use relative paths, such as `../../main/plugins` and `../../renderer/src/lib/plugins.svelte`.
 - Adding a plugin means writing its folder and adding a line to `manifests.ts`, plus `main.ts` and/or `renderer.ts` beside it.
 
 ## Manifest
@@ -93,16 +96,17 @@ export default renderer
 | Member | What it does |
 |---|---|
 | `ctx.views.add({ id, tip, component, icon?, contextual? })` | A sidebar view. Its icon goes in the activity bar, or under "tools" when `contextual`, shown only while `manifest.when` holds. The component gets `{ ctx, visible, docKey }`. `docKey` changes when the open file, its build or the vault's files change, so use it to refresh. Views stay mounted while the plugin is on. |
-| `ctx.commands.add({ id, title, run, key? })` | Listed in **Tools** under the plugin's name. `key` is a CodeMirror key (`"Mod-Alt-q"`) and works while the editor has focus. `ctx.commands.run(id)` runs one. |
+| `ctx.commands.add({ id, title, run, key? })` | Listed in **Tools** under the plugin's name and in the command palette (Ctrl+Shift+P). `key` is a CodeMirror key (`"Mod-Alt-q"`) and works while the editor has focus. `ctx.commands.run(id)` runs one. |
 | `ctx.status.item({ text, tip?, onclick? })` | A status bar item; it returns `{ set(change) }`. |
 | `ctx.editor` | `file()`, `text()`, `cursor()`, `selection()`, `insert`, `insertBlock`, `replace(from, to, text)`, `applyTo(rel, changes)`, `textOf(rel)`, `focus()`, `math()` (the open document's MathJax renderer). It also has `extension(ext)`, a CodeMirror extension in every editor. Offsets count a line break as one character. |
-| `ctx.live.decorations((state, file) => Range<Decoration>[])` | Decorations shown only in the live view, recomputed when the text, the viewport or the mode changes. |
+| `ctx.live.decorations((state, file) => Range<Decoration>[])` | Decorations shown only in the live view. They are recomputed when the text, the viewport or the mode changes. It returns `{ refresh() }`: call it when something else the function reads changes, such as the plugin's index. Otherwise open files keep stale decorations until the next edit. |
 | `ctx.cite.source({ label, search(q), pick(hit) })` | The cite picker searches it as you type, below the document's own entries. `pick` makes the hit citable (e.g. appends it to the `.bib`) and returns its key. |
 | `ctx.panel(component)` | Content under the plugin's entry in the Plugins panel (gets `{ ctx }`). |
-| `ctx.host` | `vault()`, `files()`, `root()` (the open file's document), `macros()`, `packages.ensure / missing / loaded`, `notify`, `open(rel, line?)`, `prompt({ title, initial?, hint? })`, `cite(keys)`, `reloadBib()`, `showView(id)`. |
-| `ctx.settings`, `ctx.invoke`, `ctx.on`, `ctx.onDispose` | As in the main half. |
+| `ctx.host` | `vault()`, `files()`, `root()` (the open file's document), `macros()`, `packages.ensure / missing / loaded`, `notify`, `open(rel, line?)`, `prompt({ title, initial?, hint? })` (prompts can follow one another), `cite(keys)`, `reloadBib()`, `showView(id)`. |
+| `ctx.invoke<T>(name, …args)` | `Promise<T>`: calls the main half's `ctx.handle(name, …)`. A handler that throws rejects it with the error's message. |
+| `ctx.settings`, `ctx.on`, `ctx.onDispose` | As in the main half. |
 
-- `packages.ensure(['siunitx', { name: 'fontenc', options: 'T1' }])` adds only the packages the document lacks. It counts what its class loads, read from the last build's log, and it is the same helper the table editor uses.
+- `packages.ensure(['siunitx', { name: 'fontenc', options: 'T1' }])` adds only the packages the document lacks. It counts what its class loads, read from the last build's log, and it is the same helper the table editor uses. Before a document's first build it can't see what the class loads, so it may add a redundant (harmless) `\usepackage`.
 - Plugin view ids are namespaced as `<plugin>:<id>`, and so are command ids.
 
 ## Rules
@@ -111,6 +115,15 @@ export default renderer
 - Keep the vault portable. Anything a build needs, such as a `.bib`, must be a real file in the vault, so it builds with the plugin off and on other machines. Plugin state that can be rebuilt goes in `ctx.cacheDir`.
 - Never write a vault file the user didn't ask for. Writes happen in response to a command or a click, and say what they did (`ctx.host.notify`).
 - Test pure logic with unit tests in `tests/`, end-to-end flows in `tests/*.e2e.ts` on `fixtures/vaults/*`, and run `npm run check`.
+
+## Worked examples
+
+- `src/plugins/symbols/`: renderer only. One view acts through `ctx.host`.
+- `src/plugins/problem-bank/`: both halves. It has:
+  - an index in the main half, kept current with `ctx.vault.onFile` and cached in `ctx.cacheDir`;
+  - a view and commands sharing a `ui/store.svelte.ts`;
+  - scratch builds;
+  - live cards refreshed when the index changes.
 
 ## Engine changelog
 
@@ -123,3 +136,10 @@ export default renderer
     - external cite hits are mouse-only, with no keyboard navigation yet;
     - `ctx.panel` was added for setup checklists.
   - The renderer runtime keeps its lists in `$state.raw`, because deep proxies broke removal by identity.
+- **Round 1 (Problem bank, built by a Sonnet subagent).** The subagent reported no blocking gaps. Running the plugin in the app found these:
+  - **Fixed:** `ctx.build.scratch` passed TeX an absolute path. TeX can't read one with a `~` (Windows short names such as `JANDER~1`), so every check failed there. The path is now vault-relative, with an e2e test, `tests/plugin.e2e.ts`. The subagent had worked around this in its own test instead of reporting it.
+  - **Fixed:** a second `ctx.host.prompt` straight after the first never opened, because of a Svelte `{@const}` that read null.
+  - **Fixed:** the Symbols port turned `\text{…}` into a tab followed by `ext{…}`. A shell heredoc had halved the backslash. The subagent spotted it.
+  - **Added:** `ctx.live.decorations` now returns `{ refresh() }`. Before, a problem added to the bank didn't get its live card until the next edit.
+  - **Added:** a command palette (Ctrl+Shift+P, and Tools → Run Command…). Commands with no key were mouse-only before.
+  - **Added:** the `@shared` alias in the main process and in vitest.

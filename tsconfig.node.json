@@ -6,7 +6,8 @@
     "moduleResolution": "bundler",
     "strict": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": ["node"],
+    "paths": { "@shared/*": ["./src/shared/*"] }
   },
   "include": ["electron.vite.config.ts", "vitest.config.ts", "src/main/**/*", "src/preload/**/*", "src/shared/**/*", "src/plugins/**/*.ts", "tests/**/*", "scripts/**/*"],
   "exclude": ["src/plugins/renderer.ts", "src/plugins/*/renderer.ts", "src/plugins/*/ui/**"]

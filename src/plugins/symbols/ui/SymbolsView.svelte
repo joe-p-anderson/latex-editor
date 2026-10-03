@@ -21,7 +21,7 @@
       const text = editor.text()
       const pos = editor.cursor()
       const math = !!mathAtCursor(text, findMathRegions(text), pos)
-      let insert = s.mode === 'math' && !math ? `$${s.command}$` : s.mode === 'text' && math ? `\text{${s.command}}` : s.command
+      let insert = s.mode === 'math' && !math ? `$${s.command}$` : s.mode === 'text' && math ? `\\text{${s.command}}` : s.command
       // \alpha straight before a letter would run into it.
       if (/[A-Za-z]$/.test(insert) && /^[A-Za-z]/.test(text.slice(pos, pos + 1))) insert += ' '
       editor.insert(insert)

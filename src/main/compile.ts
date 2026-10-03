@@ -9,7 +9,7 @@
 //     (shadow.ts), without touching the vault or pdf/.
 import { spawn, type ChildProcess } from 'node:child_process'
 import { copyFile, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
-import { delimiter, isAbsolute, join, posix, resolve } from 'node:path'
+import { delimiter, isAbsolute, join, posix, relative, resolve, sep } from 'node:path'
 import type { CompileResult, Problem } from '../shared/api'
 import { bibKeys, bibNeeds, bibStale, dropBibKey, runBib, saveBibKey, type BibJob, type BibTool } from './bibliography'
 import { diagnose, type DiagnoseContext } from './diagnose'
@@ -406,7 +406,10 @@ export async function compileScratch(vault: Vault, dir: string, name: string, so
   for (; passes < 2; ) {
     passes++
     await rm(logPath, { force: true }).catch(() => {})
-    await runTool('pdflatex', [...baseArgsFor(dir), texPath], vault.root, env, false).catch(() => {})
+    // Named relative to the vault root (the working folder), as builds name their root:
+    // TeX can't read an absolute path with a ~ in it (a Windows short name).
+    const arg = relative(vault.root, texPath).split(sep).join('/')
+    await runTool('pdflatex', [...baseArgsFor(dir), arg], vault.root, env, false).catch(() => {})
     log = await readFile(logPath, 'utf8').catch(() => '')
     if (!log || !RERUN.test(log)) break
   }

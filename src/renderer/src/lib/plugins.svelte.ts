@@ -4,7 +4,7 @@
 // extensions, live-view decorations and citation sources. App.svelte reads
 // those lists and supplies the HostServices plugins act through.
 import type { Component } from 'svelte'
-import type { Extension, EditorState, Range } from '@codemirror/state'
+import { StateEffect, type Extension, type EditorState, type Range } from '@codemirror/state'
 import { Decoration, EditorView, ViewPlugin, keymap, type DecorationSet, type ViewUpdate } from '@codemirror/view'
 import type { VaultInfo } from '@shared/api'
 import type { MacroDefs } from '@shared/mathrender'
@@ -166,9 +166,10 @@ export interface RendererContext {
   live: {
     /**
      * Decorations shown only in the live view, recomputed when the text or
-     * the visible range changes. `file` is the editor's file.
+     * the visible range changes, and when `refresh` is called (after what
+     * `fn` reads changes, e.g. the plugin's index). `file` is the editor's file.
      */
-    decorations(fn: (state: EditorState, file: string | null) => Range<Decoration>[]): void
+    decorations(fn: (state: EditorState, file: string | null) => Range<Decoration>[]): { refresh(): void }
   }
   cite: {
     source(s: Omit<CiteSource, 'plugin'>): void
@@ -310,7 +311,13 @@ export class PluginRuntime {
           }
         },
       },
-      live: { decorations: (fn) => addExtension(liveDecorations(fn)) },
+      live: {
+        decorations: (fn) => {
+          const live = liveDecorations(fn)
+          addExtension(live.extension)
+          return { refresh: live.refresh }
+        },
+      },
       cite: {
         source: (s) => {
           const src: CiteSource = { ...s, plugin: id }
@@ -364,8 +371,12 @@ export function toAccelerator(key: string): string {
     .join('+')
 }
 
-/** An extension drawing `fn`'s decorations while the live view is on. */
-function liveDecorations(fn: (state: EditorState, file: string | null) => Range<Decoration>[]): Extension {
+/** Asks plugin live decorations to recompute. */
+const refreshLive = StateEffect.define<null>()
+
+/** An extension drawing `fn`'s decorations while the live view is on, and a way to redraw them in every editor. */
+function liveDecorations(fn: (state: EditorState, file: string | null) => Range<Decoration>[]): { extension: Extension; refresh(): void } {
+  const views = new Set<EditorView>()
   const compute = (view: EditorView): DecorationSet => {
     if (!isLive(view.state)) return Decoration.none
     try {
@@ -375,17 +386,22 @@ function liveDecorations(fn: (state: EditorState, file: string | null) => Range<
       return Decoration.none
     }
   }
-  return ViewPlugin.fromClass(
+  const extension = ViewPlugin.fromClass(
     class {
       decorations: DecorationSet
-      constructor(view: EditorView) {
+      constructor(readonly view: EditorView) {
+        views.add(view)
         this.decorations = compute(view)
       }
       update(u: ViewUpdate) {
-        const toggled = u.transactions.some((tr) => tr.effects.some((e) => e.is(setLive)))
-        if (u.docChanged || u.viewportChanged || toggled || isLive(u.state) !== isLive(u.startState)) this.decorations = compute(u.view)
+        const asked = u.transactions.some((tr) => tr.effects.some((e) => e.is(setLive) || e.is(refreshLive)))
+        if (u.docChanged || u.viewportChanged || asked || isLive(u.state) !== isLive(u.startState)) this.decorations = compute(u.view)
+      }
+      destroy() {
+        views.delete(this.view)
       }
     },
     { decorations: (v) => v.decorations },
   )
+  return { extension, refresh: () => views.forEach((v) => v.dispatch({ effects: refreshLive.of(null) })) }
 }

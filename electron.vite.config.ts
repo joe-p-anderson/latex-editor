@@ -7,6 +7,8 @@ const mathjaxVersion: string = JSON.parse(readFileSync('node_modules/mathjax-ful
 
 export default defineConfig({
   main: {
+    // Plugins' shared modules import @shared/… in both processes.
+    resolve: { alias: { '@shared': resolve('src/shared') } },
     plugins: [externalizeDepsPlugin()],
   },
   preload: {

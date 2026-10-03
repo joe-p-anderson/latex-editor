@@ -2,8 +2,16 @@
   import { onMount } from 'svelte'
   import { fuzzyFilter, isImage } from '@shared/images'
 
-  /** Ctrl+P: type part of a file name, Enter opens it. */
-  let { files, onpick, onclose }: { files: string[]; onpick: (rel: string) => void; onclose: () => void } = $props()
+  /**
+   * Ctrl+P: type part of a file name, Enter opens it. With `commands` it's
+   * the command palette (Ctrl+Shift+P): `files` are command titles.
+   */
+  let {
+    files,
+    commands = false,
+    onpick,
+    onclose,
+  }: { files: string[]; commands?: boolean; onpick: (rel: string) => void; onclose: () => void } = $props()
 
   let query = $state('')
   let selected = $state(0)
@@ -38,22 +46,27 @@
     }
   }
 
-  const name = (p: string) => p.slice(p.lastIndexOf('/') + 1)
-  const folder = (p: string) => p.slice(0, p.lastIndexOf('/') + 1)
+  const name = (p: string) => (commands ? p : p.slice(p.lastIndexOf('/') + 1))
+  const folder = (p: string) => (commands ? '' : p.slice(0, p.lastIndexOf('/') + 1))
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 <div class="backdrop" onclick={onclose}>
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="dialog" onclick={(e) => e.stopPropagation()} {onkeydown} role="dialog" aria-label="Open file" tabindex="-1">
-    <input bind:this={input} bind:value={query} placeholder="Open a file by name…  (type / to match folders too)" spellcheck="false" />
+  <div class="dialog" onclick={(e) => e.stopPropagation()} {onkeydown} role="dialog" aria-label={commands ? 'Run a command' : 'Open file'} tabindex="-1">
+    <input
+      bind:this={input}
+      bind:value={query}
+      placeholder={commands ? 'Run a command…' : 'Open a file by name…  (type / to match folders too)'}
+      spellcheck="false"
+    />
     <div class="list" bind:this={list}>
       {#each results as rel, i (rel)}
         <button class="row" class:sel={i === selected} onclick={() => onpick(rel)} onmouseenter={() => (selected = i)}>
           <span class="name">{name(rel)}</span><span class="dir">{folder(rel)}</span>
         </button>
       {:else}
-        <p class="empty">No files match "{query}".</p>
+        <p class="empty">{commands ? (files.length ? `No commands match "${query}".` : 'No commands: switch on a plugin in the Plugins view.') : `No files match "${query}".`}</p>
       {/each}
     </div>
   </div>

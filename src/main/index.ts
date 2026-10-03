@@ -341,7 +341,10 @@ let pluginCommands: PluginMenuItem[] = []
 
 /** The Tools menu: the Plugins panel, then each plugin's commands under its name. */
 function toolsMenu(): Electron.MenuItemConstructorOptions[] {
-  const items: Electron.MenuItemConstructorOptions[] = [{ label: 'Plugins…', click: send('plugins') }]
+  const items: Electron.MenuItemConstructorOptions[] = [
+    { label: 'Run Command…', ...shown('CmdOrCtrl+Shift+P'), click: send('command-palette') },
+    { label: 'Plugins…', click: send('plugins') },
+  ]
   const byPlugin = new Map<string, PluginMenuItem[]>()
   for (const c of pluginCommands) byPlugin.set(c.plugin, [...(byPlugin.get(c.plugin) ?? []), c])
   for (const [plugin, commands] of byPlugin) {

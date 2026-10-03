@@ -65,6 +65,8 @@
   let tabs = $state<string[]>([])
   let mru: string[] = []
   let quickOpen = $state(false)
+  // Ctrl+Shift+P: the plugins' commands.
+  let palette = $state(false)
   let dirty = $state(new Set<string>())
   let editor = $state<Editor>()
   let viewer = $state<PdfViewer>()
@@ -149,6 +151,12 @@
 
   // A plugin's prompt (HostServices.prompt), answered by PromptDialog.
   let pluginPrompt = $state<{ title: string; initial: string; hint?: string; done: (v: string | null) => void } | null>(null)
+  /** Closes the prompt, then answers it (the answer may open the next one). */
+  function answerPrompt(value: string | null): void {
+    const done = pluginPrompt?.done
+    pluginPrompt = null
+    done?.(value)
+  }
 
   // What plugins act through (src/renderer/src/lib/plugins.svelte.ts).
   const host: HostServices = {
@@ -885,6 +893,7 @@
     else if (name === 'toggle-panel') togglePanel()
     else if (name === 'appearance') showView('appearance')
     else if (name === 'plugins') showView('plugins')
+    else if (name === 'command-palette') palette = true
     else if (name === 'recompile' && active) compile(active)
     else if (name === 'sync-forward') syncForward()
     else if (name === 'close-vault') closeVault()
@@ -1121,6 +1130,7 @@
     } else if (key === 'w' && plain) {
       if (active) closeTab(active)
     } else if (key === 'p' && plain) quickOpen = true
+    else if (key === 'p' && e.shiftKey && !e.altKey) palette = true
     else if (key === 's' && e.altKey && !e.shiftKey) saveAll()
     else if (key === 'h' && e.shiftKey && !e.altKey) openSearch()
     else if (key === 'c' && e.shiftKey && !e.altKey) openCitePicker()
@@ -1829,13 +1839,9 @@
     title={pp.title}
     initial={pp.initial}
     hint={pp.hint}
-    onsubmit={(v) => {
-      pluginPrompt = null
-      pp.done(v)
-    }}
+    onsubmit={(v) => answerPrompt(v)}
     oncancel={() => {
-      pluginPrompt = null
-      pp.done(null)
+      answerPrompt(null)
       editor?.focus()
     }}
   />
@@ -1850,6 +1856,22 @@
     }}
     onclose={() => {
       quickOpen = false
+      editor?.focus()
+    }}
+  />
+{/if}
+
+{#if palette}
+  {@const titled = new Map(plugins.commands.map((c) => [`${c.plugin}: ${c.title}`, c.id]))}
+  <QuickOpen
+    commands
+    files={[...titled.keys()]}
+    onpick={(title) => {
+      palette = false
+      plugins.runCommand(titled.get(title)!)
+    }}
+    onclose={() => {
+      palette = false
       editor?.focus()
     }}
   />
