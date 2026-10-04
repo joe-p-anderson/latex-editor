@@ -124,14 +124,24 @@ export interface CiteHit {
   inBib?: boolean
 }
 
-/** Somewhere other than the vault's .bib files to find references (e.g. Zotero). */
+/**
+ * Somewhere other than the vault's .bib files to find references (e.g.
+ * Zotero). Its hits show dimmed in the cite picker, below the document's own
+ * entries; inserting one adds it to the bibliography first.
+ */
 export interface CiteSource {
   plugin: string
-  /** Its heading in the cite picker. */
+  /** Its name in the cite picker ("From Zotero"). */
   label: string
   search(query: string): Promise<CiteHit[]>
-  /** Makes the hit citable (e.g. adds it to the .bib) and returns its key; null to cancel. */
-  pick(hit: CiteHit): Promise<string | null>
+  /**
+   * Makes the hit citable by writing it into the document's .bib. Returns its
+   * key, and `file` when this call wrote it there (absent when it was there
+   * already); null when it couldn't (say why with notify).
+   */
+  add(hit: CiteHit): Promise<{ key: string; file?: string } | null>
+  /** Takes back an `add`: removes `key`'s entry from `file`. */
+  remove(key: string, file: string): Promise<void>
 }
 
 /** What a plugin's renderer half gets. Everything it adds is removed when it's switched off. */

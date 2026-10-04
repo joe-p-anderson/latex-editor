@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { appendFor, bibDeclaration, bibNamesIn, entryKey, normalizeEntry, scanEntries, splitEntries, upsertEntries } from '../src/plugins/zotero/bib'
+import { appendFor, bibDeclaration, bibNamesIn, entryKey, normalizeEntry, removeEntries, scanEntries, splitEntries, upsertEntries } from '../src/plugins/zotero/bib'
 import { citedKeysFromAux, collectionPath, keysChanged, keysFromCayw, missingKey, parseRpc, refsFromApi, refsFromBbt } from '../src/plugins/zotero/parse'
 import { syncCollection } from '../src/plugins/zotero/main/collection'
 import { chooseBib, ensureEntries, missingKeyFix, syncEntries, type BibFiles } from '../src/plugins/zotero/main/library'
@@ -117,6 +117,28 @@ describe('upsertEntries', () => {
     expect(text.startsWith(crlf)).toBe(true)
     expect(text.replace(/\r\n/g, '')).not.toMatch(/[\r\n]/)
     expect(text.match(/\n/g)!.length).toBe(text.match(/\r\n/g)!.length)
+  })
+})
+
+describe('removeEntries (undo of an add)', () => {
+  const smith = { id: 'CCCC3333', key: 'Smith2015', bibtex: '@book{Smith2015,\n  title = {A Book},\n  year = 2015\n}' }
+  const doe = { id: 'AAAA1111', key: 'doe2020', bibtex: '@article{doe2020,\n  title = {Doe},\n  year = 2020\n}' }
+
+  it('gives back the file as it was before the add, byte for byte', () => {
+    for (const before of [HAND, '', '@misc{a}\n', HAND.replace(/\n/g, '\r\n')]) {
+      const { text } = upsertEntries(before, [smith])
+      expect(removeEntries(text, ['Smith2015'])).toEqual({ text: before, removed: ['Smith2015'] })
+    }
+  })
+
+  it('takes out one of several, leaving the rest as if only they were added', () => {
+    const both = upsertEntries(HAND, [smith, doe]).text
+    expect(removeEntries(both, ['Smith2015']).text).toBe(upsertEntries(HAND, [doe]).text)
+    expect(removeEntries(both, ['doe2020']).text).toBe(upsertEntries(HAND, [smith]).text)
+  })
+
+  it('never removes a hand-written entry', () => {
+    expect(removeEntries(HAND, ['hand2001', 'Other1999'])).toEqual({ text: HAND, removed: [] })
   })
 })
 

@@ -107,8 +107,9 @@ From round 2, Zotero, built with the round-1 skill. The lessons transferred: the
   - Allow read-only calls against the user's real install to learn real response shapes.
   - Forbid anything that writes to their data; test writes against a `node:http` mock.
   - Record trimmed, fabricated-but-real-shaped fixtures in `tests/fixtures/<id>/`.
+- **Svelte `{@const x = state.y}` is live.** A click handler that clears `state` and then uses `x` reads null. This has bitten twice: the prompt dialog and the cite menu. Use the value before clearing the state, or copy it into a plain variable first.
 - **Make mocks as strict as the real thing.** The collection-sync mock accepted any path, and real Better BibTeX refused the relative one the plugin sent. Copy the real program's validation and error messages into the mock: one live call per write path shows what they are, run with the user's consent.
-- **Cite-source hits pass through Svelte state:** object identity is lost. Extra fields you put on a hit (an item id, say) survive but aren't typed, so cast in `pick`.
+- **Cite-source hits pass through Svelte state:** object identity is lost. Extra fields you put on a hit (an item id, say) survive but aren't typed, so cast in `add`.
 - **Untyped extras:** see the `ctx.build.fixes` row in PLUGINS.md for what a build carries.
 - **Things still awkward,** recorded in the PLUGINS.md changelog: no way to trigger a full build from a plugin, and no notice when the cite picker is cancelled.
 

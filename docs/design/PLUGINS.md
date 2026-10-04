@@ -101,7 +101,7 @@ export default renderer
 | `ctx.status.item({ text, tip?, onclick? })` | A status bar item; it returns `{ set(change) }`. |
 | `ctx.editor` | `file()`, `text()`, `cursor()`, `selection()`, `insert`, `insertBlock`, `replace(from, to, text)`, `applyTo(rel, changes)`, `textOf(rel)`, `focus()`, `math()` (the open document's MathJax renderer). It also has `extension(ext)`, a CodeMirror extension in every editor. Offsets count a line break as one character. |
 | `ctx.live.decorations((state, file) => Range<Decoration>[])` | Decorations shown only in the live view. They are recomputed when the text, the viewport or the mode changes. It returns `{ refresh() }`: call it when something else the function reads changes, such as the plugin's index. Otherwise open files keep stale decorations until the next edit. |
-| `ctx.cite.source({ label, search(q), pick(hit) })` | The cite picker searches it as you type, below the document's own entries. `pick` makes the hit citable (e.g. appends it to the `.bib`) and returns its key. |
+| `ctx.cite.source({ label, search(q), add(hit), remove(key, file) })` | The cite picker searches it as you type. Its hits show dimmed below the document's own entries, because they aren't in the bibliography yet. Inserting one (click, Enter, or the right-click menu) calls `add`, which writes the entry into the `.bib`. `add` returns `{ key, file? }`, with `file` only when it wrote the entry just now. The app then cites the key and offers Undo: a button, or Ctrl+Z while the note shows. Undo takes the `\cite` back out if nothing was typed since, and calls `remove(key, file)`. "Add to the bibliography" in the menu adds without citing. |
 | `ctx.panel(component)` | Content under the plugin's entry in the Plugins panel (gets `{ ctx }`). It shows when the entry's settings are unfolded. `ctx.showSettings()` opens the Plugins view with them unfolded, e.g. from a status item. |
 | `ctx.openLink(url)` | Opens a page in the browser, if the manifest's `links` lists it (or a prefix of it). Only https. |
 | `ctx.host` | `vault()`, `files()`, `root()` (the open file's document), `macros()`, `packages.ensure / missing / loaded`, `notify`, `open(rel, line?)`, `prompt({ title, initial?, hint? })` (prompts can follow one another), `cite(keys)`, `reloadBib()`, `showView(id)`. |
@@ -152,3 +152,11 @@ export default renderer
   - **Added:** applying a fix that appends to a file that doesn't exist creates the file. The quick fix had been skipped when the `.bib` was missing.
   - **Declined for now:** a `ctx.host.bibFiles()` API. The plugin reads `\bibliography{…}` itself, and one consumer isn't enough to fix the API's shape.
   - **Fixed after a live test (with the user's consent):** collection sync sent Better BibTeX a relative path (`endleaf/…`), which it refuses. It now starts with the library's name, read from the local API (`/My Library/endleaf/…`). The mock accepted any path, so the tests had passed; it now rejects relative paths as Better BibTeX does. A real build filled `endleaf/zvault/main` with every cited reference that exists in Zotero.
+- **After round 2, from the user:** clicking in the cite picker did different things depending on what kind of row it was.
+  - Clicking now always inserts.
+  - Source hits look dimmed, as Symbols does for symbols whose package isn't loaded.
+  - The right-click menu has Insert, plus "Show in <file>" or "Add to the bibliography".
+  - Adding offers an Undo note that Ctrl+Z also triggers.
+  - `CiteSource.pick` became `add`/`remove`, and `ctx.vault.trash` was added for undoing an add that created the `.bib`.
+  - Zotero's undo restores the `.bib` byte for byte when nothing else has changed it since (the main half keeps the text from before the add). After other changes, it only removes the entries it marked.
+  - In the app this hit the same Svelte trap as the round-1 prompt bug: a `{@const}` that reads state the handler had just cleared.

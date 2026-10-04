@@ -3,7 +3,7 @@
   import { EditorView, basicSetup } from 'codemirror'
   import { Compartment, EditorState, Prec, type Extension, type StateEffect } from '@codemirror/state'
   import { keymap } from '@codemirror/view'
-  import { indentWithTab } from '@codemirror/commands'
+  import { indentWithTab, undo } from '@codemirror/commands'
   import { StreamLanguage } from '@codemirror/language'
   import { stex } from '@codemirror/legacy-modes/mode/stex'
   import { lintGutter, setDiagnostics, type Diagnostic } from '@codemirror/lint'
@@ -402,6 +402,11 @@
       effects: EditorView.scrollIntoView(Math.min(from, len), { y: 'center' }),
     })
     view.focus()
+  }
+
+  /** Undoes the open file's last change, as Ctrl+Z does. */
+  export function undoLast(): void {
+    undo(view)
   }
 
   /** The main selection in the open file (\n offsets). */

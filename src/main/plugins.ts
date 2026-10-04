@@ -29,6 +29,8 @@ export interface MainContext {
     readOptional(rel: string): Promise<string | null>
     /** Writes the file, making its folder if needed. */
     write(rel: string, text: string): Promise<void>
+    /** Sends a file to the Recycle Bin (e.g. one the plugin created, on undo). */
+    trash(rel: string): Promise<void>
     /** Every visible file, vault-relative. */
     files(): Promise<string[]>
     /** Each file added, changed or removed. */
@@ -177,6 +179,7 @@ export class PluginHost {
           await mkdir(dirname(vault.abs(rel)), { recursive: true })
           await writeFile(vault.abs(rel), text, 'utf8')
         },
+        trash: (rel) => shell.trashItem(vault.abs(rel)),
         files: () => vault.files(),
         onFile: (f) => own(vault.onFile(f)),
       },

@@ -57,14 +57,21 @@ const zotero: PluginRenderer = (ctx) => {
     label: 'Zotero',
     search: async (q) =>
       (await ctx.invoke<Ref[]>('search', q)).map((r): ZoteroHit => ({ key: r.key, title: r.title, authors: r.authors, year: r.year, detail: r.venue, zotero: r.id })),
-    pick: async (hit) => {
-      try {
-        const h = hit as ZoteroHit
-        return (await ensure([{ key: h.key, id: h.zotero }]))[0] ?? null
-      } catch (e) {
-        ctx.host.notify((e as Error).message)
+    // The cite picker says what was added (with Undo), so this doesn't.
+    add: async (hit) => {
+      const h = hit as ZoteroHit
+      const r = await ctx.invoke<EnsureResult>('ensure', [{ key: h.key, id: h.zotero }], await ctx.host.root())
+      const key = r.keys[0]
+      if (!key) {
+        ctx.host.notify(`Zotero couldn't export ${h.key || h.title}`)
         return null
       }
+      if (r.added.length) ctx.host.reloadBib()
+      return { key, file: r.added.includes(key) ? r.file : undefined }
+    },
+    remove: async (key, file) => {
+      await ctx.invoke('remove', [key], file)
+      ctx.host.reloadBib()
     },
   })
 

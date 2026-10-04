@@ -168,6 +168,29 @@ export function upsertEntries(text: string, items: BibItem[], opts: UpsertOption
   return { text: out, results }
 }
 
+/**
+ * Takes out the entries for `keys` that the plugin wrote (those with a
+ * marker line), with the marker and the blank line that set them apart.
+ * Hand-written entries are never removed. Returns the text and the keys removed.
+ */
+export function removeEntries(text: string, keys: string[]): { text: string; removed: string[] } {
+  const want = new Set(keys.map((k) => k.toLowerCase()))
+  const spans = scanEntries(text).filter((s) => s.zotero && want.has(s.key.toLowerCase()))
+  let out = text
+  // From the end, so earlier offsets stay right.
+  for (const s of [...spans].reverse()) {
+    let from = s.start
+    let to = s.end
+    // The line break after the entry, and one blank line before it.
+    const after = /^\r?\n/.exec(out.slice(to))
+    if (after) to += after[0].length
+    const before = /(\r?\n)[ \t]*\r?\n$/.exec(out.slice(0, from))
+    if (before) from -= before[0].length - before[1].length
+    out = out.slice(0, from) + out.slice(to)
+  }
+  return { text: out, removed: spans.map((s) => s.key) }
+}
+
 /** Only the text `upsertEntries` would add at the end (for an append edit). */
 export function appendFor(text: string, items: BibItem[]): string {
   const { text: next } = upsertEntries(text, items)

@@ -30,7 +30,7 @@
   import { insertRow, newTable, packagesFor, parseTable, pasteGrid, serializeTable, type TableModel } from '@shared/tablemodel'
   import { normalizeEol } from '@shared/search'
   import { clearSpellingCache, type SpellHooks } from './lib/spellcheck'
-  import { PluginRuntime, type HostServices } from './lib/plugins.svelte'
+  import { PluginRuntime, type CiteHit, type CiteSource, type HostServices } from './lib/plugins.svelte'
   import PluginsPanel from './lib/PluginsPanel.svelte'
   import { usePackageLine, type PackageSpec } from '@shared/packages'
   import { BUILTIN_MATH_SNIPPETS, mathSnippetsFileTemplate, mergeSnippets, parseMathSnippets, type MathSnippet } from '@shared/mathsnippets'
@@ -71,13 +71,22 @@
   let editor = $state<Editor>()
   let viewer = $state<PdfViewer>()
 
-  // A short-lived message in the header (e.g. why a jump went nowhere).
+  // A short-lived message in the header (e.g. why a jump went nowhere),
+  // perhaps with an action such as Undo, which Ctrl+Z also runs while it shows.
   let note = $state<string | null>(null)
+  let noteAction = $state<{ label: string; run: () => void } | null>(null)
   let noteTimer: ReturnType<typeof setTimeout> | undefined
-  function flash(msg: string): void {
+  function flash(msg: string, action?: { label: string; run: () => void }): void {
     note = msg
+    noteAction = action ?? null
     clearTimeout(noteTimer)
-    noteTimer = setTimeout(() => (note = null), 3500)
+    noteTimer = setTimeout(() => ((note = null), (noteAction = null)), action ? 6000 : 3500)
+  }
+  function runNoteAction(): void {
+    const action = noteAction
+    note = null
+    noteAction = null
+    action?.run()
   }
 
   let compiling = $state(false)
@@ -788,6 +797,38 @@
     editor.focus()
   }
 
+  /**
+   * A cite picker hit from a plugin's source (e.g. Zotero): adds it to the
+   * bibliography and, with `cite`, cites it at the cursor. A note offers to
+   * undo it (Ctrl+Z too), which takes the citation back out if nothing was
+   * typed since, and removes the entry.
+   */
+  async function citeFromSource(source: CiteSource, hit: CiteHit, cite: boolean): Promise<void> {
+    citePicker = false
+    const plain = (e: Error) => e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
+    const added = await source.add(hit).catch((e: Error) => (flash(plain(e)), null))
+    if (!added) return editor?.focus()
+    const rel = active
+    let after: string | null = null
+    if (cite) {
+      insertCitation([added.key])
+      after = editor?.docText() ?? null
+    } else editor?.focus()
+    // Already in the bibliography: nothing to take back.
+    if (!added.file) return
+    const file = added.file
+    const name = file.slice(file.lastIndexOf('/') + 1)
+    flash(`Added ${added.key} to ${name}`, {
+      label: 'Undo',
+      run: async () => {
+        if (after !== null && active === rel && editor?.docText() === after) editor.undoLast()
+        const ok = await source.remove(added.key, file).then(() => true, (e: Error) => (flash(plain(e)), false))
+        if (ok) flash(`${added.key} removed from ${name}`)
+        editor?.focus()
+      },
+    })
+  }
+
   /** Reads the vault's snippet and math shortcut files (none is fine). */
   async function loadSnippets(): Promise<void> {
     const g = await window.api.globalSnippets()
@@ -1109,6 +1150,13 @@
 
   /** App-wide keys, caught before the editor sees them. */
   function onkeydown(e: KeyboardEvent): void {
+    // Ctrl+Z while a note offers Undo takes that back, not the last edit.
+    if (noteAction?.label === 'Undo' && e.ctrlKey && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'z') {
+      e.preventDefault()
+      e.stopPropagation()
+      runNoteAction()
+      return
+    }
     if (vault && e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
       e.preventDefault()
       e.stopPropagation()
@@ -1764,7 +1812,11 @@
               />
             </div>
             {#if !active}<EmptyPlate logo={logoUrl(endpaper.palette, 'mid')} />{/if}
-            {#if note}<div class="note">{note}</div>{/if}
+            {#if note}
+              <div class="note" class:acts={!!noteAction}>
+                {note}{#if noteAction}<button onclick={runNoteAction} title={noteAction.label === 'Undo' ? 'Undo (Ctrl+Z)' : undefined}>{noteAction.label}</button>{/if}
+              </div>
+            {/if}
           </section>
           <div class="splitter v" hidden={!showPdf} role="separator" aria-orientation="vertical" onpointerdown={startDrag}></div>
           <section class="pdf-pane" hidden={!showPdf}>
@@ -1891,6 +1943,11 @@
     info={bib}
     sources={plugins.citeSources}
     onpick={insertCitation}
+    onsource={citeFromSource}
+    onshow={(file, line) => {
+      citePicker = false
+      go(file, line)
+    }}
     onclose={() => {
       citePicker = false
       editor?.focus()
@@ -2150,6 +2207,16 @@
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
     z-index: 10;
     pointer-events: none;
+  }
+  .note.acts {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .note button {
+    padding: 1px 10px;
+    font-weight: 600;
   }
   .banner {
     display: flex;

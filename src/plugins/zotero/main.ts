@@ -3,7 +3,7 @@ import { access } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { PluginMain } from '../../main/plugins'
-import { bibNamesIn } from './bib'
+import { bibNamesIn, removeEntries } from './bib'
 import { collectionPath, keysFromCayw, type Ref } from './parse'
 import { syncCollection } from './main/collection'
 import { chooseBib, ensureEntries, missingKeyFix, syncEntries, type BibFiles } from './main/library'
@@ -40,7 +40,38 @@ const main: PluginMain = async (ctx) => {
     return p ? p.search(query) : []
   })
 
-  ctx.handle('ensure', async (want: { id?: string; key?: string }[], root: string | null): Promise<EnsureResult> => ensureEntries(files, await needProvider(), want, root, setting()))
+  // Each .bib's text from before the last add to it (null: the add created it)
+  // and after, so undoing that add gives the file back byte for byte.
+  const lastAdd = new Map<string, { before: string | null; after: string; keys: string[] }>()
+  ctx.handle('ensure', async (want: { id?: string; key?: string }[], root: string | null): Promise<EnsureResult> => {
+    const { target } = await chooseBib(files, root, setting())
+    const before = await files.read(target)
+    const r = await ensureEntries(files, await needProvider(), want, root, setting())
+    const after = r.added.length ? await files.read(r.file) : null
+    if (after !== null) lastAdd.set(r.file, { before: r.file === target ? before : null, after, keys: r.added })
+    return r
+  })
+
+  // Undo of an add. Straight after it, the file goes back exactly as it was
+  // (a .bib the add created goes to the Recycle Bin); after other changes,
+  // only the entries are taken out.
+  ctx.handle('remove', async (keys: string[], file: string): Promise<{ removed: string[]; trashed: boolean }> => {
+    const text = await ctx.vault.readOptional(file)
+    if (text === null) return { removed: [], trashed: false }
+    const last = lastAdd.get(file)
+    if (last && last.after === text && keys.every((k) => last.keys.includes(k))) {
+      lastAdd.delete(file)
+      if (last.before === null) {
+        await ctx.vault.trash(file)
+        return { removed: keys, trashed: true }
+      }
+      await ctx.vault.write(file, last.before)
+      return { removed: keys, trashed: false }
+    }
+    const { text: next, removed } = removeEntries(text, keys)
+    if (removed.length) await ctx.vault.write(file, next)
+    return { removed, trashed: false }
+  })
 
   ctx.handle('sync', async (root: string | null): Promise<SyncResult> => syncEntries(files, await needProvider(), root, setting()))
 
