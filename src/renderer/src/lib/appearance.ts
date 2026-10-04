@@ -25,10 +25,10 @@ export function applyAppearance(app: AppAppearance, endpaper: VaultAppearance): 
   const tokens = appearanceTokens(app, endpaper, paletteTheme(endpaper.palette))
   // The vault's endpaper, once it's marbled (the palette's gradient until then).
   tokens.marbleimg = marbleCss(endpaper)
-  // Bench materials: the paper grain, the chrome's binding and the desk.
+  // The paper grain, then Bench's materials: the chrome's binding and the desk.
   const bench = app.look === 'bench'
   const url = (m: Parameters<typeof material>[0]) => `url(${material(m)})`
-  tokens.grainimg = bench ? url('grain') : 'none'
+  tokens.grainimg = url('grain') // both looks: Plain grains its page and sidebar too
   tokens['chrome-img'] = bench ? url(({ saddle: 'saddle', linen: 'linen', dark: 'leather' } as const)[chromeMaterial(app)]) : 'none'
   tokens.leatherimg = bench ? url('leather') : 'none'
   tokens.deskimg = bench ? url(app.desk) : 'none'

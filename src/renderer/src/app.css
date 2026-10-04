@@ -111,3 +111,26 @@ textarea {
   color: inherit;
   background: var(--paper);
 }
+
+/* The Plain look's page and sidebar: paper with Bench's grain. */
+:root[data-look='plain'] :is(.cm-gutters, .cm-content, .sidebar) {
+  background-image: var(--grainimg);
+  background-size: 512px;
+  background-blend-mode: soft-light;
+}
+/* The gutter's grain ends where the text's begins, so the page has no seam. */
+:root[data-look='plain'] .cm-gutters {
+  background-position: right 0;
+}
+/*
+ * Soft-light barely marks pale paper, so the light page blends the grain
+ * hard-light, under a half-clear sheet of the paper to tone it back down.
+ */
+:root[data-look='plain'][data-page='paper'] :is(.cm-gutters, .cm-content, .sidebar) {
+  --sheet: color-mix(in srgb, var(--paper) 50%, transparent);
+  background-image: linear-gradient(var(--sheet), var(--sheet)), var(--grainimg);
+  background-blend-mode: normal, hard-light;
+}
+:root[data-look='plain'][data-page='paper'] .sidebar {
+  --sheet: color-mix(in srgb, var(--side) 50%, transparent);
+}
