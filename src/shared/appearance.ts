@@ -39,7 +39,7 @@ export interface VaultAppearance {
 
 export const LOOKS: [Look, string][] = [
   ['plain', 'Plain'],
-  ['bench', 'Bench'],
+  ['bench', 'Bench (beta)'],
 ]
 export const DESKS: [Desk, string][] = [
   ['felt', 'Felt'],

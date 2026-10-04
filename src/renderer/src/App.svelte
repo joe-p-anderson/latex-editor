@@ -2181,10 +2181,6 @@
     position: relative;
     overflow: hidden;
   }
-  /* Plain: the page starts at the tab bar, so the open tab runs on into it. */
-  :global(:root[data-look='plain'] .cm-scroller) {
-    padding-top: 0;
-  }
   .pdf-pane {
     min-width: 0;
     min-height: 0;

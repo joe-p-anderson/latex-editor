@@ -14,7 +14,7 @@ The theme builder is the **Appearance** sidebar view. It opens from the gear at 
 
 | Setting | Values | Default | Scope | Stored in |
 |---|---|---|---|---|
-| Look | Plain, Bench | Plain | global | `settings.json` |
+| Look | Plain, Bench (beta) | Plain | global | `settings.json` |
 | Page | the palette's paper stock, Black | Black | global | `settings.json` |
 | Desk (Bench only) | Felt, Leather pad | Felt | global | `settings.json` |
 | Binding (Bench only) | Saddle leather, Linen; Black pages force dark leather | Saddle leather | global | `settings.json` |
