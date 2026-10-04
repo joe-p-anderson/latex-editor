@@ -1747,7 +1747,9 @@
           <div class="side-body">
             <CitationsView
               {bib}
+              sources={plugins.citeSources}
               oncite={(key) => insertCitation([key])}
+              onsource={citeFromSource}
               onopen={(file, line) => go(file, line)}
             />
           </div>

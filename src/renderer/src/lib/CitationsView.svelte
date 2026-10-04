@@ -1,19 +1,30 @@
 <script lang="ts">
   /**
-   * The Citations tool: the open document's bibliography as cards. Click to
-   * cite at the cursor; the key opens the entry in its .bib file.
+   * The Citations tool: the open document's bibliography as cards and,
+   * while filtering, plugins' sources (e.g. Zotero), dimmed because citing
+   * one adds it to the .bib first. Click a card to cite it at the cursor;
+   * right-click for more (show it in its .bib, or add it without citing).
    */
   import type { BibInfo } from '@shared/api'
   import type { BibSummary } from '@shared/bibtex'
+  import type { CiteHit, CiteSource } from './plugins.svelte'
+  import { citeMenu, searchSources, type CiteRow } from './citations'
+  import CiteMenu from './CiteMenu.svelte'
 
   let {
     bib,
+    sources = [],
     oncite,
+    onsource,
     onopen,
   }: {
     /** Null when no document (or its bibliography) is loaded. */
     bib: BibInfo | null
+    /** Plugins' reference sources, searched as you filter. */
+    sources?: CiteSource[]
     oncite: (key: string) => void
+    /** A source's hit: add it to the bibliography, and cite it unless `cite` is false. */
+    onsource: (source: CiteSource, hit: CiteHit, cite: boolean) => void
     onopen: (file: string, line: number) => void
   } = $props()
 
@@ -24,37 +35,90 @@
     const hay = (e: BibSummary) => `${e.key} ${e.authors} ${e.year} ${e.title} ${e.venue} ${e.tags.join(' ')}`.toLowerCase()
     return (bib?.entries ?? []).filter((e) => words.every((w) => hay(e).includes(w)))
   })
+
+  // The sources' hits for the filter, once typing pauses.
+  let external = $state<CiteRow[]>([])
+  let timer: ReturnType<typeof setTimeout> | undefined
+  $effect(() => {
+    const q = query
+    clearTimeout(timer)
+    if (q.trim().length < 2) {
+      external = []
+      return
+    }
+    timer = setTimeout(async () => {
+      const found = await searchSources(sources, q, bib)
+      if (query === q) external = found
+    }, 300)
+  })
+
+  const rows = $derived<CiteRow[]>([...matches.map((entry): CiteRow => ({ kind: 'bib', entry })), ...external])
+
+  function cite(row: CiteRow): void {
+    if (row.kind === 'bib') oncite(row.entry.key)
+    else onsource(row.source, row.hit, true)
+  }
+
+  let menu = $state<{ row: CiteRow; x: number; y: number } | null>(null)
+  function openMenu(e: MouseEvent, row: CiteRow): void {
+    e.preventDefault()
+    menu = { row, x: e.clientX, y: e.clientY }
+  }
 </script>
 
 <div class="view">
   <div class="head">Citations</div>
   {#if !bib}
     <p class="hint">Open a document that has a bibliography to cite from it.</p>
-  {:else if !bib.entries.length}
-    <p class="hint">{bib.bibs.length ? `${bib.bibs.join(', ')} has no entries yet.` : 'This document names no bibliography.'}</p>
   {:else}
-    <input class="field" bind:value={query} placeholder="Author, year, title or key" aria-label="Filter the bibliography" />
+    {#if bib.entries.length || sources.length}
+      <input
+        class="field"
+        bind:value={query}
+        placeholder={sources.length ? `Author, year, title or key; also searches ${sources.map((s) => s.label).join(', ')}` : 'Author, year, title or key'}
+        aria-label="Filter the bibliography"
+      />
+    {/if}
+    {#if !bib.entries.length}
+      <p class="hint">{bib.bibs.length ? `${bib.bibs.join(', ')} has no entries yet.` : 'This document names no bibliography.'}</p>
+    {/if}
     <div class="list">
-      {#each matches as e (e.key)}
-        <button class="card" onclick={() => oncite(e.key)} title="Cite at the cursor">
-          <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
-          <span
-            class="key"
-            title="Open in {e.file}"
-            onclick={(ev) => {
-              ev.stopPropagation()
-              onopen(e.file, e.line)
-            }}>{e.key}</span
+      {#each rows as row, i (row.kind === 'bib' ? `b:${row.entry.key}` : `s:${i}`)}
+        {#if row.kind === 'source' && (i === 0 || rows[i - 1].kind === 'bib' || (rows[i - 1] as { source: CiteSource }).source !== row.source)}
+          <div class="source">From {row.source.label}: not in the bibliography yet</div>
+        {/if}
+        {#if row.kind === 'bib'}
+          {@const e = row.entry}
+          <button class="card" onclick={() => cite(row)} oncontextmenu={(ev) => openMenu(ev, row)} title="Cite at the cursor. Right-click for more">
+            <span class="key">{e.key}</span>
+            <span class="who">{e.author}{e.year ? ` (${e.year})` : ''}</span>
+            <span class="title">{e.title}</span>
+          </button>
+        {:else}
+          {@const h = row.hit}
+          <button
+            class="card faint"
+            onclick={() => cite(row)}
+            oncontextmenu={(ev) => openMenu(ev, row)}
+            title="Not in the bibliography yet: citing it adds it from {row.source.label}. Right-click for more"
           >
-          <span class="who">{e.author}{e.year ? ` (${e.year})` : ''}</span>
-          <span class="title">{e.title}</span>
-        </button>
+            {#if h.key}<span class="key">{h.key}</span>{/if}
+            <span class="who">{h.authors}{h.year ? ` (${h.year})` : ''}</span>
+            <span class="title">{h.title}</span>
+          </button>
+        {/if}
       {:else}
-        <p class="hint">Nothing matches.</p>
+        {#if bib.entries.length}<p class="hint">Nothing matches.</p>{/if}
       {/each}
     </div>
   {/if}
 </div>
+
+{#if menu}
+  {@const row = menu.row}
+  {@const m = citeMenu(row, { insert: () => cite(row), show: onopen, add: () => row.kind === 'source' && onsource(row.source, row.hit, false) })}
+  <CiteMenu x={menu.x} y={menu.y} who={m.who} where={m.where} items={m.items} onclose={() => (menu = null)} />
+{/if}
 
 <style>
   .view {
@@ -105,20 +169,30 @@
     background: var(--paper);
     border-color: var(--detail);
   }
+  /* Like Symbols' symbols whose package isn't loaded: there, but not ready to use as is. */
+  .card.faint {
+    opacity: 0.5;
+  }
+  .card.faint:hover {
+    opacity: 0.85;
+  }
   .key {
     display: block;
     font: 600 12px var(--f-mono);
     color: var(--detail);
-    cursor: pointer;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .key:hover {
-    text-decoration: underline;
-  }
   .who {
     display: block;
+    color: var(--ink-soft);
+  }
+  .source {
+    margin: 12px 12px 2px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+    font: 12px var(--f-ui);
     color: var(--ink-soft);
   }
   .hint {

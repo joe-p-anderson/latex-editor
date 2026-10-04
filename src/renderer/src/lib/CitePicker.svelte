@@ -1,8 +1,10 @@
 <script lang="ts">
-  import { onMount, tick } from 'svelte'
+  import { onMount } from 'svelte'
   import { searchBib, type BibSummary } from '@shared/bibtex'
   import type { BibInfo } from '@shared/api'
   import type { CiteHit, CiteSource } from './plugins.svelte'
+  import { citeMenu, searchSources, type CiteRow } from './citations'
+  import CiteMenu from './CiteMenu.svelte'
 
   /**
    * A searchable list of the document's bibliography entries and, while
@@ -32,7 +34,7 @@
 
   const LIMIT = 200
 
-  type Row = { kind: 'bib'; entry: BibSummary } | { kind: 'source'; source: CiteSource; hit: CiteHit }
+  type Row = CiteRow
 
   let query = $state('')
   let selected = $state(0)
@@ -49,29 +51,23 @@
   })
   const results = $derived(query.trim() ? searchBib(info.entries, query) : byDefault)
 
-  // The sources' hits for the query, once typing pauses; ones already in the bibliography are left out.
-  let external = $state<{ source: CiteSource; hits: CiteHit[] }[]>([])
+  // The sources' hits for the query, once typing pauses (ones already in the bibliography are left out).
+  let external = $state<Row[]>([])
   let externalTimer: ReturnType<typeof setTimeout> | undefined
   $effect(() => {
-    const q = query.trim()
+    const q = query
     clearTimeout(externalTimer)
-    if (q.length < 2 || !sources.length) {
+    if (q.trim().length < 2) {
       external = []
       return
     }
-    const known = new Set(info.entries.map((e) => e.key))
     externalTimer = setTimeout(async () => {
-      const found = await Promise.all(
-        sources.map(async (source) => ({ source, hits: (await source.search(q).catch(() => [])).filter((h) => !h.key || !known.has(h.key)) })),
-      )
-      if (query.trim() === q) external = found.filter((f) => f.hits.length)
+      const found = await searchSources(sources, q, info)
+      if (query === q) external = found
     }, 250)
   })
 
-  const rows = $derived<Row[]>([
-    ...results.slice(0, LIMIT).map((entry): Row => ({ kind: 'bib', entry })),
-    ...external.flatMap(({ source, hits }) => hits.map((hit): Row => ({ kind: 'source', source, hit }))),
-  ])
+  const rows = $derived<Row[]>([...results.slice(0, LIMIT).map((entry): Row => ({ kind: 'bib', entry })), ...external])
   $effect(() => {
     void query
     selected = 0
@@ -91,10 +87,7 @@
 
   function onkeydown(e: KeyboardEvent): void {
     const move = { ArrowDown: 1, ArrowUp: -1, PageDown: 10, PageUp: -10 }[e.key]
-    if (menu && e.key === 'Escape') {
-      e.preventDefault()
-      menu = null
-    } else if (move) {
+    if (move) {
       e.preventDefault()
       selected = Math.max(0, Math.min(rows.length - 1, selected + move))
       list.querySelectorAll('.row')[selected]?.scrollIntoView({ block: 'nearest' })
@@ -121,25 +114,11 @@
   // --- Right-click menu ---------------------------------------------------------
 
   let menu = $state<{ row: Row; x: number; y: number } | null>(null)
-  async function openMenu(e: MouseEvent, row: Row, i: number): Promise<void> {
+  function openMenu(e: MouseEvent, row: Row, i: number): void {
     e.preventDefault()
     selected = i
     menu = { row, x: e.clientX, y: e.clientY }
-    await tick()
-    // Keep it on screen.
-    const el = document.querySelector<HTMLElement>('.cite-menu')
-    if (el && menu) {
-      const r = el.getBoundingClientRect()
-      menu = { ...menu, x: Math.min(menu.x, innerWidth - r.width - 4), y: Math.min(menu.y, innerHeight - r.height - 4) }
-    }
   }
-  // The action first: the menu's {@const row} reads `menu`, so closing it first would leave it null.
-  const run = (f: () => void) => () => {
-    f()
-    menu = null
-  }
-  const keyOf = (row: Row) => (row.kind === 'bib' ? row.entry.key : row.hit.key)
-  const fileName = (rel: string) => rel.slice(rel.lastIndexOf('/') + 1)
 </script>
 
 {#snippet who(author: string, year: string | undefined)}
@@ -149,7 +128,7 @@
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 <div class="backdrop" onclick={onclose}>
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="dialog" onclick={(e) => (e.stopPropagation(), (menu = null))} {onkeydown} role="dialog" aria-label="Cite" tabindex="-1">
+  <div class="dialog" onclick={(e) => e.stopPropagation()} {onkeydown} role="dialog" aria-label="Cite" tabindex="-1">
     <div class="top">
       <strong>Cite</strong>
       <input bind:this={input} bind:value={query} placeholder="Search {info.entries.length} references: author, title, year, journal, #tag…" spellcheck="false" />
@@ -228,20 +207,8 @@
 
 {#if menu}
   {@const row = menu.row}
-  {@const key = keyOf(row)}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="cite-menu" style:left="{menu.x}px" style:top="{menu.y}px" role="menu" tabindex="-1" onclick={(e) => e.stopPropagation()}>
-    <div class="menu-head">
-      {#if row.kind === 'bib'}{@render who(row.entry.author, row.entry.year)}{:else}{@render who(row.hit.authors, row.hit.year)}{/if}
-      <div class="muted">{row.kind === 'bib' ? `In ${fileName(row.entry.file)}` : `In ${row.source.label}, not in the bibliography yet`}</div>
-    </div>
-    <button onclick={run(() => insertRow(row))}>Insert <code>\cite{'{'}{key ?? '…'}{'}'}</code>{#if row.kind === 'source'}, adding it to the bibliography{/if}</button>
-    {#if row.kind === 'bib'}
-      <button onclick={run(() => onshow(row.entry.file, row.entry.line))}>Show in {fileName(row.entry.file)}</button>
-    {:else}
-      <button onclick={run(() => onsource(row.source, row.hit, false))}>Add to the bibliography</button>
-    {/if}
-  </div>
+  {@const m = citeMenu(row, { insert: () => insertRow(row), show: onshow, add: () => row.kind === 'source' && onsource(row.source, row.hit, false) })}
+  <CiteMenu x={menu.x} y={menu.y} who={m.who} where={m.where} items={m.items} onclose={() => (menu = null)} />
 {/if}
 
 <style>
@@ -402,41 +369,5 @@
   .box-space {
     width: 13px;
     flex: none;
-  }
-  .cite-menu {
-    position: fixed;
-    z-index: 200;
-    min-width: 240px;
-    max-width: 380px;
-    padding: 4px;
-    background: var(--paper);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-    display: flex;
-    flex-direction: column;
-  }
-  .menu-head {
-    padding: 6px 10px 8px;
-    margin-bottom: 4px;
-    border-bottom: 1px solid var(--line);
-  }
-  .muted {
-    font-size: 12px;
-    color: var(--ink-soft);
-  }
-  .cite-menu button {
-    border: none;
-    background: none;
-    text-align: left;
-    padding: 5px 10px;
-    border-radius: 4px;
-  }
-  .cite-menu button:hover {
-    background: var(--sel);
-  }
-  .cite-menu code {
-    font-family: Consolas, monospace;
-    font-size: 12px;
   }
 </style>
