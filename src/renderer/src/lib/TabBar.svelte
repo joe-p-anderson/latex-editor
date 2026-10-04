@@ -109,9 +109,11 @@
   .tabs {
     display: flex;
     overflow-x: auto;
-    background: var(--tabpaper);
+    /* the rule is the bottom strip of the marbled sheet, laid across the bar, under the tab paper */
     border-bottom: 4px solid transparent;
-    border-image: var(--marbleimg) 1;
+    background:
+      linear-gradient(var(--tabpaper), var(--tabpaper)) padding-box,
+      var(--marbleimg) center / cover border-box;
     box-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
     scrollbar-width: none;
     flex: none;
