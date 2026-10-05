@@ -74,9 +74,9 @@ export async function discoverPaperOf(vault: Vault, rel: string): Promise<string
   return null
 }
 
-/** The paper rooted at `root`, for the renderer. */
-export async function paperInfo(vault: Vault, root: string): Promise<PaperInfo> {
-  const { files, texts } = await paperGraph(vault, root)
+/** The paper rooted at `root`, for the renderer; `overrides` as for paperGraph. */
+export async function paperInfo(vault: Vault, root: string, overrides?: Record<string, string>): Promise<PaperInfo> {
+  const { files, texts } = await paperGraph(vault, root, overrides && Object.keys(overrides).length ? overrides : undefined)
   return {
     root,
     name: posix.basename(root).replace(/\.tex$/i, ''),

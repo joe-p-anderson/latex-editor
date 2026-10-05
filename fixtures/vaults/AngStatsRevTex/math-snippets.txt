@@ -1,0 +1,108 @@
+# Math shortcuts for this vault. They expand as you type, inside math only.
+# Backspace right after one puts back what you typed.
+#
+# One per line:   trigger => replacement
+#   $1, $2 … are places Tab moves between; $0 is where the cursor ends up.
+#   A /regex/ trigger can use its groups in the replacement as [[0]], [[1]] …
+#   A trigger starting with a letter fires only at the start of a word.
+#   !trigger turns a built-in shortcut off, e.g.   !xx
+#   A line here with the same trigger as a built-in replaces it.
+#
+# Examples:
+#   vv => \vec{$1}$0
+#   !sr
+
+
+# ---- The built-in shortcuts, for reference ----
+# Greek
+# @a => \alpha
+# @b => \beta
+# @g => \gamma
+# @G => \Gamma
+# @d => \delta
+# @D => \Delta
+# @e => \epsilon
+# @ve => \varepsilon
+# @z => \zeta
+# @h => \eta
+# @q => \theta
+# @Q => \Theta
+# @vq => \vartheta
+# @i => \iota
+# @k => \kappa
+# @l => \lambda
+# @L => \Lambda
+# @m => \mu
+# @n => \nu
+# @x => \xi
+# @X => \Xi
+# @p => \pi
+# @P => \Pi
+# @r => \rho
+# @s => \sigma
+# @S => \Sigma
+# @t => \tau
+# @u => \upsilon
+# @U => \Upsilon
+# @f => \phi
+# @F => \Phi
+# @vf => \varphi
+# @c => \chi
+# @y => \psi
+# @Y => \Psi
+# @w => \omega
+# @W => \Omega
+#
+# Fractions, roots and powers
+# // => \frac{$1}{$2}$0
+# sq => \sqrt{$1}$0
+# sr => ^{2}
+# cb => ^{3}
+# td => ^{$1}$0
+# invs => ^{-1}
+# deg => ^\circ
+#
+# Accents: xhat → \hat{x}; on their own they wait for the letter
+# /(?<![\\A-Za-z])([A-Za-z])hat/ => \hat{[[0]]}
+# /(?<![\\A-Za-z])([A-Za-z])bar/ => \bar{[[0]]}
+# /(?<![\\A-Za-z])([A-Za-z])vec/ => \vec{[[0]]}
+# /(?<![\\A-Za-z])([A-Za-z])ddot/ => \ddot{[[0]]}
+# /(?<![\\A-Za-z])([A-Za-z])dot/ => \dot{[[0]]}
+# /(?<![\\A-Za-z])([A-Za-z])tilde/ => \tilde{[[0]]}
+# hat => \hat{$1}$0
+# bar => \bar{$1}$0
+# vec => \vec{$1}$0
+# dot => \dot{$1}$0
+# ddot => \ddot{$1}$0
+#
+# Relations and operators
+# -> => \to
+# => => \implies
+# <= => \leq
+# >= => \geq
+# != => \neq
+# ~~ => \approx
+# == => &=
+# ** => \cdot
+# xx => \times
+# +- => \pm
+# -+ => \mp
+# ... => \dots
+# ooo => \infty
+# prop => \propto
+# par => \partial
+# del => \nabla
+#
+# Sums, integrals, limits and derivatives
+# sum => \sum_{$1}^{$2} $0
+# int => \int_{$1}^{$2} $3 \,d$4
+# lim => \lim_{$1 \to $2} $0
+# ddt => \frac{d}{dt}
+# ddx => \frac{d}{dx}
+#
+# Text in math
+# txt => \text{$1}$0
+#
+# Subscripts: x1 → x_1, then x_12 → x_{12}
+# /(?<![A-Za-z\\\d])([A-Za-z])(\d)/ => [[0]]_[[1]]
+# /(?<![A-Za-z\\])([A-Za-z])_(\d\d)/ => [[0]]_{[[1]]}

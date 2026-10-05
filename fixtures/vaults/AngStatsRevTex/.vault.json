@@ -1,0 +1,16 @@
+{
+  "papers": [
+    "main.tex"
+  ],
+  "appearance": {
+    "palette": "forest-floor",
+    "marbling": "fan",
+    "tone": "rich",
+    "seed": 19740
+  },
+  "plugins": {
+    "symbols": true,
+    "problem-bank": false,
+    "zotero": true
+  }
+}

@@ -1,0 +1,110 @@
+%PIP-412029OA046
+\documentclass[reprint,amsmath,amssymb,aps,prb,nofootinbib,floatfix]{revtex4-2}
+\bibliographystyle{apsrev4-2}
+\usepackage{afterpage}
+\usepackage{blindtext}
+\usepackage[rgb]{xcolor}
+%\usepackage[twocolumn=true,includehead=false,left=.75in,right=.75in,top=.75in,bottom=.75in]{geometry}
+%\usepackage[letterpaper, portrait, twocolumn, twoside, left=2cm, hmarginratio=2:1, includemp, marginparwidth=43pt, bottom=1cm, foot=.7cm, includefoot, textheight=11cm, heightrounded, columnsep=1cm, dvips, verbose]{geometry}
+\definecolor{Cred}{RGB}{208, 32, 46}
+\usepackage[firstpage=true]{background}
+\usetikzlibrary{calc}
+%\usepackage{tikz}
+\backgroundsetup{angle = 0, scale = 1, vshift = 0pt, opacity=1,
+  contents = {\begin{tikzpicture}[overlay,remember picture]
+    \node at (0,0) {\includegraphics[scale=1]{EC_RC.pdf}};
+\end{tikzpicture}
+}
+}
+%    \draw (3.4in,3.75in) node[inner sep=0] {\includegraphics[width=1in]{arrow.pdf}};
+%    \draw (3.5in,3.85in) node[rotate=-90] {\scshape{Editor's}};
+%    \draw (3.5in-\baselineskip,3.85in) node[rotate=-90] {\scshape{Suggestion}};
+%\end{tikzpicture}
+
+\usepackage{graphicx} % Required for inserting images
+\usepackage{mathtools} % Useful for a bunch of math stuff
+\usepackage{cleveref} % Use for better cross-references
+\usepackage[caption=false]{subfig} % For sub-figures
+\usepackage{booktabs} % For nicer looking tables
+\usepackage[twoside]{fancyhdr}
+\usepackage{appendix}
+
+\usepackage{placeins}
+
+
+
+
+\fancypagestyle{plain}{%
+%\setlength{\headheight}{60pt}
+\fancyhead[L,C]{}
+\fancyhf{}
+\fancyhead[R]{\raisebox{.6cm+1pt}{\textbf{Rapid Communication}}}
+\fancyhead[L]{ \raisebox{.6cm+1pt}{\scshape{Editor's Suggestion}\vspace{12pt}}}
+\fancyhead[C]{\raisebox{.6cm}{\large\scshape{CARTHAGE}}\hspace{0.2cm}\includegraphics[height=1.5cm]{Logo.pdf}\hspace{0.1cm}\raisebox{.6cm}{\large\scshape{COLLEGE 
+ }}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+}
+\usepackage{printlen}
+
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyheadinit{\setlength{\headheight}{20pt}}
+\fancyhead[RO,LE]{\textbf{Rapid Communication}}
+\fancyhead[LO,RE]{\textit{Phys. in Prog.} \textbf{1} 1 (Jan. 2024)}
+\fancyhead[C]{ \large \scshape{PHYSICS IN PROGRESS}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% These are packages I am using in this document
+\usepackage{siunitx}
+
+% Everything up to here is the 'document preamble'
+
+\begin{document} 
+
+\vspace*{25pt}
+\title{Validating an ullage detection technique for liquid propellant tanks }
+\author{ Justin Wheeler }
+\affiliation{Department of Physics and Astronomy, Carthage College, 2001 Alford Park Drive, Kenosha, WI 53140, USA}
+\collaboration{Received January 24, 2024, Published online January 26, 2024}
+\begin{abstract}
+Knowledge of location of the ullage, the gas pocket within a liquid propellant tank, and ullage dynamics is of vital importance to deep-space refueling depots. Characterizing the size and location of the ullage within liquid propellant tanks in equilibrium is crucial to the Mars mission. An experiment payload was designed to test a method of gauging the size and location of the ullage within a liquid propellant tank. Broadband white noise is passed into a stainless steel tank filled with a rocket propellant simulant. The acoustic vibrations are measured at several point sensor locations along the surface where changes in amplitude are representative of changes in the thickness of the liquid layer coating the inside of the tank. The data suggests that the sensors are able to detect the passage of the liquid surface under the effect of gravity but are not accurate  enough for space flight at the moment.
+\end{abstract}
+\maketitle
+
+
+\section{Introduction}
+
+Knowledge of the location of the gas within liquid propellant tanks in space is of vital importance. Gas presence at the exit of the tank when fluid is transferred can cause harmful spikes in pressure damaging sensitive equipment. Most spaceflight endeavors involve a liquid propellant tank being drained to completion before the liquid can settle into low gravity equilibrium. With the efforts to put humans on Mars, refueling depots in space are necessary. The liquid propellant within these refueling tanks will have sufficient time to settle into their lowest energy state.
+
+In the absence of gravity, capillary force keeps the liquid stuck to the inner surface of the propellant tank leaving a gas bubble floating in the center. The dynamics of this ullage have not yet been characterized in low gravity. 
+
+An experiment, named Microgravity Ullage Detection (MUD), was designed by the primary author and built by students at Carthage College. The payload is able to operate and collect data on Earth with the effects of gravity and can operate aboard the ZeroG Inc. modified Boeing 727 aircraft as well as the Blue Origin New Shepard payload lockers in the absence of gravitational effects. Data collected and analyzed in this experiment is obtained on Earth and will be used to validate that this method works as intended before collecting data in space. 
+
+\section{Theory}
+Acoustically driven vibrations propagate through surfaces as waves. On cylindrical tanks, these waves propagate axially, radially, and circumferentially \cite{ChambersCylinderModes}. The walls of the tank can be considered an infinitely coupled series of simple harmonic oscillators with frequencies ranging across all available frequencies. According to the Debye model, each atom in a solid is treated as a simple harmonic oscillator with a certain vibrational frequency. In the Debye model, the vibrational frequencies of these oscillators are distributed across a range, forming a continuous spectrum. This is in contrast to the simpler Einstein model, which assumes that atoms in a material do not vibrate independently of one another \cite{OxfordSolidState}.
+
+Some frequencies will be faintly present in a material, whereas others will be at large amplitudes. This is because, an external force applied at the natural frequency of a harmonic oscillator within the material induces resonance. This leads to oscillations with large amplitudes because the energy input is synchronized with the natural frequency of the oscillators. An oscillating atom has a natural frequency
+\begin{equation}
+    \omega_0 = \sqrt{\frac{k}{m}},
+\end{equation}
+where $\omega_0$ is the natural frequency, k is the spring constant related to the stiffness of the material, and m is the mass of the atom \cite{OscillatorBasics}. Therefore, the amplitudes of these atoms acting as harmonic oscillators depend on the material's stiffness and mass. On top of this, the geometry of the material is important, as the Debye model indicates, the quantum oscillators are interacting with one another, and defects in crystalline structure play a large role in influencing the resonant frequencies of a material.
+
+As the mass and effective stiffness of the tank decrease, the frequency and amplitude of the overall oscillations increase. If a cylindrical propellant tank is filled with liquid, the vibrations are damped at locations that are covered by liquid within the tank \cite{BENTLEY1971179}. This is because the liquid presence can be approximated as additional mass added to the tank wall, shifting the resonant frequencies and amplitudes. The amount of damping is proportional to the thickness of the liquid layer at each location. 
+
+In the presence of gravity, this is a binary system, either the patch is covered or it is not covered. The thickness of the liquid does not change at any point on the tank, liquid is effectively only present or not. Proof of concept on Earth is necessary before testing in space. In the absence of gravity, capillary forces keep the liquid covering the inner surface of the tank with the gas forming a bubble floating in the center, known as the ullage. The distance between the ullage and the tank wall is all liquid, the thickness of which is proportional to the damping force at that location. Thus, by driving the tank with a wide enough range of frequencies to excite the modes of the tank, and sensing the excitation in waves propagating along the outside surface, one can deduce information about the thickness of liquid covering the inside surface of the tank at the locations of the sensors. If the entire tank is covered with sensors, the size and location of the ullage can be reconstructed from the data taken by the sensors.
+
+%\newgeometry{headheight=16pt,textwidth=100pt}
+
+The theory that will be investigated in this paper is that under the effect of gravity, the liquid-vapor interface separating the ullage from the liquid can be detected by observing the change in amplitude of the vibrations at locations along a stainless steel tank during fluid transfer. 
+
+\section{Methods}
+
+\subsection{Experiment Payload Design}
+\blinddocument
+
+\end{document}

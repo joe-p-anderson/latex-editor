@@ -26,7 +26,7 @@ const api: Api & { onMenuOpenVault(cb: () => void): () => void } = {
   mathMacros: (rel) => ipcRenderer.invoke('math:macros', rel),
   editorContext: (rel) => ipcRenderer.invoke('editor:context', rel),
   bibInfo: (rel) => ipcRenderer.invoke('bib:info', rel),
-  paperInfo: (rel) => ipcRenderer.invoke('paper:info', rel),
+  paperInfo: (rel, overrides) => ipcRenderer.invoke('paper:info', rel, overrides),
   declarePaper: (root, on) => ipcRenderer.invoke('paper:declare', root, on),
   listImages: () => ipcRenderer.invoke('images:list'),
   importImage: (sourcePath) => ipcRenderer.invoke('images:import', sourcePath),

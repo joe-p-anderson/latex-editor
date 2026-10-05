@@ -127,10 +127,10 @@ textarea {
  * hard-light, under a half-clear sheet of the paper to tone it back down.
  */
 :root[data-look='plain'][data-page='paper'] :is(.cm-gutters, .cm-content, .sidebar) {
-  --sheet: color-mix(in srgb, var(--paper) 50%, transparent);
+  --sheet: color-mix(in srgb, var(--paper) 60%, transparent);
   background-image: linear-gradient(var(--sheet), var(--sheet)), var(--grainimg);
   background-blend-mode: normal, hard-light;
 }
 :root[data-look='plain'][data-page='paper'] .sidebar {
-  --sheet: color-mix(in srgb, var(--side) 50%, transparent);
+  --sheet: color-mix(in srgb, var(--side) 70%, transparent);
 }

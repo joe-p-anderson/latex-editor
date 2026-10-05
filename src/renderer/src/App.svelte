@@ -234,7 +234,7 @@
     ...pluginViews.tools,
   ])
   // A view that's no longer offered (a tool out of context, a plugin switched off) falls back to Files.
-  const CORE_VIEWS = ['files', 'contents', 'search', 'appearance', 'plugins']
+  const CORE_VIEWS = ['files', 'contents', 'search', 'appearance', 'endpaper', 'plugins']
   $effect(() => {
     if (!CORE_VIEWS.includes(view) && !views.some((v) => v.id === view) && !tools.some((v) => v.id === view)) view = 'files'
   })
@@ -242,7 +242,9 @@
   /** The paper `rel` belongs to (the main process works out its root). */
   async function loadPaper(rel: string): Promise<void> {
     if (!rel.endsWith('.tex') || !vault) return
-    const info = await window.api.paperInfo(rel).catch(() => null)
+    // Unsaved text counts: an \input added to an unsaved file (say, by moving a
+    // section to a file of its own) shows as a card straight away.
+    const info = await window.api.paperInfo(rel, overrides()).catch(() => null)
     if (rel !== active) return
     paper = info
     rebuildPaperModel()
@@ -1757,9 +1759,10 @@
           <div class="side-body">
             <PluginsPanel states={plugins.states} panels={plugins.panels} vaultName={vault.name} focus={pluginFocus} />
           </div>
-        {:else if view === 'appearance'}
+        {:else if view === 'appearance' || view === 'endpaper'}
           <div class="side-body">
             <AppearancePanel
+              part={view === 'endpaper' ? 'endpaper' : 'look'}
               app={appearance}
               endpaper={vault.appearance}
               vaultName={vault.name}
@@ -1842,7 +1845,7 @@
       spelling={spellOn}
       problems={problemCounts}
       items={plugins.status}
-      onendpaper={() => showView('appearance')}
+      onendpaper={() => showView('endpaper')}
       onsection={() => {
         view = 'contents'
         sideOpen = true

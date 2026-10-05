@@ -12,7 +12,8 @@
     "check": "svelte-check --tsconfig ./tsconfig.web.json && tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run --project unit",
     "test:e2e": "vitest run --project e2e",
-    "fixtures:logs": "vite-node scripts/gen-error-logs.ts"
+    "fixtures:logs": "vite-node scripts/gen-error-logs.ts",
+    "icons": "electron scripts/make-icons.mjs"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^6.2.4",

@@ -1,7 +1,9 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, net, protocol, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, nativeTheme, net, protocol, shell } from 'electron'
+import { execFile } from 'node:child_process'
 import { copyFile, mkdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises'
 import { basename, join, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { promisify } from 'node:util'
 import { bibInfo } from './bibliography'
 import { cacheDirFor, compile, compileDraft, compileSection, fullBuildReason, resolveRoot } from './compile'
 import { discoverPaperOf, paperInfo } from './project'
@@ -17,7 +19,7 @@ import { PluginHost } from './plugins'
 import type { SettingValues } from '../shared/plugin'
 import { isImage } from '../shared/images'
 import type { SearchOptions } from '../shared/search'
-import { normalizeVaultAppearance, PALETTES, type AppAppearance, type VaultAppearance } from '../shared/appearance'
+import { normalizeVaultAppearance, PALETTES, type AppAppearance, type PaletteId, type VaultAppearance } from '../shared/appearance'
 import type { RecentVault, SectionTarget } from '../shared/api'
 
 let win: BrowserWindow | null = null
@@ -26,12 +28,44 @@ let vault: Vault | null = null
 let closeConfirmed = false
 const plugins = new PluginHost(() => win)
 
+// The window's (and so the taskbar's) icon: the open vault's palette logo, in
+// the mid tier (24–64 px), dark or light to suit the taskbar. It keeps the
+// last vault's palette while the welcome screen shows.
+let iconPalette: PaletteId = 'bookbinders-blue'
+let taskbarDark = true
+
+/**
+ * Whether the taskbar is dark. Windows themes apps and the taskbar
+ * separately, and nativeTheme follows the apps' setting, so on Windows this
+ * reads the taskbar's ("system") setting from the registry.
+ */
+async function readTaskbarDark(): Promise<boolean> {
+  if (process.platform !== 'win32') return nativeTheme.shouldUseDarkColors
+  const key = String.raw`HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`
+  const out = await promisify(execFile)('reg', ['query', key, '/v', 'SystemUsesLightTheme']).then(
+    (r) => r.stdout,
+    () => '',
+  )
+  const m = /SystemUsesLightTheme\s+REG_DWORD\s+0x(\d+)/.exec(out)
+  return m ? m[1] === '0' : true // Windows' taskbar is dark unless set otherwise
+}
+
+function windowIcon(): Electron.NativeImage {
+  const tone = taskbarDark ? 'dark' : 'light'
+  return nativeImage.createFromPath(join(app.getAppPath(), 'endleaf-marbled-themes/icons', `${iconPalette}-${tone}-mid.ico`))
+}
+function updateIcon(palette = iconPalette): void {
+  iconPalette = palette
+  win?.setIcon(windowIcon())
+}
+
 async function openVault(root: string): Promise<Vault> {
   await vault?.close()
   vault = new Vault(resolve(root), await globalTemplatesDir())
   await vault.load()
   vault.watch(async () => win?.webContents.send('tree-changed', await vault!.tree()))
   await plugins.open(vault)
+  updateIcon(vault.appearance.palette)
   const recent = (await loadSettings()).recentVaults ?? []
   await saveSettings({
     lastVault: vault.root,
@@ -240,7 +274,11 @@ ipcMain.handle('window:close', () => {
 })
 ipcMain.handle('appearance:get', () => appAppearance())
 ipcMain.handle('appearance:set', (_e, changes: Partial<AppAppearance>) => saveAppAppearance(changes))
-ipcMain.handle('appearance:set-vault', (_e, changes: Partial<VaultAppearance>) => requireVault().saveAppearance(changes))
+ipcMain.handle('appearance:set-vault', async (_e, changes: Partial<VaultAppearance>) => {
+  const appearance = await requireVault().saveAppearance(changes)
+  updateIcon(appearance.palette)
+  return appearance
+})
 // The custom title bar: its colours for the window controls, and its menu buttons.
 ipcMain.handle('window:chrome', (_e, color: string, symbolColor: string) => {
   win?.setTitleBarOverlay({ color, symbolColor, height: TITLE_BAR_HEIGHT })
@@ -285,11 +323,11 @@ ipcMain.handle('bib:info', async (_e, rel: string) => {
   const root = (await resolveRoot(v, rel).catch(() => null)) ?? rel
   return bibInfo(v, root, cacheDirFor(v, root))
 })
-ipcMain.handle('paper:info', async (_e, rel: string) => {
+ipcMain.handle('paper:info', async (_e, rel: string, overrides?: Record<string, string>) => {
   const v = requireVault()
   const root = await resolveRoot(v, rel).catch(() => null)
   if (root) {
-    const info = await paperInfo(v, root)
+    const info = await paperInfo(v, root, overrides)
     if (root === rel || info.files.some((f) => f.rel === rel)) return info
   }
   // Not part of the document it would build: perhaps of one not marked yet.
@@ -439,6 +477,7 @@ async function createWindow(): Promise<void> {
     width: 1500,
     height: 950,
     title: 'endleaf',
+    icon: windowIcon(),
     // The renderer draws the title bar; Windows draws the window controls over it.
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: '#0F1424', symbolColor: '#EBE2D3', height: TITLE_BAR_HEIGHT },
@@ -492,6 +531,12 @@ app.whenReady().then(async () => {
   await migrateSettings()
   protocol.handle('vault', serveVaultFile)
   buildMenu()
+  taskbarDark = await readTaskbarDark()
+  // Fires on Windows when either theme setting changes.
+  nativeTheme.on('updated', async () => {
+    taskbarDark = await readTaskbarDark()
+    updateIcon()
+  })
   createWindow()
 })
 app.on('window-all-closed', () => app.quit())

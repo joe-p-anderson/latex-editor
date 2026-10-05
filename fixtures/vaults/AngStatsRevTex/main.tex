@@ -7,6 +7,7 @@
 %\bibliographystyle{apsrev4-1}
 \usepackage{siunitx}
 \usepackage[caption=false]{subfig}
+\usepackage{booktabs}
 \setcounter{totalnumber}{1}
 
 \captionsetup[subfigure]{labelformat=brace}
@@ -16,10 +17,8 @@
 {,~#2#1#3)}{,~#2#1#3}{,~#2#1#3)}
 
 
-
-
-
 \begin{document}
+
 \preprint{APS/123-QED}
 
 \title{The line bundle regime and the scale-dependence \\of continuum dislocation dynamics}
@@ -29,8 +28,7 @@
 \author{Anter El-Azab}
 \affiliation{School of materials engineering, Purdue University}%
 
-\date{\today}% It is always \today, today,
-             %  but any date may be explicitly specified
+\date{\today}
 
 \begin{abstract}
 
@@ -50,6 +48,10 @@ Continuum dislocation dynamics (CDD) has become the state-of-the-art theoretical
 \input{5_Results}
 \input{67_discussionconclusion}
 \input{A_Appendices}
+
+\input{b_new_appendix.tex}
+\cite{Acharya2006}
+
 
 \bibliography{AngStatsBib}
 \end{document}

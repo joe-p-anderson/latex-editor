@@ -1,0 +1,21 @@
+\documentclass{article}
+\usepackage{blindtext}
+\usepackage[rgb]{xcolor}
+\definecolor{Cred}{RGB}{208, 32, 46}
+\usepackage[firstpage=true]{background}
+\usetikzlibrary{calc}
+\backgroundsetup{angle = 0, scale = 1, vshift = -2ex, opacity=1,
+  contents = {\begin{tikzpicture}[overlay,remember picture]
+\draw [line width=1pt,color=Cred]
+       ($ (current page.north west) + (1.5cm,-2.0cm) $)
+    rectangle
+    ($ (current page.south east) + (-1.5cm,1.8cm) $);
+\draw [line width=1pt,color=Cred]
+    ($ (current page.north west) + (1.65cm,-2.15cm) $)
+    rectangle
+    ($ (current page.south east) + (-1.65cm,1.95cm) $); 
+\end{tikzpicture}}}
+\pagestyle{empty}
+\begin{document}
+\Blinddocument
+\end{document}

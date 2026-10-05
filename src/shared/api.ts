@@ -203,8 +203,11 @@ export interface Api {
   editorContext(rel: string): Promise<EditorContext>
   /** The bibliography of the document `rel` belongs to. */
   bibInfo(rel: string): Promise<BibInfo>
-  /** The paper `rel` belongs to (its root, which may be `rel` itself); null when there's no document. */
-  paperInfo(rel: string): Promise<PaperInfo | null>
+  /**
+   * The paper `rel` belongs to (its root, which may be `rel` itself); null when there's no document.
+   * `overrides` (unsaved buffers) are read in place of the files, so an \input not yet saved counts.
+   */
+  paperInfo(rel: string, overrides?: Record<string, string>): Promise<PaperInfo | null>
   /** Marks `root` as a multi-part paper, or unmarks it, in .vault.json. */
   declarePaper(root: string, on: boolean): Promise<void>
   /**

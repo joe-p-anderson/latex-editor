@@ -1,7 +1,8 @@
 <script lang="ts">
   /**
-   * The theme builder: global choices (look, page, type) first, then this
-   * vault's endpaper. Every change applies at once and is saved.
+   * The theme builder, in two parts: 'look' holds the global choices (look,
+   * page, type), from the gear; 'endpaper' holds this vault's palette and
+   * marbling, from the vault's swatch. Every change applies at once and is saved.
    */
   import {
     BINDINGS,
@@ -23,6 +24,7 @@
   import { marbleCss } from './marbles.svelte'
 
   let {
+    part,
     app,
     endpaper,
     vaultName,
@@ -30,6 +32,7 @@
     onvault,
     ondefaults,
   }: {
+    part: 'look' | 'endpaper'
     app: AppAppearance
     /** The open vault's endpaper; null when no vault is open. */
     endpaper: VaultAppearance | null
@@ -59,41 +62,76 @@
 {/snippet}
 
 <div class="panel">
-  <div class="head">
-    <span class="title">Appearance</span>
-    <button class="small" title="Return every setting to its default" onclick={ondefaults}>Defaults</button>
-  </div>
-
-  <div class="body">
-    <div class="group">
-      <div class="label">Look</div>
-      {@render choices(LOOKS, app.look, (look) => onapp({ look }))}
-      <p class="hint">{bench ? 'A book on a desk, bound in this vault’s endpapers.' : 'A flat editor with marbled accents.'}</p>
+  {#if part === 'look'}
+    <div class="head">
+      <span class="title">Appearance</span>
+      <button class="small" title="Return every setting to its default" onclick={ondefaults}>Defaults</button>
     </div>
 
-    <div class="group">
-      <div class="label">Page</div>
-      {@render choices(pages, app.page, (page) => onapp({ page }))}
+    <div class="body">
+      <div class="group">
+        <div class="label">Look</div>
+        {@render choices(LOOKS, app.look, (look) => onapp({ look }))}
+        <p class="hint">{bench ? 'A book on a desk, bound in this vault’s endpapers.' : 'A flat editor with marbled accents.'}</p>
+      </div>
+
+      <div class="group">
+        <div class="label">Page</div>
+        {@render choices(pages, app.page, (page) => onapp({ page }))}
+      </div>
+
+      {#if bench}
+        <div class="group">
+          <div class="label">File tabs</div>
+          {@render choices(TAB_EDGES, app.tabs, (tabs) => onapp({ tabs }))}
+        </div>
+        <div class="group">
+          <div class="label">Desk</div>
+          {@render choices(DESKS, app.desk, (desk) => onapp({ desk }))}
+        </div>
+        <div class="group">
+          <div class="label">Binding</div>
+          {@render choices(BINDINGS, app.binding, (binding) => onapp({ binding }), black)}
+          {#if black}<p class="hint">Black pages are bound in dark leather.</p>{/if}
+        </div>
+      {/if}
+
+      <div class="section">Type</div>
+      <div class="group">
+        <div class="label">Line length <output>{app.lineLength} characters</output></div>
+        <input
+          type="range"
+          min={LINE_LENGTH.min}
+          max={LINE_LENGTH.max}
+          step="1"
+          value={app.lineLength}
+          aria-label="Line length in characters"
+          oninput={(e) => onapp({ lineLength: +e.currentTarget.value })}
+        />
+      </div>
+      <div class="group">
+        <div class="label">Text size</div>
+        {@render choices(
+          TEXT_SIZES.map((n) => [n, `${n} px`] as [number, string]),
+          app.textSize,
+          (textSize) => onapp({ textSize }),
+        )}
+      </div>
+      <div class="group">
+        <div class="label">Typeface</div>
+        <div class="choices">
+          {#each TYPEFACES as face (face)}
+            <button class:on={face === app.typeface} style:font-family={pageFontStack(face)} onclick={() => onapp({ typeface: face })}>{face}</button>
+          {/each}
+        </div>
+      </div>
+    </div>
+  {:else if endpaper}
+    <div class="head">
+      <span class="title">Endpaper · {vaultName}</span>
     </div>
 
-    {#if bench}
-      <div class="group">
-        <div class="label">File tabs</div>
-        {@render choices(TAB_EDGES, app.tabs, (tabs) => onapp({ tabs }))}
-      </div>
-      <div class="group">
-        <div class="label">Desk</div>
-        {@render choices(DESKS, app.desk, (desk) => onapp({ desk }))}
-      </div>
-      <div class="group">
-        <div class="label">Binding</div>
-        {@render choices(BINDINGS, app.binding, (binding) => onapp({ binding }), black)}
-        {#if black}<p class="hint">Black pages are bound in dark leather.</p>{/if}
-      </div>
-    {/if}
-
-    {#if endpaper}
-      <div class="section">This vault · {vaultName}</div>
+    <div class="body">
       <div class="group">
         <div class="label">Palette</div>
         <div class="swatches">
@@ -108,6 +146,7 @@
             </button>
           {/each}
         </div>
+        <p class="hint">Printed on {stock.name.toLowerCase()} paper.</p>
       </div>
       <div class="group">
         <div class="label">Marbling</div>
@@ -124,38 +163,8 @@
           <button class="small" title="Marble a fresh sheet in the same pattern" onclick={() => onvault({ seed: Math.floor(Math.random() * 100000) })}>Remarble</button>
         </div>
       </div>
-    {/if}
-
-    <div class="section">Type</div>
-    <div class="group">
-      <div class="label">Line length <output>{app.lineLength} characters</output></div>
-      <input
-        type="range"
-        min={LINE_LENGTH.min}
-        max={LINE_LENGTH.max}
-        step="1"
-        value={app.lineLength}
-        aria-label="Line length in characters"
-        oninput={(e) => onapp({ lineLength: +e.currentTarget.value })}
-      />
     </div>
-    <div class="group">
-      <div class="label">Text size</div>
-      {@render choices(
-        TEXT_SIZES.map((n) => [n, `${n} px`] as [number, string]),
-        app.textSize,
-        (textSize) => onapp({ textSize }),
-      )}
-    </div>
-    <div class="group">
-      <div class="label">Typeface</div>
-      <div class="choices">
-        {#each TYPEFACES as face (face)}
-          <button class:on={face === app.typeface} style:font-family={pageFontStack(face)} onclick={() => onapp({ typeface: face })}>{face}</button>
-        {/each}
-      </div>
-    </div>
-  </div>
+  {/if}
 </div>
 
 <style>
