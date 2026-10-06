@@ -125,7 +125,7 @@ export async function runBib(job: BibJob, needs: BibNeeds, env: NodeJS.ProcessEn
   if (job.shadow) {
     // biber reads relative paths (../refs.bib) from its working folder in
     // the shadow: it has to exist, with the saved .bib files beside the unsaved ones.
-    await mkdir(c.cwd, { recursive: true })
+    await mkdir(bibCommand(job, needs.tool, env).cwd, { recursive: true })
     for (const f of needs.files) {
       const rel = job.vault.rel(f)
       if (!rel || job.buffers?.[rel] !== undefined) continue
