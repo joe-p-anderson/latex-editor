@@ -8,7 +8,7 @@
 //   - a preview build compiles unsaved buffers from a shadow folder
 //     (shadow.ts), without touching the vault or pdf/.
 import { spawn, type ChildProcess } from 'node:child_process'
-import { copyFile, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { delimiter, isAbsolute, join, posix, relative, resolve, sep } from 'node:path'
 import type { CompileResult, Problem } from '../shared/api'
 import { bibKeys, bibNeeds, bibStale, dropBibKey, runBib, saveBibKey, type BibJob, type BibTool } from './bibliography'
@@ -121,6 +121,9 @@ async function build(vault: Vault, rel: string, buffers: Record<string, string> 
       await mkdir(join(cacheDir, dirOf(f.include.arg.replace(/\\/g, '/'))), { recursive: true }).catch(() => {})
     }
   }
+  // A class can wrap \include in a macro (\pipaddarticle{Manuscripts/X}), which the
+  // paper graph can't see: mirror the vault's folders of .tex files, too.
+  for (const d of await texFolders(vault.root)) await mkdir(join(cacheDir, d), { recursive: true }).catch(() => {})
 
   // The preamble format, when there is a current one. A preview whose
   // unsaved files include something the format was built from can't use it.
@@ -230,6 +233,20 @@ async function build(vault: Vault, rel: string, buffers: Record<string, string> 
   const result: CompileResult = { ok, root, passes: run.passes, pdf: pdfExists ? cachePdf : null, problems, log, durationMs: Date.now() - started, draft, preloaded: !!format }
   await runAfterBuild({ kind, vault, root, cacheDir, name, buffers, auxPath: join(cacheDir, `${name}.aux`), result })
   return result
+}
+
+/** The vault's subfolders (vault-relative, up to four deep) that hold .tex files; not the caches or the PDF copies. */
+async function texFolders(root: string, rel = '', depth = 0): Promise<string[]> {
+  const entries = await readdir(join(root, rel), { withFileTypes: true }).catch(() => [])
+  const out: string[] = []
+  if (rel && entries.some((e) => e.isFile() && /\.tex$/i.test(e.name))) out.push(rel)
+  if (depth < 4) {
+    for (const e of entries) {
+      if (!e.isDirectory() || e.name.startsWith('.') || (!rel && e.name === 'pdf')) continue
+      out.push(...(await texFolders(root, rel ? `${rel}/${e.name}` : e.name, depth + 1)))
+    }
+  }
+  return out
 }
 
 const errorCount = (log: string) => (log.match(ERROR_LINES) ?? []).length
