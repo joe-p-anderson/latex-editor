@@ -30,6 +30,28 @@ const BUILT_IN: Omit<Starter, 'source' | 'id'>[] = [
 `,
   },
   {
+    name: 'Handout',
+    ext: '.tex',
+    description: 'A homework, lab or activity handout (needs handout.cls in your templates)',
+    text: `\\documentclass{handout}
+
+\\assignment{{{Assignment|Homework 1}}}
+\\title{{{Title}}}
+\\duedate{{{Due date}}}
+
+\\begin{document}
+\\maketitle
+
+\\hwinstructions
+
+\\begin{questions}
+    \\question 
+\\end{questions}
+
+\\end{document}
+`,
+  },
+  {
     name: 'Standalone figure',
     ext: '.tex',
     description: 'A figure that compiles on its own, cropped to its contents',

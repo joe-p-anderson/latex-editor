@@ -175,7 +175,7 @@ The compiled PDF has a grip (⠿) in the viewer's bar. Drag it into an email, a 
 
 #### New file and starters
 
-The New File dialog picks a starter, a name (the starter's extension is added if you type none), a folder (or a new one) and the starter's fields, with a preview of the result. Built-in starters are a blank file, a section, an article, a standalone figure, a bibliography, a Markdown note and plain text.
+The New File dialog picks a starter, a name (the starter's extension is added if you type none), a folder (or a new one) and the starter's fields, with a preview of the result. Built-in starters are a blank file, a section, an article, a handout, a standalone figure, a bibliography, a Markdown note and plain text.
 
 Your own starters are `.tex`, `.bib`, `.md` or `.txt` files in a `starters/` folder inside the vault's template folder or the global one (**File → Template Folder**). In one:
 
