@@ -1,0 +1,36 @@
+%
+% Physics in Progress -- Volume 2, whole issue
+%
+% Compile THIS file to get the complete issue as one PDF, with the page
+% numbers running straight through from the first article to the last.  Each
+% manuscript is still a standalone document that compiles on its own; nothing
+% here duplicates what is in them.
+%
+% Every article's "Rapid Communication"/"Original Article" and Editor's
+% Suggestion setting is read off its own \documentclass line, so an article's
+% type is changed by editing that manuscript, not this file.
+%
+% A manuscript's own preamble is skipped when it is pulled in here, so any
+% package an article needs has to be loaded below.
+%
+\documentclass[issue]{physicsinprogress}
+
+\pipvolume{2}
+\pipissuedate{Feb. 2026}
+
+% Union of everything the manuscripts load in their own preambles.
+\usepackage{siunitx}
+
+\begin{document}
+
+\pipaddarticle{Manuscripts/BV_CoupledPendulum}
+\pipaddarticle{Manuscripts/BV_SimplePendulum}
+\pipaddarticle{Manuscripts/BV_Interferometer}
+\pipaddarticle{Manuscripts/Braedon_EoverM}
+\pipaddarticle{Manuscripts/Braedon_Millikan}
+\pipaddarticle{Manuscripts/Semaje_ElecDiff}
+\pipaddarticle[Manuscript]{Manuscripts/Semaje_PhotoElect}
+\pipaddarticle{Manuscripts/SF_Interferometer}
+\pipaddarticle{Manuscripts/Skylar_LloydMirror}
+
+\end{document}

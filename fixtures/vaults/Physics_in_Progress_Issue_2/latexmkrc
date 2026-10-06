@@ -1,0 +1,11 @@
+# latexmk configuration for the Physics in Progress issue build.
+#
+# issue.tex gives every article its own reference list (chapterbib), so latexmk
+# runs BibTeX once per article, on Manuscripts/<name>/manuscript.aux.  By
+# default latexmk chdir's into that folder first, which breaks the database
+# paths the class writes -- those are relative to the project root, and they
+# have to be, because several manuscripts call their database "bib.bib" and a
+# search-path lookup would hand an article somebody else's references.
+#
+# Compiling a single manuscript on its own does not depend on this file.
+$bibtex_fudge = 0;

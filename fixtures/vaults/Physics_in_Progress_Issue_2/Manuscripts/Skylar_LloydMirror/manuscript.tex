@@ -1,79 +1,19 @@
 %PIP-412035RC020
-\documentclass[reprint,amsmath,amssymb,aps,prb,footinbib,floatfix]{revtex4-2}
-\bibliographystyle{apsrev4-2}
-%\usepackage{afterpage}
-\usepackage{blindtext}
-\usepackage[rgb]{xcolor}
-%\usepackage[twocolumn=true,includehead=false,left=.75in,right=.75in,top=.75in,bottom=.75in]{geometry}
-%\usepackage[letterpaper, portrait, twocolumn, twoside, left=2cm, hmarginratio=2:1, includemp, marginparwidth=43pt, bottom=1cm, foot=.7cm, includefoot, textheight=11cm, heightrounded, columnsep=1cm, dvips, verbose]{geometry}
-\definecolor{Cred}{RGB}{208, 32, 46}
-\usepackage[firstpage=true]{background}
-\usetikzlibrary{calc}
-%\usepackage{tikz}
-\backgroundsetup{angle = 0, scale = 1, vshift = 0pt, opacity=1,
-  contents = {\begin{tikzpicture}[overlay,remember picture]
-    \node at (0,0) {\includegraphics[scale=1]{RC_def.pdf}};
-\end{tikzpicture}
-}
-}
-%    \draw (3.4in,3.75in) node[inner sep=0] {\includegraphics[width=1in]{arrow.pdf}};
-%    \draw (3.5in,3.85in) node[rotate=-90] {\scshape{Editor's}};
-%    \draw (3.5in-\baselineskip,3.85in) node[rotate=-90] {\scshape{Suggestion}};
-%\end{tikzpicture}
+\documentclass[rc]{physicsinprogress}
 
-\usepackage{graphicx} % Required for inserting images
-\usepackage{mathtools} % Useful for a bunch of math stuff
-\usepackage{cleveref} % Use for better cross-references
-\usepackage[caption=false]{subfig} % For sub-figures
-\usepackage{booktabs} % For nicer looking tables
-\usepackage[twoside]{fancyhdr}
-\usepackage{appendix}
+\pipvolume{2}
+\pipissuedate{Feb. 2026}
 
-\usepackage{placeins}
-
-
-
-
-\fancypagestyle{plain}{%
-%\setlength{\headheight}{60pt}
-\fancyhead[L,C]{}
-\fancyhf{}
-\fancyhead[R]{\raisebox{.6cm+1pt}{\textbf{Rapid Communication}}}
-\fancyhead[L]{ \raisebox{.6cm+1pt}{\scshape{Editor's Suggestion}\vspace{12pt}}}
-\fancyhead[C]{\raisebox{.6cm}{\large\scshape{CARTHAGE}}\hspace{0.2cm}\includegraphics[height=1.5cm]{Logo.pdf}\hspace{0.1cm}\raisebox{.6cm}{\large\scshape{COLLEGE 
- }}}
-\fancyfoot[C]{\thepage}
-\renewcommand{\headrulewidth}{0pt}
-\renewcommand{\footrulewidth}{0pt}
-}
-\usepackage{printlen}
-
-
-\pagestyle{fancy}
-\fancyhf{}
-\fancyheadinit{\setlength{\headheight}{20pt}}
-\fancyhead[RO,LE]{\textbf{Rapid Communication}}
-\fancyhead[LO,RE]{\textit{Phys. in Prog.} \textbf{2} (Feb. 2026)}
-\fancyhead[C]{ \large \scshape{PHYSICS IN PROGRESS}}
-\fancyfoot[C]{\thepage}
-\renewcommand{\headrulewidth}{0.4pt}
-\renewcommand{\footrulewidth}{0pt}
-
-% These are packages I am using in this document
 \usepackage{siunitx}
 
-% Everything up to here is the 'document preamble'
-
-\begin{document} 
-
-\vspace*{25pt}
+\begin{document}
 
 \title{Reflecting on microwaves with Lloyd's mirror}
 \author{Skylar Farr}
 \affiliation{%
 Department of Physics and Astronomy,  Carthage College, 2001 Alford Park Drive, Kenosha, WI 53140, USA
 }%
-\collaboration{Received January 29, 2026, Published online February 5, 2026}
+\pipdates{January 29, 2026}{February 5, 2026}
 \begin{abstract}
     The wavelength of a microwave transmitter was determined by using a method of interferometry called Lloyd's Mirror. This method consists of a transmitter, reflector, and a receiver. By relating the total path a wave travels, to the distance of a reflector away from the wave, the wavelength of said microwave can be calculated using a linear regression. Two sets of data taken are consistent in showing distance does not change wavelength despite the imprecision of the results when compared to the recorded wavelength of the microwave transmitter. Outside influences creating additional reflection are likely the cause of this imprecision.
 \end{abstract}

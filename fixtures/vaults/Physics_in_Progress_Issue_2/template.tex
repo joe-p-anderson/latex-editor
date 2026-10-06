@@ -1,0 +1,88 @@
+%PIP-412035RC020
+%
+% Physics in Progress -- article template
+%
+% Options:  ec | noec     Editor's Suggestion (red border + flag)   default: noec
+%           rc | oa       Rapid Communication | Original Article    default: oa
+%
+\documentclass[rc,ec]{physicsinprogress}
+
+\pipvolume{2}
+\pipissuedate{Feb. 2026}
+
+% Anything else this particular article needs:
+% \usepackage{siunitx}
+
+\begin{document}
+
+\title{It takes two: finding the normal modes in a coupled pendulum system}
+
+\author{Brookelyn H Velmont}
+\affiliation{%
+Department of Physics and Astronomy, Carthage College, 2001 Alford Park Drive,
+Kenosha, WI 53140, USA
+}%
+\pipdates{January 29, 2026}{February 5, 2026}
+
+\begin{abstract}
+The normal modes of a system of two coupled pendulums were determined by using
+angular displacement data recorded with rotary motion sensors. Diagonalization
+of the covariance matrix revealed two independent mode coordinates
+corresponding to in-phase and out-of-phase oscillations.
+\end{abstract}
+
+\maketitle
+
+\section{Introduction}
+
+Synchronization is one of the most common phenomena observed in nature, yet the
+physical mechanisms underlying such behavior in non-linear systems are still an
+active area of study. While the motion of a single pendulum is well described by
+simple harmonic motion at small angles, many real physical systems involve
+multiple oscillators that exchange energy.
+
+\section{Key Findings}
+
+One pendulum was kept at the equilibrium position while the other was displaced
+by $\theta_1$ and released from rest. To quantify correlations between the two
+pendulums, the covariance matrix is constructed. Its elements are defined by
+\begin{align}
+A_{11} &= \left\langle (\theta_1 - \bar{\theta}_1)^2 \right\rangle, \\
+A_{12} &= \left\langle (\theta_1 - \bar{\theta}_1)(\theta_2 - \bar{\theta}_2) \right\rangle,
+\end{align}
+where $\langle \cdot \rangle$ denotes a time average over the dataset. The
+eigenvalues $\lambda$ follow from
+\begin{equation}
+    \det(\mathbf{A} - \lambda \mathbf{I}) = 0,
+\end{equation}
+and the larger eigenvalue corresponds to the dominant mode of motion. See
+\cref{fig:example} for the resulting decomposition.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.35\linewidth]{Logo.pdf}
+    \caption{Replace with a real figure. Referenced with \texttt{\textbackslash cref}.}
+    \label{fig:example}
+\end{figure}
+
+\section{Conclusion}
+
+The clean separation of the motion into two distinct mode coordinates
+demonstrates that covariance matrix diagonalization effectively isolates the
+system's normal modes.
+
+\section*{Acknowledgments}
+
+This research would not have been made possible without funding from the
+Carthage College Physics and Astronomy Department.
+
+\section*{Data Availability Statement}
+
+A Jupyter notebook containing all the experimental data, data analysis, and
+figure generation can be found in the supplemental
+materials.\footnote{See online article posting for access to supplemental
+material.}
+
+% \bibliography{bib.bib}
+
+\end{document}

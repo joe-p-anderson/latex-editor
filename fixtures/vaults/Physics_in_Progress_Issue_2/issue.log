@@ -1,0 +1,1715 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (MiKTeX 26.5) (preloaded format=pdflatex 2026.7.30)  30 JUL 2026 16:03
+entering extended mode
+ restricted \write18 enabled.
+ %&-line parsing enabled.
+**./issue.tex
+(issue.tex
+LaTeX2e <2026-06-01>
+L3 programming layer <2026-06-18>
+(physicsinprogress.cls
+Document Class: physicsinprogress 2026/07/30 v1.1 Physics in Progress journal c
+lass
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/revtex\revtex4-2.
+cls
+Document Class: revtex4-2 2022/06/05 4.2f (https://journals.aps.org/revtex/ for
+ documentation)
+ Copyright (c) 2019 American Physical Society.
+ mailto:revtex@aps.org
+ Licensed under the LPPL:
+http://www.ctan.org/tex-archive/macros/latex/base/lppl.txt
+ Arthur Ogawa <arthur_ogawa at sbcglobal dot net>
+ Based on work by David Carlisle <david at dcarlisle.demon.co.uk>
+ Version (4.2d--4.2f): Modified by Mark Doyle and Phelype Oleinik
+ .
+ltxutil[2022/06/05 4.2f utilities package (portions licensed from W. E. Baxter 
+web at superscript.com)]
+LaTeX Info: Redefining \@centercr on input line 356.
+Class revtex4-2 Info: Repairing hyperref-unfriendly LaTeX definition of \mpfoot
+note on input line 492.
+Class revtex4-2 Info: Repairing broken LateX \@sect on input line 814.
+\intertabularlinepenalty=\count276
+\@tbpen=\count277
+\@arstrutbox@hline=\box53
+Class revtex4-2 Info: Repairing broken LaTeX \@xbitor on input line 1845.
+Class revtex4-2 Info: Making \typeout \long on input line 2110.
+ltxfront[2022/06/05 4.2f frontmatter package (AO,DPC,MD)]
+\c@affil=\count278
+\c@collab=\count279
+\absbox=\box54
+ltxgrid[2022/06/05 4.2f page grid package (portions licensed from W. E. Baxter 
+web at superscript.com)]
+\c@linecount=\count280
+\output@latex=\toks17
+\box@size@1=\box55
+\box@size@2=\box56
+\@protection@box=\box57
+\@topmark@saved=\toks18
+\footins@saved=\box58
+\footins@recovered=\box59
+\column@recovered=\box60
+\pagesofar=\box61
+\footsofar=\box62
+\pagegrid@col=\count281
+Class revtex4-2 Info: Overriding \@vspace, \@vspacer, \@no@pgbk, \@newline, and
+ \\  on input line 5676.
+\c@part=\count282
+\c@section=\count283
+\c@subsection=\count284
+\c@subsubsection=\count285
+\c@paragraph=\count286
+\c@subparagraph=\count287
+\abovecaptionskip=\skip49
+\belowcaptionskip=\skip50
+\c@figure=\count288
+\fbox@1=\box63
+\c@table=\count289
+\fbox@2=\box64
+\c@video=\count290
+\fbox@4=\box65
+\@bibdataout=\write3
+\widetext@top=\box66
+\widetext@bot=\box67
+Class revtex4-2 Info: Selecting society aps on input line 7669.
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/revtex\aps4-2.rtx
+File: aps4-2 2022/06/05 4.2f (https://journals.aps.org/revtex/ for documentatio
+n)
+Class revtex4-2 Info: RevTeX society APS selected on input line 40.
+)
+Class revtex4-2 Info: Selecting journal prb on input line 7671.
+Class revtex4-2 Info: APS journal PRB selected on input line 7672.
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/revtex\aps10pt4-2
+.rtx
+File: aps10pt4-2 2022/06/05 4.2f (https://journals.aps.org/revtex/ for document
+ation)
+Class revtex4-2 Info: RevTeX pointsize 10pt selected on input line 39.
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/textcase\textcase
+.sty
+Package: textcase 2025/02/16 v1.05 Text only upper/lower case changing (DPC)
+Package textcase Info: Defining Legacy names on input line 20.
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amssymb.
+sty
+Package: amssymb 2013/01/14 v3.01 AMS font symbols
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amsfonts
+.sty
+Package: amsfonts 2013/01/14 v3.01 Basic AMSFonts support
+\@emptytoks=\toks19
+\symAMSa=\mathgroup4
+\symAMSb=\mathgroup5
+LaTeX Font Info:    Redeclaring math symbol \hbar on input line 98.
+LaTeX Font Info:    Overwriting math alphabet `\mathfrak' in version `bold'
+(Font)                  U/euf/m/n --> U/euf/b/n on input line 106.
+))
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsmath.s
+ty
+Package: amsmath 2026/05/19 v2.18d AMS math features
+\@mathmargin=\skip51
+
+For additional information on amsmath, use the `?' option.
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amstext.s
+ty
+Package: amstext 2024/11/17 v2.01 AMS text
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsgen.st
+y
+File: amsgen.sty 1999/11/30 v2.0 generic functions
+\@emptytoks=\toks20
+\ex@=\dimen150
+)
+LaTeX Info: Redefining \text on input line 28.
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsbsy.st
+y
+Package: amsbsy 1999/11/29 v1.2d Bold Symbols
+\pmbraise@=\dimen151
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsopn.st
+y
+Package: amsopn 2022/04/08 v2.04 operator names
+)
+\inf@bad=\count291
+LaTeX Info: Redefining \frac on input line 233.
+\uproot@=\count292
+\leftroot@=\count293
+LaTeX Info: Redefining \overline on input line 398.
+LaTeX Info: Redefining \colon on input line 409.
+\classnum@=\count294
+\DOTSCASE@=\count295
+LaTeX Info: Redefining \ldots on input line 495.
+LaTeX Info: Redefining \dots on input line 498.
+LaTeX Info: Redefining \cdots on input line 619.
+\Mathstrutbox@=\box68
+\strutbox@=\box69
+LaTeX Info: Redefining \big on input line 721.
+LaTeX Info: Redefining \Big on input line 722.
+LaTeX Info: Redefining \bigg on input line 723.
+LaTeX Info: Redefining \Bigg on input line 724.
+\big@size=\dimen152
+LaTeX Font Info:    Redeclaring font encoding OML on input line 742.
+LaTeX Font Info:    Redeclaring font encoding OMS on input line 743.
+\macc@depth=\count296
+LaTeX Info: Redefining \bmod on input line 904.
+LaTeX Info: Redefining \pmod on input line 909.
+LaTeX Info: Redefining \smash on input line 939.
+LaTeX Info: Redefining \relbar on input line 969.
+LaTeX Info: Redefining \Relbar on input line 970.
+\c@MaxMatrixCols=\count297
+\dotsspace@=\muskip17
+\c@parentequation=\count298
+\dspbrk@lvl=\count299
+\tag@help=\toks21
+\row@=\count300
+\column@=\count301
+\maxfields@=\count302
+\andhelp@=\toks22
+\eqnshift@=\dimen153
+\alignsep@=\dimen154
+\tagshift@=\dimen155
+\tagwidth@=\dimen156
+\totwidth@=\dimen157
+\lineht@=\dimen158
+\@envbody=\toks23
+\multlinegap=\skip52
+\multlinetaggap=\skip53
+\mathdisplay@stack=\toks24
+LaTeX Info: Redefining \[ on input line 2965.
+LaTeX Info: Redefining \] on input line 2966.
+) (C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/url\url.sty
+\Urlmuskip=\muskip18
+Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/natbib\natbib.sty
+Package: natbib 2010/09/13 8.31b (PWD, AO)
+\bibhang=\skip54
+\bibsep=\skip55
+LaTeX Info: Redefining \cite on input line 694.
+\c@NAT@ctr=\count303
+)
+Class revtex4-2 Info: Repairing natbib's \BibitemShut on input line 7676.
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/revtex\revsymb4-2
+.sty
+Package: revsymb4-2 2022/06/05 4.2f (https://journals.aps.org/revtex/ for docum
+entation)
+LaTeX Info: Redefining \frak on input line 104.
+LaTeX Info: Redefining \Bbb on input line 120.
+LaTeX Info: Redefining \REV@mathfrak on input line 128.
+))
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/xcolor\xcolor.sty
+Package: xcolor 2022/06/12 v2.14 LaTeX color extensions (UK)
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\colo
+r.cfg
+File: color.cfg 2016/01/02 v1.6 sample color configuration
+)
+Package xcolor Info: Driver file: pdftex.def on input line 227.
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/graphics-def\pdft
+ex.def
+File: pdftex.def 2025/09/29 v1.2d Graphics/color driver for pdftex
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/graphics\mathcolo
+r.ltx)
+Package xcolor Info: Model `cmy' substituted by `cmy0' on input line 1353.
+Package xcolor Info: Model `hsb' substituted by `rgb' on input line 1357.
+Package xcolor Info: Model `RGB' extended on input line 1369.
+Package xcolor Info: Model `HTML' substituted by `rgb' on input line 1371.
+Package xcolor Info: Model `Hsb' substituted by `hsb' on input line 1372.
+Package xcolor Info: Model `tHsb' substituted by `hsb' on input line 1373.
+Package xcolor Info: Model `HSB' substituted by `hsb' on input line 1374.
+Package xcolor Info: Model `Gray' substituted by `gray' on input line 1375.
+Package xcolor Info: Model `wave' substituted by `hsb' on input line 1376.
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/pgf/frontendlayer
+\tikz.sty
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/pgf/basiclayer\pg
+f.sty
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/pgf/utilities\pgf
+rcs.sty
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\p
+gfutil-common.tex
+\pgfutil@everybye=\toks25
+\pgfutil@tempdima=\dimen159
+\pgfutil@tempdimb=\dimen160
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\p
+gfutil-latex.def
+\pgfutil@abb=\box70
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\p
+gfrcs.code.tex
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf\pgf.revisio
+n.tex)
+Package: pgfrcs 2025-08-29 v3.1.11a (3.1.11a)
+))
+Package: pgf 2025-08-29 v3.1.11a (3.1.11a)
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/pgf/basiclayer\pg
+fcore.sty
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphicx
+.sty
+Package: graphicx 2026-05-17 v1.2e Enhanced LaTeX Graphics (DPC,SPQR)
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/graphics\keyval.s
+ty
+Package: keyval 2026-05-17 v1.15 key=value parser (DPC)
+\KV@toks@=\toks26
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphics
+.sty
+Package: graphics 2026-05-17 v1.4h Standard LaTeX Graphics (DPC,SPQR)
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/graphics\trig.sty
+Package: trig 2023/12/02 v1.11 sin cos tan (DPC)
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\grap
+hics.cfg
+File: graphics.cfg 2016/06/04 v1.11 sample graphics configuration
+)
+Package graphics Info: Driver file: pdftex.def on input line 106.
+)
+\Gin@req@height=\dimen161
+\Gin@req@width=\dimen162
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/pgf/systemlayer\p
+gfsys.sty
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/systemlayer
+\pgfsys.code.tex
+Package: pgfsys 2025-08-29 v3.1.11a (3.1.11a)
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\p
+gfkeys.code.tex
+\pgfkeys@pathtoks=\toks27
+\pgfkeys@temptoks=\toks28
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\p
+gfkeyslibraryfiltered.code.tex
+\pgfkeys@tmptoks=\toks29
+))
+\pgf@x=\dimen163
+\pgf@y=\dimen164
+\pgf@xa=\dimen165
+\pgf@ya=\dimen166
+\pgf@xb=\dimen167
+\pgf@yb=\dimen168
+\pgf@xc=\dimen169
+\pgf@yc=\dimen170
+\pgf@xd=\dimen171
+\pgf@yd=\dimen172
+\w@pgf@writea=\write4
+\r@pgf@reada=\read2
+\c@pgf@counta=\count304
+\c@pgf@countb=\count305
+\c@pgf@countc=\count306
+\c@pgf@countd=\count307
+\t@pgf@toka=\toks30
+\t@pgf@tokb=\toks31
+\t@pgf@tokc=\toks32
+\pgf@sys@id@count=\count308
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/systemlayer
+\pgf.cfg
+File: pgf.cfg 2025-08-29 v3.1.11a (3.1.11a)
+)
+Driver file for pgf: pgfsys-pdftex.def
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/systemlayer
+\pgfsys-pdftex.def
+File: pgfsys-pdftex.def 2025-08-29 v3.1.11a (3.1.11a)
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/systemlayer
+\pgfsys-common-pdf.def
+File: pgfsys-common-pdf.def 2025-08-29 v3.1.11a (3.1.11a)
+)))
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/systemlayer
+\pgfsyssoftpath.code.tex
+File: pgfsyssoftpath.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgfsyssoftpath@smallbuffer@items=\count309
+\pgfsyssoftpath@bigbuffer@items=\count310
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/systemlayer
+\pgfsysprotocol.code.tex
+File: pgfsysprotocol.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+))
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\
+pgfcore.code.tex
+Package: pgfcore 2025-08-29 v3.1.11a (3.1.11a)
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmat
+h.code.tex
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmat
+hutil.code.tex)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmat
+hparser.code.tex
+\pgfmath@dimen=\dimen173
+\pgfmath@count=\count311
+\pgfmath@box=\box71
+\pgfmath@toks=\toks33
+\pgfmath@stack@operand=\toks34
+\pgfmath@stack@operation=\toks35
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmat
+hfunctions.code.tex)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmat
+hfunctions.basic.code.tex)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmat
+hfunctions.trigonometric.code.tex)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmat
+hfunctions.random.code.tex)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmat
+hfunctions.comparison.code.tex)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmat
+hfunctions.base.code.tex)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmat
+hfunctions.round.code.tex)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmat
+hfunctions.misc.code.tex)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmat
+hfunctions.integerarithmetics.code.tex)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmat
+hcalc.code.tex)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmat
+hfloat.code.tex
+\c@pgfmathroundto@lastzeros=\count312
+))
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfint
+.code.tex)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\
+pgfcorepoints.code.tex
+File: pgfcorepoints.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgf@picminx=\dimen174
+\pgf@picmaxx=\dimen175
+\pgf@picminy=\dimen176
+\pgf@picmaxy=\dimen177
+\pgf@pathminx=\dimen178
+\pgf@pathmaxx=\dimen179
+\pgf@pathminy=\dimen180
+\pgf@pathmaxy=\dimen181
+\pgf@xx=\dimen182
+\pgf@xy=\dimen183
+\pgf@yx=\dimen184
+\pgf@yy=\dimen185
+\pgf@zx=\dimen186
+\pgf@zy=\dimen187
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\
+pgfcorepathconstruct.code.tex
+File: pgfcorepathconstruct.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgf@path@lastx=\dimen188
+\pgf@path@lasty=\dimen189
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\
+pgfcorepathusage.code.tex
+File: pgfcorepathusage.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgf@shorten@end@additional=\dimen190
+\pgf@shorten@start@additional=\dimen191
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\
+pgfcorescopes.code.tex
+File: pgfcorescopes.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgfpic=\box72
+\pgf@hbox=\box73
+\pgf@layerbox@main=\box74
+\pgf@picture@serial@count=\count313
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\
+pgfcoregraphicstate.code.tex
+File: pgfcoregraphicstate.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgflinewidth=\dimen192
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\
+pgfcoretransformations.code.tex
+File: pgfcoretransformations.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgf@pt@x=\dimen193
+\pgf@pt@y=\dimen194
+\pgf@pt@temp=\dimen195
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\
+pgfcorequick.code.tex
+File: pgfcorequick.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\
+pgfcoreobjects.code.tex
+File: pgfcoreobjects.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\
+pgfcorepathprocessing.code.tex
+File: pgfcorepathprocessing.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\
+pgfcorearrows.code.tex
+File: pgfcorearrows.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgfarrowsep=\dimen196
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\
+pgfcoreshade.code.tex
+File: pgfcoreshade.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgf@max=\dimen197
+\pgf@sys@shading@range@num=\count314
+\pgf@shadingcount=\count315
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\
+pgfcoreimage.code.tex
+File: pgfcoreimage.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\
+pgfcoreexternal.code.tex
+File: pgfcoreexternal.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgfexternal@startupbox=\box75
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\
+pgfcorelayers.code.tex
+File: pgfcorelayers.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\
+pgfcoretransparency.code.tex
+File: pgfcoretransparency.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\
+pgfcorepatterns.code.tex
+File: pgfcorepatterns.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\
+pgfcorerdf.code.tex
+File: pgfcorerdf.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)))
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/modules\pgf
+moduleshapes.code.tex
+File: pgfmoduleshapes.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgfnodeparttextbox=\box76
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/modules\pgf
+moduleplot.code.tex
+File: pgfmoduleplot.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/pgf/compatibility
+\pgfcomp-version-0-65.sty
+Package: pgfcomp-version-0-65 2025-08-29 v3.1.11a (3.1.11a)
+\pgf@nodesepstart=\dimen198
+\pgf@nodesepend=\dimen199
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/pgf/compatibility
+\pgfcomp-version-1-18.sty
+Package: pgfcomp-version-1-18 2025-08-29 v3.1.11a (3.1.11a)
+))
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/pgf/utilities\pgf
+for.sty
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/pgf/utilities\pgf
+keys.sty
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\p
+gfkeys.code.tex))
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/pgf/math\pgfmath.
+sty
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmat
+h.code.tex))
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\p
+gffor.code.tex
+Package: pgffor 2025-08-29 v3.1.11a (3.1.11a)
+\pgffor@iter=\dimen256
+\pgffor@skip=\dimen257
+\pgffor@stack=\toks36
+\pgffor@toks=\toks37
+))
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/frontendlay
+er/tikz\tikz.code.tex
+Package: tikz 2025-08-29 v3.1.11a (3.1.11a)
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/libraries\p
+gflibraryplothandlers.code.tex
+File: pgflibraryplothandlers.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgf@plot@mark@count=\count316
+\pgfplotmarksize=\dimen258
+)
+\tikz@lastx=\dimen259
+\tikz@lasty=\dimen260
+\tikz@lastxsaved=\dimen261
+\tikz@lastysaved=\dimen262
+\tikz@lastmovetox=\dimen263
+\tikz@lastmovetoy=\dimen264
+\tikzleveldistance=\dimen265
+\tikzsiblingdistance=\dimen266
+\tikz@figbox=\box77
+\tikz@figbox@bg=\box78
+\tikz@tempbox=\box79
+\tikz@tempbox@bg=\box80
+\tikztreelevel=\count317
+\tikznumberofchildren=\count318
+\tikznumberofcurrentchild=\count319
+\tikz@fig@count=\count320
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/modules\pgf
+modulematrix.code.tex
+File: pgfmodulematrix.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgfmatrixcurrentrow=\count321
+\pgfmatrixcurrentcolumn=\count322
+\pgf@matrix@numberofcolumns=\count323
+)
+\tikz@expandcount=\count324
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/frontendlay
+er/tikz/libraries\tikzlibrarytopaths.code.tex
+File: tikzlibrarytopaths.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)))
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pgf/frontendlay
+er/tikz/libraries\tikzlibrarycalc.code.tex
+File: tikzlibrarycalc.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/mathtools\mathtoo
+ls.sty
+Package: mathtools 2024/10/04 v1.31 mathematical typesetting tools
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/tools\calc.sty
+Package: calc 2025/03/01 v4.3b Infix arithmetic (KKT,FJ)
+\calc@Acount=\count325
+\calc@Bcount=\count326
+\calc@Adimen=\dimen267
+\calc@Bdimen=\dimen268
+\calc@Askip=\skip56
+\calc@Bskip=\skip57
+LaTeX Info: Redefining \setlength on input line 86.
+LaTeX Info: Redefining \addtolength on input line 87.
+\calc@Ccount=\count327
+\calc@Cskip=\skip58
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/mathtools\mhsetup
+.sty
+Package: mhsetup 2021/03/18 v1.4 programming setup (MH)
+)
+\g_MT_multlinerow_int=\count328
+\l_MT_multwidth_dim=\dimen269
+\origjot=\skip59
+\l_MT_shortvdotswithinadjustabove_dim=\dimen270
+\l_MT_shortvdotswithinadjustbelow_dim=\dimen271
+\l_MT_above_intertext_sep=\dimen272
+\l_MT_below_intertext_sep=\dimen273
+\l_MT_above_shortintertext_sep=\dimen274
+\l_MT_below_shortintertext_sep=\dimen275
+\xmathstrut@box=\box81
+\xmathstrut@dim=\dimen276
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/cleveref\cleveref
+.sty
+Package: cleveref 2018/03/27 v0.21.4 Intelligent cross-referencing
+)
+==> First Aid for cleveref.sty applied!
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/subfig\subfig.sty
+Package: subfig 2005/06/28 ver: 1.3 subfig package
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/caption\caption3.
+sty
+Package: caption3 2023/07/31 v2.4d caption3 kernel (AR)
+\caption@tempdima=\dimen277
+\captionmargin=\dimen278
+\caption@leftmargin=\dimen279
+\caption@rightmargin=\dimen280
+\caption@width=\dimen281
+\caption@indent=\dimen282
+\caption@parindent=\dimen283
+\caption@hangindent=\dimen284
+Package caption Info: Unknown document class (or package),
+(caption)             standard defaults will be used.
+Package caption Info: \@makecaption = \long macro:#1#2->\par \vskip \abovecapti
+onskip \begingroup \small \rmfamily \sbox \@tempboxa {\let \\\heading@cr \@make
+@capt@title {#1}{#2}}\@ifdim {\wd \@tempboxa >\hsize }{\begingroup \samepage \f
+lushing \let \footnote \@footnotemark@gobble \@make@capt@title {#1}{#2}\par \en
+dgroup }{\global \@minipagefalse \hb@xt@ \hsize {\hfil \unhbox \@tempboxa \hfil
+ }}\endgroup \vskip \belowcaptionskip  on input line 1175.
+)
+\c@KVtest=\count329
+\sf@farskip=\skip60
+\sf@captopadj=\dimen285
+\sf@capskip=\skip61
+\sf@nearskip=\skip62
+\c@subfigure=\count330
+\c@subfigure@save=\count331
+\c@lofdepth=\count332
+\c@subtable=\count333
+\c@subtable@save=\count334
+\c@lotdepth=\count335
+\sf@top=\skip63
+\sf@bottom=\skip64
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/booktabs\booktabs
+.sty
+Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
+\heavyrulewidth=\dimen286
+\lightrulewidth=\dimen287
+\cmidrulewidth=\dimen288
+\belowrulesep=\dimen289
+\belowbottomsep=\dimen290
+\aboverulesep=\dimen291
+\abovetopsep=\dimen292
+\cmidrulesep=\dimen293
+\cmidrulekern=\dimen294
+\defaultaddspace=\dimen295
+\@cmidla=\count336
+\@cmidlb=\count337
+\@aboverulesep=\dimen296
+\@belowrulesep=\dimen297
+\@thisruleclass=\count338
+\@lastruleclass=\count339
+\@thisrulewidth=\dimen298
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/fancyhdr\fancyhdr
+.sty
+Package: fancyhdr 2025/02/07 v5.2 Extensive control of page headers and footers
+
+\f@nch@headwidth=\skip65
+\f@nch@offset@elh=\skip66
+\f@nch@offset@erh=\skip67
+\f@nch@offset@olh=\skip68
+\f@nch@offset@orh=\skip69
+\f@nch@offset@elf=\skip70
+\f@nch@offset@erf=\skip71
+\f@nch@offset@olf=\skip72
+\f@nch@offset@orf=\skip73
+\f@nch@height=\skip74
+\f@nch@footalignment=\skip75
+\f@nch@widthL=\skip76
+\f@nch@widthC=\skip77
+\f@nch@widthR=\skip78
+\@temptokenb=\toks38
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/appendix\appendix
+.sty
+Package: appendix 2020/02/08 v1.2c extra appendix facilities
+\c@@pps=\count340
+\c@@ppsavesec=\count341
+\c@@ppsaveapp=\count342
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/placeins\placeins
+.sty
+Package: placeins 2005/04/18  v 2.2
+)
+\pipbannerdrop=\skip79
+\piplogoheight=\skip80
+\pipbannerhshift=\skip81
+\piplogohshift=\skip82
+\pipborderxsep=\skip83
+\pipborderysep=\skip84
+\pipbordergap=\skip85
+\pipborderrule=\skip86
+\pip@innerx=\skip87
+\pip@innery=\skip88
+\piptitledrop=\skip89
+\c@pip@article=\count343
+\pip@nesting=\count344
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/cite\chapterbib.s
+ty
+\c@inputfile=\count345
+Package: chapterbib 2010/09/18  v 1.17
+))
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/siunitx\siunitx.s
+ty
+Package: siunitx 2026-05-15 v3.5.5 A comprehensive (SI) units package
+\l__siunitx_number_uncert_offset_int=\count346
+\l__siunitx_number_exponent_fixed_int=\count347
+\l__siunitx_number_min_decimal_int=\count348
+\l__siunitx_number_min_integer_int=\count349
+\l__siunitx_number_round_precision_int=\count350
+\l__siunitx_number_lower_threshold_int=\count351
+\l__siunitx_number_upper_threshold_int=\count352
+\l__siunitx_number_group_first_int=\count353
+\l__siunitx_number_group_size_int=\count354
+\l__siunitx_number_group_min_int=\count355
+\l__siunitx_number_group_minimum_int=\count356
+\l__siunitx_compound_count_int=\count357
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/translations\tran
+slations.sty
+Package: translations 2022/02/05 v1.12 internationalization of LaTeX2e packages
+ (CN)
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/etoolbox\etoolbox
+.sty
+Package: etoolbox 2025/10/02 v2.5m e-TeX tools for LaTeX (JAW)
+\etb@tempcnta=\count358
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/pdftexcmds\pdft
+excmds.sty
+Package: pdftexcmds 2020-06-27 v0.33 Utility functions of pdfTeX for LuaTeX (HO
+)
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/infwarerr\infwa
+rerr.sty
+Package: infwarerr 2019/12/03 v1.5 Providing info/warning/error messages (HO)
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/iftex\iftex.sty
+Package: iftex 2024/12/12 v1.0g TeX engine tests
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/generic/ltxcmds\ltxcmds
+.sty
+Package: ltxcmds 2023-12-04 v1.26 LaTeX kernel commands for general use (HO)
+)
+Package pdftexcmds Info: \pdf@primitive is available.
+Package pdftexcmds Info: \pdf@ifprimitive is available.
+Package pdftexcmds Info: \pdfdraftmode found.
+))
+\l__siunitx_table_tmp_box=\box82
+\l__siunitx_table_tmp_dim=\dimen299
+\l__siunitx_table_column_width_dim=\dimen300
+\l__siunitx_table_integer_box=\box83
+\l__siunitx_table_decimal_box=\box84
+\l__siunitx_table_uncert_box=\box85
+\l__siunitx_table_before_box=\box86
+\l__siunitx_table_after_box=\box87
+\l__siunitx_table_before_dim=\dimen301
+\l__siunitx_table_carry_dim=\dimen302
+\l__siunitx_unit_tmp_int=\count359
+\l__siunitx_unit_position_int=\count360
+\l__siunitx_unit_total_int=\count361
+\l__siunitx_sexagesimal_tmp_dim=\dimen303
+\l__siunitx_sexagesimal_marker_box=\box88
+\l__siunitx_sexagesimal_unit_box=\box89
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/tools\array.sty
+Package: array 2026/02/24 v2.7b Tabular extension package (FMi)
+\col@sep=\dimen304
+\ar@mcellbox=\box90
+\extrarowheight=\dimen305
+\NC@list=\toks39
+\extratabsurround=\skip90
+\backup@length=\skip91
+\ar@cellbox=\box91
+))
+Class revtex4-2 Info: Unrecognized array package. Please update this document c
+lass! (Proceeding with fingers crossed.) on input line 24.
+Class revtex4-2 Info: cite was not loaded (OK!) on input line 24.
+Class revtex4-2 Info: mcite was not loaded (OK!) on input line 24.
+Class revtex4-2 Info: multicol was not loaded (OK!) on input line 24.
+Package translations Info: No language package found. I am going to use `englis
+h' as default language. on input line 24.
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/l3backend\l3backe
+nd-pdftex.def
+File: l3backend-pdftex.def 2026-02-18 L3 backend support: PDF output (pdfTeX)
+\l__color_backend_stack_int=\count362
+)
+No file issue.aux.
+\openout1 = `issue.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 24.
+LaTeX Font Info:    ... okay on input line 24.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 24.
+LaTeX Font Info:    ... okay on input line 24.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 24.
+LaTeX Font Info:    ... okay on input line 24.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 24.
+LaTeX Font Info:    ... okay on input line 24.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 24.
+LaTeX Font Info:    ... okay on input line 24.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 24.
+LaTeX Font Info:    ... okay on input line 24.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 24.
+LaTeX Font Info:    ... okay on input line 24.
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/context/base/mkii\supp-
+pdf.mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+\scratchcounter=\count363
+\scratchdimen=\dimen306
+\scratchbox=\box92
+\nofMPsegments=\count364
+\nofMParguments=\count365
+\everyMPshowfont=\toks40
+\MPscratchCnt=\count366
+\MPscratchDim=\dimen307
+\MPnumerator=\count367
+\makeMPintoPDFobject=\count368
+\everyMPtoPDFconversion=\toks41
+)
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/epstopdf-pkg\epst
+opdf-base.sty
+Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
+Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
+85.
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/00miktex\epstopdf
+-sys.cfg
+File: epstopdf-sys.cfg 2021/03/18 v2.0 Configuration of epstopdf for MiKTeX
+))
+Package caption Info: Begin \AtBeginDocument code.
+Package caption Info: subfig package v1.3 is loaded.
+Package caption Info: End \AtBeginDocument code.
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/translations/dict
+s\translations-basic-dictionary-english.trsl
+File: translations-basic-dictionary-english.trsl (english translation file `tra
+nslations-basic-dictionary')
+)
+Package translations Info: loading dictionary `translations-basic-dictionary' f
+or `english'. on input line 24.
+\openout3 = `issueNotes.bib'.
+
+\openout2 = `Manuscripts/BV_CoupledPendulum/manuscript.aux'.
+
+
+(Manuscripts/BV_CoupledPendulum/manuscript.tex
+LaTeX Font Info:    Trying to load font information for U+msa on input line 21.
+
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd
+File: umsa.fd 2013/01/14 v3.01 AMS symbols A
+)
+LaTeX Font Info:    Trying to load font information for U+msb on input line 21.
+
+(C:\Users\janderson19\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd
+File: umsb.fd 2013/01/14 v3.01 AMS symbols B
+)
+
+Class revtex4-2 Warning: Assuming \noaffiliation for collaboration.
+
+
+Package natbib Warning: Citation `Pena_Ramirez_undated-ie' on page 1 undefined 
+on input line 28.
+
+
+Package natbib Warning: Citation `pena2016sympathy' on page 1 undefined on inpu
+t line 28.
+
+
+Package natbib Warning: Citation `smith2003two' on page 1 undefined on input li
+ne 30.
+
+
+LaTeX Warning: Reference `fig:pic' on page 1 undefined on input line 34.
+
+<Manuscripts/BV_CoupledPendulum/coupledosc.pdf, id=4, 576.20819pt x 394.10197pt
+>
+File: Manuscripts/BV_CoupledPendulum/coupledosc.pdf Graphic file (type pdf)
+<use Manuscripts/BV_CoupledPendulum/coupledosc.pdf>
+Package pdftex.def Info: Manuscripts/BV_CoupledPendulum/coupledosc.pdf  used on
+ input line 38.
+(pdftex.def)             Requested size: 221.3985pt x 151.42604pt.
+<Logo.pdf, id=5, 226.59654pt x 298.04459pt>
+File: Logo.pdf Graphic file (type pdf)
+<use Logo.pdf>
+Package pdftex.def Info: Logo.pdf  used on input line 44.
+(pdftex.def)             Requested size: 32.44592pt x 42.67912pt.
+[1{C:/Users/janderson19/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map} <./Lo
+go.pdf> <./Manuscripts/BV_CoupledPendulum/coupledosc.pdf
+
+pdfTeX warning: miktex-pdftex.exe (file ./Manuscripts/BV_CoupledPendulum/couple
+dosc.pdf): PDF inclusion: multiple pdfs with page group included in a single pa
+ge
+>]
+Overfull \hbox (4.9278pt too wide) detected at line 69
+[]\OML/cmm/m/it/10 ^^U[] \OT1/cmr/m/n/10 = []\OML/cmm/m/it/10 :
+ []
+
+<Manuscripts/BV_CoupledPendulum/normalmodes.pdf, id=131, 462.52798pt x 346.8960
+1pt>
+File: Manuscripts/BV_CoupledPendulum/normalmodes.pdf Graphic file (type pdf)
+<use Manuscripts/BV_CoupledPendulum/normalmodes.pdf>
+Package pdftex.def Info: Manuscripts/BV_CoupledPendulum/normalmodes.pdf  used o
+n input line 110.
+(pdftex.def)             Requested size: 246.0pt x 184.49977pt.
+
+LaTeX Warning: Reference `fig:normal' on page 2 undefined on input line 143.
+
+[2 <./Manuscripts/BV_CoupledPendulum/normalmodes.pdf>]
+
+Package natbib Warning: Citation `Note1' on page 3 undefined on input line 163.
+
+
+No file Manuscripts/BV_CoupledPendulum/manuscript.bbl.
+) [3]
+\openout2 = `Manuscripts/BV_SimplePendulum/manuscript.aux'.
+
+ (Manuscripts/BV_SimplePendulum/manuscript.tex
+
+Package natbib Warning: Citation `belendez2007exact' on page 4 undefined on inp
+ut line 30.
+
+<Manuscripts/BV_SimplePendulum/drawing.pdf, id=170, 745.14066pt x 506.02658pt>
+File: Manuscripts/BV_SimplePendulum/drawing.pdf Graphic file (type pdf)
+<use Manuscripts/BV_SimplePendulum/drawing.pdf>
+Package pdftex.def Info: Manuscripts/BV_SimplePendulum/drawing.pdf  used on inp
+ut line 37.
+(pdftex.def)             Requested size: 196.80075pt x 133.64856pt.
+File: Logo.pdf Graphic file (type pdf)
+<use Logo.pdf>
+Package pdftex.def Info: Logo.pdf  used on input line 53.
+(pdftex.def)             Requested size: 32.44592pt x 42.67912pt.
+[4 <./Manuscripts/BV_SimplePendulum/drawing.pdf>]
+
+LaTeX Warning: Reference `fig:pendulum' on page 5 undefined on input line 72.
+
+<Manuscripts/BV_SimplePendulum/gravity.pdf, id=210, 462.52798pt x 346.89601pt>
+File: Manuscripts/BV_SimplePendulum/gravity.pdf Graphic file (type pdf)
+<use Manuscripts/BV_SimplePendulum/gravity.pdf>
+Package pdftex.def Info: Manuscripts/BV_SimplePendulum/gravity.pdf  used on inp
+ut line 78.
+(pdftex.def)             Requested size: 246.0pt x 184.49977pt.
+
+LaTeX Warning: Reference `fig:plot' on page 5 undefined on input line 83.
+
+
+Package natbib Warning: Citation `nist_gn' on page 5 undefined on input line 91
+.
+
+[5 <./Manuscripts/BV_SimplePendulum/gravity.pdf>]
+
+Package natbib Warning: Citation `Note2' on page 6 undefined on input line 110.
+
+
+No file Manuscripts/BV_SimplePendulum/manuscript.bbl.
+) [6]
+\openout2 = `Manuscripts/BV_Interferometer/manuscript.aux'.
+
+ (Manuscripts/BV_Interferometer/manuscript.tex
+
+Class revtex4-2 Warning: Assuming \noaffiliation for collaboration.
+
+
+Package natbib Warning: Citation `crew1900wave' on page 7 undefined on input li
+ne 27.
+
+
+Package natbib Warning: Citation `young1804bakerian' on page 7 undefined on inp
+ut line 27.
+
+
+Package natbib Warning: Citation `michelson1887art' on page 7 undefined on inpu
+t line 29.
+
+
+LaTeX Warning: Reference `fig:drawing' on page 7 undefined on input line 32.
+
+
+LaTeX Warning: Reference `fig:drawing' on page 7 undefined on input line 40.
+
+<Manuscripts/BV_Interferometer/interferometer.pdf, id=262, 578.58395pt x 433.84
+193pt>
+File: Manuscripts/BV_Interferometer/interferometer.pdf Graphic file (type pdf)
+<use Manuscripts/BV_Interferometer/interferometer.pdf>
+Package pdftex.def Info: Manuscripts/BV_Interferometer/interferometer.pdf  used
+ on input line 43.
+(pdftex.def)             Requested size: 221.3985pt x 166.00688pt.
+
+LaTeX Warning: Reference `fig:fringes' on page 7 undefined on input line 48.
+
+
+LaTeX Warning: Reference `fig:fringes' on page 7 undefined on input line 48.
+
+<Manuscripts/BV_Interferometer/fringes.pdf, id=263, 133.49875pt x 133.49875pt>
+File: Manuscripts/BV_Interferometer/fringes.pdf Graphic file (type pdf)
+<use Manuscripts/BV_Interferometer/fringes.pdf>
+Package pdftex.def Info: Manuscripts/BV_Interferometer/fringes.pdf  used on inp
+ut line 51.
+(pdftex.def)             Requested size: 135.30075pt x 135.31339pt.
+<Manuscripts/BV_Interferometer/slopeiswavelength.pdf, id=264, 462.52798pt x 346
+.89601pt>
+File: Manuscripts/BV_Interferometer/slopeiswavelength.pdf Graphic file (type pd
+f)
+<use Manuscripts/BV_Interferometer/slopeiswavelength.pdf>
+Package pdftex.def Info: Manuscripts/BV_Interferometer/slopeiswavelength.pdf  u
+sed on input line 57.
+(pdftex.def)             Requested size: 246.0pt x 184.49977pt.
+File: Logo.pdf Graphic file (type pdf)
+<use Logo.pdf>
+Package pdftex.def Info: Logo.pdf  used on input line 61.
+(pdftex.def)             Requested size: 32.44592pt x 42.67912pt.
+[7{C:/Users/janderson19/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/cm-super/
+cm-super-ts1.enc}]
+
+LaTeX Warning: A float is stuck (cannot be placed) on input line 61.
+
+
+LaTeX Warning: A float is stuck (cannot be placed) on input line 61.
+
+
+Class revtex4-2 Warning: Deferred float stuck during \clearpage processing.
+
+
+LaTeX Warning: Reference `fig:slope' on page 8 undefined on input line 62.
+
+
+LaTeX Warning: Reference `fig:slope' on page 8 undefined on input line 62.
+
+
+Package natbib Warning: Citation `pasco_mini_laser' on page 8 undefined on inpu
+t line 68.
+
+[8 <./Manuscripts/BV_Interferometer/interferometer.pdf> <./Manuscripts/BV_Inter
+ferometer/fringes.pdf
+
+pdfTeX warning: miktex-pdftex.exe (file ./Manuscripts/BV_Interferometer/fringes
+.pdf): PDF inclusion: multiple pdfs with page group included in a single page
+> <./Manuscripts/BV_Interferometer/slopeiswavelength.pdf>]
+
+Package natbib Warning: Citation `Note3' on page 9 undefined on input line 78.
+
+No file Manuscripts/BV_Interferometer/manuscript.bbl.
+) [9]
+\openout2 = `Manuscripts/Braedon_EoverM/manuscript.aux'.
+
+ (Manuscripts/Braedon_EoverM/manuscript.tex
+
+Class revtex4-2 Warning: Assuming \noaffiliation for collaboration.
+
+
+Package natbib Warning: Citation `Chodos_2000' on page 10 undefined on input li
+ne 32.
+
+
+Package natbib Warning: Citation `goel2026thermionic' on page 10 undefined on i
+nput line 32.
+
+
+Package natbib Warning: Citation `Thomson01022010' on page 10 undefined on inpu
+t line 33.
+
+
+Package natbib Warning: Citation `Thomson01022010' on page 10 undefined on inpu
+t line 33.
+
+
+LaTeX Warning: Reference `vecLorentz' on page 10 undefined on input line 45.
+
+File: Logo.pdf Graphic file (type pdf)
+<use Logo.pdf>
+Package pdftex.def Info: Logo.pdf  used on input line 56.
+(pdftex.def)             Requested size: 32.44592pt x 42.67912pt.
+[10]
+
+LaTeX Warning: Reference `fig:diagram' on page 11 undefined on input line 72.
+
+
+LaTeX Warning: Reference `linRBV' on page 11 undefined on input line 72.
+
+
+LaTeX Warning: Reference `linRBV' on page 11 undefined on input line 77.
+
+<Manuscripts/Braedon_EoverM/exp02_HelmholtzDiagramV1.pdf, id=453, 308.15125pt x
+ 348.30125pt>
+File: Manuscripts/Braedon_EoverM/exp02_HelmholtzDiagramV1.pdf Graphic file (typ
+e pdf)
+<use Manuscripts/Braedon_EoverM/exp02_HelmholtzDiagramV1.pdf>
+Package pdftex.def Info: Manuscripts/Braedon_EoverM/exp02_HelmholtzDiagramV1.pd
+f  used on input line 81.
+(pdftex.def)             Requested size: 196.80075pt x 222.44966pt.
+
+LaTeX Warning: Reference `fig:vOverB' on page 11 undefined on input line 86.
+
+<Manuscripts/Braedon_EoverM/sqrtVOverBPlot_V1.png, id=454, 495.7722pt x 492.881
+4pt>
+File: Manuscripts/Braedon_EoverM/sqrtVOverBPlot_V1.png Graphic file (type png)
+<use Manuscripts/Braedon_EoverM/sqrtVOverBPlot_V1.png>
+Package pdftex.def Info: Manuscripts/Braedon_EoverM/sqrtVOverBPlot_V1.png  used
+ on input line 90.
+(pdftex.def)             Requested size: 246.0pt x 244.56741pt.
+
+Package natbib Warning: Citation `supp' on page 11 undefined on input line 91.
+
+
+Package natbib Warning: Citation `supp' on page 11 undefined on input line 91.
+
+
+Package natbib Warning: Citation `supp' on page 11 undefined on input line 114.
+
+
+
+LaTeX Warning: Reference `linRBV' on page 11 undefined on input line 114.
+
+[11 <./Manuscripts/Braedon_EoverM/exp02_HelmholtzDiagramV1.pdf>]
+
+LaTeX Warning: A float is stuck (cannot be placed) on input line 115.
+
+
+LaTeX Warning: A float is stuck (cannot be placed) on input line 115.
+
+
+Class revtex4-2 Warning: Deferred float stuck during \clearpage processing.
+
+
+LaTeX Warning: Reference `fig:vOverB' on page 12 undefined on input line 119.
+
+
+LaTeX Warning: Reference `linRBV' on page 12 undefined on input line 119.
+
+
+Package natbib Warning: Citation `Note4' on page 12 undefined on input line 125
+.
+
+No file Manuscripts/Braedon_EoverM/manuscript.bbl.
+) [12 <./Manuscripts/Braedon_EoverM/sqrtVOverBPlot_V1.png>]
+\openout2 = `Manuscripts/Braedon_Millikan/manuscript.aux'.
+
+
+(Manuscripts/Braedon_Millikan/manuscript.tex
+
+Class revtex4-2 Warning: Assuming \noaffiliation for collaboration.
+
+
+Package natbib Warning: Citation `thomson' on page 13 undefined on input line 2
+6.
+
+
+Package natbib Warning: Citation `pascoap8210' on page 13 undefined on input li
+ne 33.
+
+
+Package natbib Warning: Citation `squibb' on page 13 undefined on input line 33
+.
+
+
+Package natbib Warning: Citation `pascoap8210' on page 13 undefined on input li
+ne 33.
+
+
+LaTeX Warning: Reference `fig:FBDs' on page 13 undefined on input line 41.
+
+<Manuscripts/Braedon_Millikan/polarityFBD_V1.png, id=471, 569.12625pt x 569.126
+25pt>
+File: Manuscripts/Braedon_Millikan/polarityFBD_V1.png Graphic file (type png)
+<use Manuscripts/Braedon_Millikan/polarityFBD_V1.png>
+Package pdftex.def Info: Manuscripts/Braedon_Millikan/polarityFBD_V1.png  used 
+on input line 44.
+(pdftex.def)             Requested size: 172.19925pt x 172.19812pt.
+File: Logo.pdf Graphic file (type pdf)
+<use Logo.pdf>
+Package pdftex.def Info: Logo.pdf  used on input line 48.
+(pdftex.def)             Requested size: 32.44592pt x 42.67912pt.
+[13]
+
+LaTeX Warning: Reference `noPolEq' on page 14 undefined on input line 55.
+
+
+LaTeX Warning: Reference `polEq' on page 14 undefined on input line 55.
+
+
+LaTeX Warning: Reference `mq' on page 14 undefined on input line 70.
+
+
+Package natbib Warning: Citation `supp' on page 14 undefined on input line 77.
+
+
+LaTeX Warning: Reference `bigQ' on page 14 undefined on input line 77.
+
+
+LaTeX Warning: Reference `tab:constants' on page 14 undefined on input line 77.
+
+
+
+LaTeX Warning: Reference `fig:qvsNPLot' on page 14 undefined on input line 93.
+
+<Manuscripts/Braedon_Millikan/qVsNPlot_V1.png, id=476, 499.3857pt x 501.5538pt>
+
+File: Manuscripts/Braedon_Millikan/qVsNPlot_V1.png Graphic file (type png)
+<use Manuscripts/Braedon_Millikan/qVsNPlot_V1.png>
+Package pdftex.def Info: Manuscripts/Braedon_Millikan/qVsNPlot_V1.png  used on 
+input line 97.
+(pdftex.def)             Requested size: 246.0pt x 247.07219pt.
+
+LaTeX Warning: Reference `fig:qvsNPLot' on page 14 undefined on input line 102.
+
+
+
+Package natbib Warning: Citation `NIST_CODATA' on page 14 undefined on input li
+ne 102.
+
+[14 <./Manuscripts/Braedon_Millikan/polarityFBD_V1.png>]
+
+LaTeX Warning: A float is stuck (cannot be placed) on input line 110.
+
+
+LaTeX Warning: A float is stuck (cannot be placed) on input line 110.
+
+
+Class revtex4-2 Warning: Deferred float stuck during \clearpage processing.
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 115--116
+
+ []
+
+
+Package natbib Warning: Citation `Note5' on page 15 undefined on input line 117
+.
+
+No file Manuscripts/Braedon_Millikan/manuscript.bbl.
+) [15 <./Manuscripts/Braedon_Millikan/qVsNPlot_V1.png>]
+\openout2 = `Manuscripts/Semaje_ElecDiff/manuscript.aux'.
+
+
+(Manuscripts/Semaje_ElecDiff/manuscript.tex
+
+Class revtex4-2 Warning: Assuming \noaffiliation for collaboration.
+
+
+Package natbib Warning: Citation `Young1802' on page 16 undefined on input line
+ 38.
+
+
+Package natbib Warning: Citation `Arons1965' on page 16 undefined on input line
+ 38.
+
+
+Package natbib Warning: Citation `Broglie1924' on page 16 undefined on input li
+ne 38.
+
+
+Package natbib Warning: Citation `Davisson1927' on page 16 undefined on input l
+ine 40.
+
+
+Package natbib Warning: Citation `Broglie1924' on page 16 undefined on input li
+ne 50.
+
+
+Package natbib Warning: Citation `Davisson1927' on page 16 undefined on input l
+ine 58.
+
+
+Package natbib Warning: Citation `Bragg1922' on page 16 undefined on input line
+ 64.
+
+
+Package natbib Warning: Citation `MEYER2021' on page 16 undefined on input line
+ 64.
+
+<Manuscripts/Semaje_ElecDiff/2Theta.png, id=486, 1200.485pt x 647.41875pt>
+File: Manuscripts/Semaje_ElecDiff/2Theta.png Graphic file (type png)
+<use Manuscripts/Semaje_ElecDiff/2Theta.png>
+Package pdftex.def Info: Manuscripts/Semaje_ElecDiff/2Theta.png  used on input 
+line 68.
+(pdftex.def)             Requested size: 221.3985pt x 119.39519pt.
+
+LaTeX Warning: Reference `fig:2sintheta' on page 16 undefined on input line 73.
+
+
+File: Logo.pdf Graphic file (type pdf)
+<use Logo.pdf>
+Package pdftex.def Info: Logo.pdf  used on input line 74.
+(pdftex.def)             Requested size: 32.44592pt x 42.67912pt.
+[16]
+
+LaTeX Warning: A float is stuck (cannot be placed) on input line 74.
+
+
+LaTeX Warning: A float is stuck (cannot be placed) on input line 74.
+
+
+Class revtex4-2 Warning: Deferred float stuck during \clearpage processing.
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 78--80
+
+ []
+
+
+LaTeX Warning: Reference `combin' on page 17 undefined on input line 81.
+
+
+LaTeX Warning: Reference `fig:Bulb' on page 17 undefined on input line 83.
+
+<Manuscripts/Semaje_ElecDiff/Bulb new.png, id=490, 672.5125pt x 578.16pt>
+File: Manuscripts/Semaje_ElecDiff/Bulb new.png Graphic file (type png)
+<use Manuscripts/Semaje_ElecDiff/Bulb new.png>
+Package pdftex.def Info: Manuscripts/Semaje_ElecDiff/Bulb new.png  used on inpu
+t line 87.
+(pdftex.def)             Requested size: 246.0pt x 211.48979pt.
+
+LaTeX Warning: Reference `fig:Bulb' on page 17 undefined on input line 91.
+
+
+LaTeX Warning: Reference `fig:Geo' on page 17 undefined on input line 98.
+
+
+LaTeX Warning: Reference `2theta' on page 17 undefined on input line 98.
+
+<Manuscripts/Semaje_ElecDiff/Geo new.png, id=491, 831.105pt x 775.89874pt>
+File: Manuscripts/Semaje_ElecDiff/Geo new.png Graphic file (type png)
+<use Manuscripts/Semaje_ElecDiff/Geo new.png>
+Package pdftex.def Info: Manuscripts/Semaje_ElecDiff/Geo new.png  used on input
+ line 103.
+(pdftex.def)             Requested size: 216.81pt x 202.40375pt.
+
+LaTeX Warning: Reference `2theta' on page 17 undefined on input line 109.
+
+
+LaTeX Warning: Reference `2theta' on page 17 undefined on input line 109.
+
+[17 <./Manuscripts/Semaje_ElecDiff/2Theta.png (PNG copy)> <./Manuscripts/Semaje
+_ElecDiff/Bulb new.png (PNG copy)> <./Manuscripts/Semaje_ElecDiff/Geo new.png (
+PNG copy)>]
+<Manuscripts/Semaje_ElecDiff/Plot New.png, id=495, 605.26125pt x 592.2125pt>
+File: Manuscripts/Semaje_ElecDiff/Plot New.png Graphic file (type png)
+<use Manuscripts/Semaje_ElecDiff/Plot New.png>
+Package pdftex.def Info: Manuscripts/Semaje_ElecDiff/Plot New.png  used on inpu
+t line 122.
+(pdftex.def)             Requested size: 216.81pt x 212.13907pt.
+
+
+LaTeX Warning: Reference `fig:Plot' on page 18 undefined on input line 127.
+
+
+LaTeX Warning: Reference `combin' on page 18 undefined on input line 127.
+
+
+LaTeX Warning: Reference `combin' on page 18 undefined on input line 130.
+
+
+LaTeX Warning: Reference `latpar' on page 18 undefined on input line 137.
+
+<Manuscripts/Semaje_ElecDiff/UnitCell.png, id=496, 1198.4775pt x 749.80125pt>
+File: Manuscripts/Semaje_ElecDiff/UnitCell.png Graphic file (type png)
+<use Manuscripts/Semaje_ElecDiff/UnitCell.png>
+Package pdftex.def Info: Manuscripts/Semaje_ElecDiff/UnitCell.png  used on inpu
+t line 148.
+(pdftex.def)             Requested size: 245.71754pt x 153.7217pt.
+
+LaTeX Warning: Reference `fig:unit' on page 18 undefined on input line 153.
+
+
+Package natbib Warning: Citation `Howe2003' on page 18 undefined on input line 
+155.
+
+
+Package natbib Warning: Citation `Note6' on page 18 undefined on input line 162
+.
+
+[18 <./Manuscripts/Semaje_ElecDiff/Plot New.png (PNG copy)> <./Manuscripts/Sema
+je_ElecDiff/UnitCell.png>]
+No file Manuscripts/Semaje_ElecDiff/manuscript.bbl.
+) [19]
+\openout2 = `Manuscripts/Semaje_PhotoElect/Manuscript.aux'.
+
+ (Manuscripts/Semaje_PhotoElect/Manuscript.tex
+
+Class revtex4-2 Warning: Assuming \noaffiliation for collaboration.
+
+
+Package natbib Warning: Citation `Arons1965' on page 20 undefined on input line
+ 37.
+
+
+Package natbib Warning: Citation `Vesely2002' on page 20 undefined on input lin
+e 37.
+
+
+Package natbib Warning: Citation `Wheaton1978' on page 20 undefined on input li
+ne 37.
+
+
+Package natbib Warning: Citation `Fowler' on page 20 undefined on input line 37
+.
+
+
+Package natbib Warning: Citation `Fowler' on page 20 undefined on input line 37
+.
+
+
+LaTeX Warning: Reference `fig:Circuit' on page 20 undefined on input line 43.
+
+<Manuscripts/Semaje_PhotoElect/Circuit.png, id=505, 784.43062pt x 614.295pt>
+File: Manuscripts/Semaje_PhotoElect/Circuit.png Graphic file (type png)
+<use Manuscripts/Semaje_PhotoElect/Circuit.png>
+Package pdftex.def Info: Manuscripts/Semaje_PhotoElect/Circuit.png  used on inp
+ut line 47.
+(pdftex.def)             Requested size: 246.0pt x 192.64159pt.
+File: Logo.pdf Graphic file (type pdf)
+<use Logo.pdf>
+Package pdftex.def Info: Logo.pdf  used on input line 54.
+(pdftex.def)             Requested size: 32.44592pt x 42.67912pt.
+[20 <./Manuscripts/Semaje_PhotoElect/Circuit.png>]
+
+Package natbib Warning: Citation `Arons1965' on page 21 undefined on input line
+ 55.
+
+
+LaTeX Warning: Reference `E electron' on page 21 undefined on input line 62.
+
+
+Package natbib Warning: Citation `BROWNSON2014' on page 21 undefined on input l
+ine 73.
+
+
+Package natbib Warning: Citation `Krane19' on page 21 undefined on input line 7
+3.
+
+<Manuscripts/Semaje_PhotoElect/Dist2.png, id=510, 617.30624pt x 592.2125pt>
+File: Manuscripts/Semaje_PhotoElect/Dist2.png Graphic file (type png)
+<use Manuscripts/Semaje_PhotoElect/Dist2.png>
+Package pdftex.def Info: Manuscripts/Semaje_PhotoElect/Dist2.png  used on input
+ line 80.
+(pdftex.def)             Requested size: 196.80075pt x 188.79799pt.
+
+LaTeX Warning: Reference `fig:Distance' on page 21 undefined on input line 85.
+
+
+LaTeX Warning: Reference `Vstop' on page 21 undefined on input line 87.
+
+<Manuscripts/Semaje_PhotoElect/Freq2.png, id=511, 617.30624pt x 592.2125pt>
+File: Manuscripts/Semaje_PhotoElect/Freq2.png Graphic file (type png)
+<use Manuscripts/Semaje_PhotoElect/Freq2.png>
+Package pdftex.def Info: Manuscripts/Semaje_PhotoElect/Freq2.png  used on input
+ line 91.
+(pdftex.def)             Requested size: 196.80075pt x 188.79799pt.
+[21 <./Manuscripts/Semaje_PhotoElect/Dist2.png (PNG copy)> <./Manuscripts/Semaj
+e_PhotoElect/Freq2.png (PNG copy)>]
+
+LaTeX Warning: Reference `Frequency' on page 22 undefined on input line 96.
+
+
+LaTeX Warning: Reference `Vstop' on page 22 undefined on input line 96.
+
+
+Package natbib Warning: Citation `Nist' on page 22 undefined on input line 96.
+
+
+Package natbib Warning: Citation `ChemPhys' on page 22 undefined on input line 
+96.
+
+
+Package natbib Warning: Citation `Note7' on page 22 undefined on input line 106
+.
+
+No file Manuscripts/Semaje_PhotoElect/Manuscript.bbl.
+) [22]
+\openout2 = `Manuscripts/SF_Interferometer/manuscript.aux'.
+
+ (Manuscripts/SF_Interferometer/manuscript.tex
+
+Class revtex4-2 Warning: Assuming \noaffiliation for collaboration.
+
+
+Package natbib Warning: Citation `hariharan2010basics' on page 23 undefined on 
+input line 26.
+
+
+Package natbib Warning: Citation `stachura2024fermat' on page 23 undefined on i
+nput line 26.
+
+
+LaTeX Warning: Reference `wavelength schematic' on page 23 undefined on input l
+ine 30.
+
+
+LaTeX Warning: Reference `double' on page 23 undefined on input line 30.
+
+<Manuscripts/SF_Interferometer/Wavelength Schematic.pdf, id=518, 301.64189pt x 
+221.79207pt>
+File: Manuscripts/SF_Interferometer/Wavelength Schematic.pdf Graphic file (type
+ pdf)
+<use Manuscripts/SF_Interferometer/Wavelength Schematic.pdf>
+Package pdftex.def Info: Manuscripts/SF_Interferometer/Wavelength Schematic.pdf
+  used on input line 38.
+(pdftex.def)             Requested size: 221.3985pt x 162.79013pt.
+<Manuscripts/SF_Interferometer/Red Laser_Interferometer.jpg, id=519, 393.1488pt
+ x 454.0965pt>
+File: Manuscripts/SF_Interferometer/Red Laser_Interferometer.jpg Graphic file (
+type jpg)
+<use Manuscripts/SF_Interferometer/Red Laser_Interferometer.jpg>
+Package pdftex.def Info: Manuscripts/SF_Interferometer/Red Laser_Interferometer
+.jpg  used on input line 47.
+(pdftex.def)             Requested size: 123.0pt x 142.06416pt.
+<Manuscripts/SF_Interferometer/Green Laser_Interferometer.jpg, id=520, 305.7021
+pt x 337.26pt>
+File: Manuscripts/SF_Interferometer/Green Laser_Interferometer.jpg Graphic file
+ (type jpg)
+<use Manuscripts/SF_Interferometer/Green Laser_Interferometer.jpg>
+Package pdftex.def Info: Manuscripts/SF_Interferometer/Green Laser_Interferomet
+er.jpg  used on input line 50.
+(pdftex.def)             Requested size: 128.90451pt x 142.21431pt.
+File: Logo.pdf Graphic file (type pdf)
+<use Logo.pdf>
+Package pdftex.def Info: Logo.pdf  used on input line 56.
+(pdftex.def)             Requested size: 32.44592pt x 42.67912pt.
+[23 <./Manuscripts/SF_Interferometer/Wavelength Schematic.pdf>]
+
+LaTeX Warning: Reference `index schematic' on page 24 undefined on input line 5
+9.
+
+<Manuscripts/SF_Interferometer/Index Schematic.pdf, id=528, 309.64282pt x 139.7
+201pt>
+File: Manuscripts/SF_Interferometer/Index Schematic.pdf Graphic file (type pdf)
+
+<use Manuscripts/SF_Interferometer/Index Schematic.pdf>
+Package pdftex.def Info: Manuscripts/SF_Interferometer/Index Schematic.pdf  use
+d on input line 63.
+(pdftex.def)             Requested size: 196.80075pt x 88.80228pt.
+
+LaTeX Warning: Reference `graph wavelengths' on page 24 undefined on input line
+ 70.
+
+<Manuscripts/SF_Interferometer/Graph of Wavelengths.png, id=529, 283.0575pt x 2
+66.9975pt>
+File: Manuscripts/SF_Interferometer/Graph of Wavelengths.png Graphic file (type
+ png)
+<use Manuscripts/SF_Interferometer/Graph of Wavelengths.png>
+Package pdftex.def Info: Manuscripts/SF_Interferometer/Graph of Wavelengths.png
+  used on input line 74.
+(pdftex.def)             Requested size: 196.80075pt x 185.63808pt.
+
+LaTeX Warning: Reference `graph indicies' on page 24 undefined on input line 79
+.
+
+
+Package natbib Warning: Citation `sultanova2009dispersion' on page 24 undefined
+ on input line 79.
+
+[24 <./Manuscripts/SF_Interferometer/Red Laser_Interferometer.jpg> <./Manuscrip
+ts/SF_Interferometer/Green Laser_Interferometer.jpg> <./Manuscripts/SF_Interfer
+ometer/Index Schematic.pdf> <./Manuscripts/SF_Interferometer/Graph of Wavelengt
+hs.png>]
+<Manuscripts/SF_Interferometer/Graph of Indicies.png, id=552, 279.0425pt x 266.
+9975pt>
+File: Manuscripts/SF_Interferometer/Graph of Indicies.png Graphic file (type pn
+g)
+<use Manuscripts/SF_Interferometer/Graph of Indicies.png>
+Package pdftex.def Info: Manuscripts/SF_Interferometer/Graph of Indicies.png  u
+sed on input line 83.
+(pdftex.def)             Requested size: 196.80075pt x 188.31065pt.
+
+
+Package natbib Warning: Citation `Note8' on page 25 undefined on input line 104
+.
+
+No file Manuscripts/SF_Interferometer/manuscript.bbl.
+) [25 <./Manuscripts/SF_Interferometer/Graph of Indicies.png>]
+\openout2 = `Manuscripts/Skylar_LloydMirror/manuscript.aux'.
+
+
+(Manuscripts/Skylar_LloydMirror/manuscript.tex
+
+Class revtex4-2 Warning: Assuming \noaffiliation for collaboration.
+
+
+Package natbib Warning: Citation `ranzan2018history' on page 26 undefined on in
+put line 25.
+
+
+Package natbib Warning: Citation `bromwich1919x' on page 26 undefined on input 
+line 25.
+
+
+LaTeX Warning: Reference `schematic' on page 26 undefined on input line 33.
+
+<Manuscripts/Skylar_LloydMirror/Lab 4 Schematic.pdf, id=558, 323.3371pt x 103.7
+7005pt>
+File: Manuscripts/Skylar_LloydMirror/Lab 4 Schematic.pdf Graphic file (type pdf
+)
+<use Manuscripts/Skylar_LloydMirror/Lab 4 Schematic.pdf>
+Package pdftex.def Info: Manuscripts/Skylar_LloydMirror/Lab 4 Schematic.pdf  us
+ed on input line 37.
+(pdftex.def)             Requested size: 246.0pt x 78.95155pt.
+File: Logo.pdf Graphic file (type pdf)
+<use Logo.pdf>
+Package pdftex.def Info: Logo.pdf  used on input line 43.
+(pdftex.def)             Requested size: 32.44592pt x 42.67912pt.
+[26]
+
+LaTeX Warning: A float is stuck (cannot be placed) on input line 43.
+
+
+LaTeX Warning: A float is stuck (cannot be placed) on input line 43.
+
+
+Class revtex4-2 Warning: Deferred float stuck during \clearpage processing.
+
+
+LaTeX Warning: Reference `fig:graph' on page 27 undefined on input line 50.
+
+<Manuscripts/Skylar_LloydMirror/Lloyd's Mirror Graph.png, id=562, 282.05376pt x
+ 264.99pt>
+File: Manuscripts/Skylar_LloydMirror/Lloyd's Mirror Graph.png Graphic file (typ
+e png)
+<use Manuscripts/Skylar_LloydMirror/Lloyd's Mirror Graph.png>
+Package pdftex.def Info: Manuscripts/Skylar_LloydMirror/Lloyd's Mirror Graph.pn
+g  used on input line 54.
+(pdftex.def)             Requested size: 196.80075pt x 184.89734pt.
+
+Package natbib Warning: Citation `griffith' on page 27 undefined on input line 
+59.
+
+
+LaTeX Warning: Reference `fig:graph' on page 27 undefined on input line 61.
+
+[27 <./Manuscripts/Skylar_LloydMirror/Lab 4 Schematic.pdf> <./Manuscripts/Skyla
+r_LloydMirror/Lloyd's Mirror Graph.png>]
+
+Package natbib Warning: Citation `Note9' on page 28 undefined on input line 74.
+
+
+No file Manuscripts/Skylar_LloydMirror/manuscript.bbl.
+) [28]
+
+Package natbib Warning: There were undefined citations.
+
+(issue.aux (Manuscripts/BV_CoupledPendulum/manuscript.aux)
+(Manuscripts/BV_SimplePendulum/manuscript.aux)
+(Manuscripts/BV_Interferometer/manuscript.aux)
+(Manuscripts/Braedon_EoverM/manuscript.aux)
+(Manuscripts/Braedon_Millikan/manuscript.aux)
+(Manuscripts/Semaje_ElecDiff/manuscript.aux)
+(Manuscripts/Semaje_PhotoElect/Manuscript.aux)
+(Manuscripts/SF_Interferometer/manuscript.aux)
+(Manuscripts/Skylar_LloydMirror/manuscript.aux))
+ ***********
+LaTeX2e <2026-06-01>
+L3 programming layer <2026-06-18>
+ ***********
+
+
+LaTeX Warning: There were undefined references.
+
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
+ ) 
+Here is how much of TeX's memory you used:
+ 24480 strings out of 467625
+ 543188 string characters out of 5418554
+ 883333 words of memory out of 5000000
+ 53215 multiletter control sequences out of 15000+600000
+ 637924 words of font info for 85 fonts, out of 8000000 for 9000
+ 1141 hyphenation exceptions out of 8191
+ 117i,14n,121p,1930b,888s stack positions out of 10000i,1000n,20000p,200000b,200000s
+<C:/Users/janderson19/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfon
+ts/cm/cmbx10.pfb><C:/Users/janderson19/AppData/Local/Programs/MiKTeX/fonts/type
+1/public/amsfonts/cm/cmbx12.pfb><C:/Users/janderson19/AppData/Local/Programs/Mi
+KTeX/fonts/type1/public/amsfonts/cm/cmbx9.pfb><C:/Users/janderson19/AppData/Loc
+al/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmcsc10.pfb><C:/Users/janders
+on19/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmex10.pfb><C
+:/Users/janderson19/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/c
+m/cmmi10.pfb><C:/Users/janderson19/AppData/Local/Programs/MiKTeX/fonts/type1/pu
+blic/amsfonts/cm/cmmi5.pfb><C:/Users/janderson19/AppData/Local/Programs/MiKTeX/
+fonts/type1/public/amsfonts/cm/cmmi6.pfb><C:/Users/janderson19/AppData/Local/Pr
+ograms/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi7.pfb><C:/Users/janderson19/Ap
+pData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi9.pfb><C:/Users/
+janderson19/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmib1
+0.pfb><C:/Users/janderson19/AppData/Local/Programs/MiKTeX/fonts/type1/public/am
+sfonts/cm/cmr10.pfb><C:/Users/janderson19/AppData/Local/Programs/MiKTeX/fonts/t
+ype1/public/amsfonts/cm/cmr5.pfb><C:/Users/janderson19/AppData/Local/Programs/M
+iKTeX/fonts/type1/public/amsfonts/cm/cmr6.pfb><C:/Users/janderson19/AppData/Loc
+al/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr7.pfb><C:/Users/janderson1
+9/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr8.pfb><C:/Use
+rs/janderson19/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr
+9.pfb><C:/Users/janderson19/AppData/Local/Programs/MiKTeX/fonts/type1/public/am
+sfonts/cm/cmsy10.pfb><C:/Users/janderson19/AppData/Local/Programs/MiKTeX/fonts/
+type1/public/amsfonts/cm/cmsy5.pfb><C:/Users/janderson19/AppData/Local/Programs
+/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy6.pfb><C:/Users/janderson19/AppData/
+Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy7.pfb><C:/Users/jander
+son19/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy9.pfb><C
+:/Users/janderson19/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/c
+m/cmti10.pfb><C:/Users/janderson19/AppData/Local/Programs/MiKTeX/fonts/type1/pu
+blic/amsfonts/cm/cmti7.pfb><C:/Users/janderson19/AppData/Local/Programs/MiKTeX/
+fonts/type1/public/amsfonts/cm/cmti9.pfb><C:/Users/janderson19/AppData/Local/Pr
+ograms/MiKTeX/fonts/type1/public/cm-super/sfrm0900.pfb><C:/Users/janderson19/Ap
+pData/Local/Programs/MiKTeX/fonts/type1/public/cm-super/sfrm1000.pfb>
+Output written on issue.pdf (28 pages, 3161602 bytes).
+PDF statistics:
+ 689 PDF objects out of 1000 (max. 8388607)
+ 0 named destinations out of 1000 (max. 500000)
+ 153 words of extra memory for PDF output out of 10000 (max. 10000000)
+

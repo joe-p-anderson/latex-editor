@@ -1,72 +1,12 @@
 %PIP-412029OA046
-\documentclass[reprint,amsmath,amssymb,aps,prb,footinbib,floatfix]{revtex4-2}
-\bibliographystyle{apsrev4-2}
-\usepackage{afterpage}
-\usepackage{blindtext}
-\usepackage[rgb]{xcolor}
-%\usepackage[twocolumn=true,includehead=false,left=.75in,right=.75in,top=.75in,bottom=.75in]{geometry}
-%\usepackage[letterpaper, portrait, twocolumn, twoside, left=2cm, hmarginratio=2:1, includemp, marginparwidth=43pt, bottom=1cm, foot=.7cm, includefoot, textheight=11cm, heightrounded, columnsep=1cm, dvips, verbose]{geometry}
-\definecolor{Cred}{RGB}{208, 32, 46}
-\usepackage[firstpage=true]{background}
-\usetikzlibrary{calc}
-%\usepackage{tikz}
-\backgroundsetup{angle = 0, scale = 1, vshift = 0pt, opacity=1,
-  contents = {\begin{tikzpicture}[overlay,remember picture]
-    \node at (0,0) {\includegraphics[scale=1]{EC_RC.pdf}};
-\end{tikzpicture}
-}
-}
-%    \draw (3.4in,3.75in) node[inner sep=0] {\includegraphics[width=1in]{arrow.pdf}};
-%    \draw (3.5in,3.85in) node[rotate=-90] {\scshape{Editor's}};
-%    \draw (3.5in-\baselineskip,3.85in) node[rotate=-90] {\scshape{Suggestion}};
-%\end{tikzpicture}
+\documentclass[rc,ec]{physicsinprogress}
 
-\usepackage{graphicx} % Required for inserting images
-\usepackage{mathtools} % Useful for a bunch of math stuff
-\usepackage{cleveref} % Use for better cross-references
-\usepackage[caption=false]{subfig} % For sub-figures
-\usepackage{booktabs} % For nicer looking tables
-\usepackage[twoside]{fancyhdr}
-\usepackage{appendix}
+\pipvolume{2}
+\pipissuedate{Feb. 2026}
 
-\usepackage{placeins}
-
-
-
-
-\fancypagestyle{plain}{%
-%\setlength{\headheight}{60pt}
-\fancyhead[L,C]{}
-\fancyhf{}
-\fancyhead[R]{\raisebox{.6cm+1pt}{\textbf{Rapid Communication}}}
-\fancyhead[L]{ \raisebox{.6cm+1pt}{\scshape{Editor's Suggestion}\vspace{12pt}}}
-\fancyhead[C]{\raisebox{.6cm}{\large\scshape{CARTHAGE}}\hspace{0.2cm}\includegraphics[height=1.5cm]{Logo.pdf}\hspace{0.1cm}\raisebox{.6cm}{\large\scshape{COLLEGE 
- }}}
-\fancyfoot[C]{\thepage}
-\renewcommand{\headrulewidth}{0pt}
-\renewcommand{\footrulewidth}{0pt}
-}
-\usepackage{printlen}
-
-
-\pagestyle{fancy}
-\fancyhf{}
-\fancyheadinit{\setlength{\headheight}{20pt}}
-\fancyhead[RO,LE]{\textbf{Rapid Communication}}
-\fancyhead[LO,RE]{\textit{Phys. in Prog.} \textbf{2} (Feb. 2026)}
-\fancyhead[C]{ \large \scshape{PHYSICS IN PROGRESS}}
-\fancyfoot[C]{\thepage}
-\renewcommand{\headrulewidth}{0.4pt}
-\renewcommand{\footrulewidth}{0pt}
-
-% These are packages I am using in this document
 \usepackage{siunitx}
 
-% Everything up to here is the 'document preamble'
-
-\begin{document} 
-
-\vspace*{25pt}
+\begin{document}
 
 
 \title{Estimating Planck's constant using the photoelectric effect}% Force line breaks with \\
@@ -76,7 +16,7 @@
 \affiliation{%
 Department of Physics and Astronomy,  Carthage College, 2001 Alford Park Drive, Kenosha, WI 53140, USA
 }%
-\collaboration{Received January 29, 2026, Published online February 5, 2026}
+\pipdates{January 29, 2026}{February 5, 2026}
 
 \begin{abstract}
 
@@ -92,7 +32,7 @@ The photoelectric effect occurs when light of a sufficiently high frequency stri
 
 %\tableofcontents
 
-\section{\label{sec:level1} Introduction}
+\section{\label{sec:photoelectric-intro} Introduction}
 
 The debate on whether light behaves as waves or particles spanned multiple centuries. It began in the early 1600s with various theories on both sides of the argument, but concluded in the early 1900s with Einstein's explanation of the photoelectric effect \cite{Arons1965}. Heinrich Hertz originally discovered this effect \cite{Vesely2002}, and later Philipp Lenard studied it \cite{Wheaton1978} . Lenard used a carbon-arc light to excite electrons on a metal plate. Those excited electrons would then be ejected from that plate and collected on another plate located some distance away from the emitter. The collector plate was then connected to a cathode and a sensitive ammeter, allowing him to measure the current induced by the collected electrons. In his studies, Lenard compared the energy of the photoelectrons (ejected electrons) to the intensity of the light coming from the source. To measure the energy of the electrons, Lenard applied a negative charge to the collector plate, repelling any electrons that lacked sufficient energy to pass. In doing so, Lenard discovered a quantity called the stopping voltage, the voltage applied to the collector plate that prevents all electrons from reaching it. Through testing, Lenard found that this stopping voltage remained constant regardless of the source's light intensity  \cite{Fowler}. He even went so far as to test this with different colors, finding that the stopping voltage actually depends on the wavelength of light \cite{Fowler}. Einstein suggested that light radiation should be thought of as quanta called photons, each with energy $hf$, where each photon transfers its energy to a single electron.
 

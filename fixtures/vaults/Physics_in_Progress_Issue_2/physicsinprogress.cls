@@ -15,10 +15,15 @@
 %%   ec | noec                    Editor's Suggestion flag + red border
 %%   rc | oa                      Rapid Communication / Original Article
 %%
+%% A third option, `issue', turns the class into a full-issue driver: one
+%% document in the project root that \pipaddarticle's every manuscript and
+%% numbers the pages straight through.  See the "Full-issue mode" section
+%% near the bottom of this file.
+%%
 %% See README-physicsinprogress.md for usage.
 %%
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{physicsinprogress}[2026/07/30 v1.0 Physics in Progress journal class]
+\ProvidesClass{physicsinprogress}[2026/07/30 v1.1 Physics in Progress journal class]
 
 %% ---------------------------------------------------------------------------
 %% Class options
@@ -27,6 +32,19 @@
 \newif\ifpip@ec        \pip@ecfalse   % Editor's Suggestion?
 \newif\ifpip@rc        \pip@rcfalse   % Rapid Communication? (false = Original Article)
 \newif\ifpip@footinbib \pip@footinbibtrue
+\newif\ifpip@issue     \pip@issuefalse % full-issue driver document?
+
+% The two editorial switches are declared once, as named actions, so that the
+% same code can be driven either from \documentclass options (below) or, in
+% full-issue mode, from the \documentclass line of each manuscript that the
+% issue swallows.
+\@namedef{pip@option@ec}{\pip@ectrue}
+\@namedef{pip@option@editorschoice}{\pip@ectrue}
+\@namedef{pip@option@noec}{\pip@ecfalse}
+\@namedef{pip@option@rc}{\pip@rctrue}
+\@namedef{pip@option@rapidcommunication}{\pip@rctrue}
+\@namedef{pip@option@oa}{\pip@rcfalse}
+\@namedef{pip@option@originalarticle}{\pip@rcfalse}
 
 \DeclareOption{ec}{\pip@ectrue}
 \DeclareOption{editorschoice}{\pip@ectrue}
@@ -36,6 +54,9 @@
 \DeclareOption{rapidcommunication}{\pip@rctrue}
 \DeclareOption{oa}{\pip@rcfalse}
 \DeclareOption{originalarticle}{\pip@rcfalse}
+
+\DeclareOption{issue}{\pip@issuetrue}
+\DeclareOption{fullissue}{\pip@issuetrue}
 
 % footinbib is on by default; intercept both spellings so that only one of
 % them is ever handed to revtex (revtex processes options in its own order,
@@ -113,12 +134,18 @@
 \newcommand{\pip@journalname}{Physics in Progress}
 \newcommand{\pip@journalabbrev}{Phys. in Prog.}
 
-% Article type shown top-right on page 1 and in the running head.
-\ifpip@rc
-  \newcommand{\pip@typename}{Rapid Communication}
-\else
-  \newcommand{\pip@typename}{Original Article}
-\fi
+% Article type shown top-right on page 1 and in the running head.  Derived from
+% the rc/oa switch rather than fixed at load time, because in full-issue mode
+% each article resets the switch and asks for the name to be recomputed.
+\newcommand{\pip@typename}{}
+\newcommand{\pip@settypename}{%
+  \ifpip@rc
+    \renewcommand{\pip@typename}{Rapid Communication}%
+  \else
+    \renewcommand{\pip@typename}{Original Article}%
+  \fi
+}
+\pip@settypename
 
 % Escape hatch for an article type the options do not cover
 % (e.g. \articletypename{Comment}).
@@ -269,7 +296,7 @@
   \end{tikzpicture}%
 }
 
-%% The banner goes into the page background of the first page only.
+%% The banner goes into the page background of the article's title page.
 %%
 %% This used to be done with \RequirePackage[firstpage=true]{background}, but
 %% that route is not reliable on a current LaTeX kernel: background v2.1 (2014)
@@ -279,29 +306,50 @@
 %% no extra \usepackage lines silently came out with NO banner at all, while the
 %% same file plus an unrelated package rendered correctly.
 %%
-%% The kernel's own shipout hook has no such ambiguity.  A one-shot boolean is
-%% used rather than a page-number test because revtex may renumber pages.
+%% The kernel's own shipout hook has no such ambiguity.  The trigger is a flag
+%% raised by \maketitle rather than a page-number test: revtex may renumber
+%% pages, and in full-issue mode the banner has to reappear on the title page of
+%% every article, not just on the first page of the file.  Nothing is shipped
+%% out between \maketitle and the page carrying the title, so the flag always
+%% lands on the right sheet.
 \@ifundefined{AddToHook}{%
   \ClassError{physicsinprogress}
     {This class needs LaTeX 2020/10/01 or newer}
-    {The first-page banner is placed with the kernel hook \protect\AddToHook,
+    {The banner is placed with the kernel hook \protect\AddToHook,
      which your LaTeX is too old to provide.  Please update your TeX
      distribution.}%
 }{%
-  \newif\ifpip@bannerdone
+  \newif\ifpip@bannerpending
   \AddToHook{shipout/background}{%
-    \ifpip@bannerdone\else
-      \global\pip@bannerdonetrue
+    \ifpip@bannerpending
+      \global\pip@bannerpendingfalse
       \pip@bannerpicture
     \fi
   }%
 }
 
-% The banner sits where revtex would otherwise start the title, so the first
+% The banner sits where revtex would otherwise start the title, so the title
 % page needs to begin a little lower.  The old preambles did this by hand with
 % a \vspace*{25pt} typed after \begin{document}; the class now does it for you.
 \newlength{\piptitledrop}       \setlength{\piptitledrop}{25pt}
-\AtBeginDocument{\vspace*{\piptitledrop}}
+
+% \maketitle is wrapped rather than patched: the wrapper raises the banner flag
+% and, in full-issue mode, keeps revtex's \label{FirstPage} from colliding with
+% the next article's.  revtex does \let\maketitle\relax on its way out, so the
+% wrapper is stashed under a private name for full-issue mode to restore.
+\AtBeginDocument{%
+  \let\pip@ltx@maketitle\maketitle
+  \def\maketitle{%
+    \global\pip@bannerpendingtrue
+    \ifpip@issue
+      \let\pip@saved@label\label
+      \let\label\pip@titlelabel
+    \fi
+    \pip@ltx@maketitle
+    \ifpip@issue\let\label\pip@saved@label\fi
+  }%
+  \ifpip@issue\else\vspace*{\piptitledrop}\fi
+}
 
 %% ---------------------------------------------------------------------------
 %% Running heads (page 2 onwards)
@@ -324,5 +372,310 @@
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 \renewcommand{\footrulewidth}{0pt}
+
+%% ---------------------------------------------------------------------------
+%% Full-issue mode (class option `issue')
+%%
+%% One document in the project root swallows every manuscript and numbers the
+%% pages straight through:
+%%
+%%   \documentclass[issue]{physicsinprogress}
+%%   \pipvolume{2}
+%%   \pipissuedate{Feb. 2026}
+%%   \usepackage{siunitx}
+%%   \begin{document}
+%%   \pipaddarticle{Manuscripts/BV_CoupledPendulum}
+%%   \pipaddarticle[Manuscript]{Manuscripts/Semaje_PhotoElect}
+%%   \end{document}
+%%
+%% The manuscripts are *not* modified for this: each one stays a standalone
+%% document that still compiles on its own.  \pipaddarticle \include's the file
+%% and the class throws away everything from \documentclass to \begin{document}
+%% -- but reads the option list off that \documentclass line first, so `rc' and
+%% `ec' stay with the manuscript that they describe instead of being restated
+%% in the issue file.
+%%
+%% Consequences worth knowing about:
+%%
+%%   * A manuscript's own preamble is skipped, so packages it loads (siunitx,
+%%     say) must be loaded by the issue document instead.  So must anything
+%%     else it sets there -- \articletypename, custom macros, \setlength.
+%%   * \label keys must be unique across the whole issue.  LaTeX says
+%%     "Label `x' multiply defined" if they are not; the class handles revtex's
+%%     own internal FirstPage / LastBibItem labels itself.
+%%   * Each article keeps its own reference list, numbered from 1, via
+%%     chapterbib.  This needs one BibTeX run per article; latexmk (and hence
+%%     Overleaf) does that automatically, given the `latexmkrc' that ships in
+%%     the project root -- see the \bibliography section below for why.
+%% ---------------------------------------------------------------------------
+
+\def\pip@artdir{}
+\def\pip@artbase{manuscript}
+\let\pip@bibfiles\@empty
+\def\pip@firstpagelabel{FirstPage}
+\def\pip@lastbibitemlabel{LastBibItem}
+
+% revtex writes \label{FirstPage} from inside \maketitle and \label{LastBibItem}
+% from inside the bibliography, once per article.  These rewriters give each
+% article its own copy of those two names; every other label passes through
+% untouched.  \pip@saved@label / \pip@saved@ref hold the real commands, and are
+% installed by whoever swaps these in.
+\newcommand{\pip@titlelabel}[1]{%
+  \def\pip@tempa{#1}\def\pip@tempb{FirstPage}%
+  \ifx\pip@tempa\pip@tempb
+    \expandafter\pip@saved@label\expandafter{\pip@firstpagelabel}%
+  \else
+    \pip@saved@label{#1}%
+  \fi
+}
+\newcommand{\pip@biblabel}[1]{%
+  \def\pip@tempa{#1}\def\pip@tempb{LastBibItem}%
+  \ifx\pip@tempa\pip@tempb
+    \expandafter\pip@saved@label\expandafter{\pip@lastbibitemlabel}%
+  \else
+    \pip@saved@label{#1}%
+  \fi
+}
+\newcommand{\pip@bibref}[1]{%
+  \def\pip@tempa{#1}\def\pip@tempb{LastBibItem}%
+  \ifx\pip@tempa\pip@tempb
+    \expandafter\pip@saved@ref\expandafter{\pip@lastbibitemlabel}%
+  \else
+    \pip@saved@ref{#1}%
+  \fi
+}
+
+\ifpip@issue
+
+\newcounter{pip@article}
+\newcount\pip@nesting
+
+% The state the issue's own \documentclass options asked for.  Every article
+% starts from here and then applies its own options on top.
+\edef\pip@defaultstate{%
+  \ifpip@ec\noexpand\pip@ectrue\else\noexpand\pip@ecfalse\fi
+  \ifpip@rc\noexpand\pip@rctrue\else\noexpand\pip@rcfalse\fi
+}
+
+%% --- per-article reset ------------------------------------------------------
+%%
+%% revtex's \maketitle disables the frontmatter commands on its way out
+%% (\let\author\@gobble, \let\maketitle\relax, \let\abstract\@undefined, ...),
+%% which is why a second \title/\author/\maketitle in the same document
+%% normally does nothing.  Snapshot them while they still work and put them
+%% back before each article; \frontmatter@init is revtex's own routine for
+%% clearing the collected author/affiliation lists.
+
+\newcommand{\pip@fmsave}{%
+  \@for\pip@tempc:=maketitle,title,author,affiliation,altaffiliation,%
+collaboration,noaffiliation,email,homepage,thanks,and,keywords,pacs,date,%
+abstract,endabstract\do{%
+    \ifcsname\pip@tempc\endcsname
+      \expandafter\let\csname pip@fm@\pip@tempc\expandafter\endcsname
+                      \csname\pip@tempc\endcsname
+    \fi
+  }%
+  \let\pip@fm@AFjoin\@AF@join
+}
+\newcommand{\pip@fmrestore}{%
+  \@for\pip@tempc:=maketitle,title,author,affiliation,altaffiliation,%
+collaboration,noaffiliation,email,homepage,thanks,and,keywords,pacs,date,%
+abstract,endabstract\do{%
+    \ifcsname pip@fm@\pip@tempc\endcsname
+      \expandafter\let\csname\pip@tempc\expandafter\endcsname
+                      \csname pip@fm@\pip@tempc\endcsname
+    \fi
+  }%
+  \let\@AF@join\pip@fm@AFjoin
+}
+
+\newcommand{\pip@resetarticle}{%
+  \pip@fmrestore
+  \frontmatter@init
+  \pip@defaultstate    % \pip@settypename follows once the article's own options
+                       % have been applied on top of this
+  \setcounter{section}{0}%
+  \setcounter{subsection}{0}\setcounter{subsubsection}{0}%
+  \setcounter{paragraph}{0}\setcounter{subparagraph}{0}%
+  \setcounter{figure}{0}\setcounter{table}{0}\setcounter{equation}{0}%
+  \ifcsname c@parentequation\endcsname\setcounter{parentequation}{0}\fi
+  \ifcsname c@video\endcsname\setcounter{video}{0}\fi
+  \ifcsname c@NAT@ctr\endcsname\setcounter{NAT@ctr}{0}\fi
+  % The footnote counter deliberately keeps running under `footinbib': revtex
+  % turns each footnote into a bibliography entry keyed Note<n>, and those keys
+  % have to stay distinct across the whole issue.  Nothing shows -- the mark the
+  % reader sees is the citation number, which does restart per article.
+  \ifpip@footinbib\else\setcounter{footnote}{0}\fi
+}
+
+%% --- reading the manuscript's own \documentclass ---------------------------
+
+\@namedef{pip@option@issue}{}      % harmless if a manuscript ever carries it
+\@namedef{pip@option@fullissue}{}
+
+\newcommand{\pip@setartoptions}[1]{%
+  \@for\pip@tempc:=#1\do{%
+    % \romannumeral-`0 expands its way through, and past, any leading spaces,
+    % so `[rc, ec]' works as well as `[rc,ec]'.
+    \edef\pip@tempc{\romannumeral-`0\pip@tempc}%
+    \ifcsname pip@option@\pip@tempc\endcsname
+      \csname pip@option@\pip@tempc\endcsname
+    \else
+      \ClassWarning{physicsinprogress}%
+        {Ignoring option `\pip@tempc' from \pip@artdir\space -- full-issue mode
+         only reads the journal options (ec/noec, rc/oa) off a manuscript's
+         \protect\documentclass\space line}%
+    \fi
+  }%
+}
+
+\def\pip@documentenvname{document}
+
+% Swallow everything between \documentclass and \begin{document}.  The loop
+% skips any other environment it meets on the way, so a preamble that opens a
+% \begin{tikzpicture} inside a macro argument does not stop it early.
+\long\def\pip@gobblepreamble#1\begin#2{%
+  \def\pip@tempa{#2}%
+  \ifx\pip@tempa\pip@documentenvname
+    \begin{document}%
+  \else
+    \expandafter\pip@gobblepreamble
+  \fi
+}
+
+\newcommand{\pip@documentclass}{%
+  \@ifnextchar[\pip@documentclass@{\pip@documentclass@[]}%
+}
+\def\pip@documentclass@[#1]#2{%
+  \stepcounter{pip@article}%
+  \edef\pip@firstpagelabel{pip@firstpage@\thepip@article}%
+  \edef\pip@lastbibitemlabel{pip@lastbibitem@\thepip@article}%
+  \pip@resetarticle
+  \pip@setartoptions{#1}%
+  \pip@settypename
+  \edef\pip@tempa{\noexpand\graphicspath{{\pip@artdir/}{./}}}\pip@tempa
+  \pip@gobblepreamble
+}
+
+% Neutralise \begin{document} / \end{document} inside an included manuscript.
+% Same shape as the docmute package: the real \document runs once, for the issue
+% file, and installs a replacement environment for the articles.  The
+% \piptitledrop that a standalone article gets at \begin{document} is applied
+% here instead, once per article.
+\let\pip@ltx@document\document
+\let\pip@ltx@enddocument\enddocument
+\def\document{%
+  \pip@ltx@document
+  \pip@nesting\z@
+  \let\documentclass\pip@documentclass
+  \renewenvironment{document}{%
+    \endgroup
+    \advance\pip@nesting\@ne
+    \vspace*{\piptitledrop}%
+    \ignorespaces
+  }{%
+    \ifnum\pip@nesting=\z@
+      \expandafter\pip@ltx@enddocument
+    \else
+      \advance\pip@nesting\m@ne
+      \begingroup
+      \@ignoretrue
+      \def\@currenvir{document}%
+      \endinput
+    \fi
+  }%
+  \ignorespaces
+}
+
+%% --- one reference list per article ----------------------------------------
+%%
+%% chapterbib gives each \include'd file its own bibliography, numbered from 1,
+%% with its own BibTeX run over its own databases.  It also keeps the numbering
+%% straight when two articles cite the same key: each gets its own number for it
+%% rather than both picking up whichever one was defined last.
+\RequirePackage{chapterbib}
+
+% Without this, revtex emits \bibliography{} at the very end of the run for the
+% "document with no bibliography" case.  In issue mode every article has called
+% \bibliography already, and the extra one writes \bibdata{} into the master
+% .aux, which makes BibTeX throw away every database it was given.
+\let\auto@bib\@empty
+
+% chapterbib replaces \bibliography wholesale, which loses two things revtex
+% needs: the endnote database that `footinbib' writes (where the \footnote text
+% lives, so that it can come out as a numbered reference), and a \bibstyle line
+% -- revtex defers that to the end of the document, so it lands in the master
+% .aux and never in the per-article one BibTeX is actually run on.  Put both
+% back.
+%
+% Database names are also rewritten to sit under the article's own directory,
+% so that a manuscript's \bibliography{bib} keeps resolving when the issue is
+% built from the project root.  This is what `latexmkrc' in the project root is
+% for: it turns off latexmk's habit of chdir'ing into the folder that holds the
+% .aux file before calling BibTeX, which would otherwise leave these paths
+% pointing at nothing.  Several manuscripts name their database `bib.bib', so
+% resolving them by search path instead of by full path is not an option --
+% BibTeX would silently hand an article the wrong references.
+\newcommand{\pip@bibstyle}{apsrev4-2}
+\let\pip@cb@bibliography\bibliography
+
+\newcommand{\pip@prefixbibs}[1]{%
+  \let\pip@bibfiles\@empty
+  \@for\pip@tempc:=#1\do{%
+    \edef\pip@tempc{\romannumeral-`0\pip@tempc}%
+    \ifx\pip@bibfiles\@empty
+      \edef\pip@bibfiles{\pip@artdir/\pip@tempc}%
+    \else
+      \edef\pip@bibfiles{\pip@bibfiles,\pip@artdir/\pip@tempc}%
+    \fi
+  }%
+}
+
+\renewcommand{\bibliography}[1]{%
+  \if@filesw
+    \immediate\write\@auxout{\string\bibstyle{\pip@bibstyle}}%
+  \fi
+  \pip@prefixbibs{#1}%
+  % \pre@bibdata is revtex's endnote database (jobnameNotes.bib, holding the
+  % \footnote text that `footinbib' turns into numbered references).  It lives
+  % in the project root, next to the issue file, so it is not prefixed.
+  \edef\pip@bibfiles{\pre@bibdata,\pip@bibfiles}%
+  \let\pip@saved@label\label \let\label\pip@biblabel
+  \let\pip@saved@ref\ref     \let\ref\pip@bibref
+  \expandafter\pip@cb@bibliography\expandafter{\pip@bibfiles}%
+  \let\label\pip@saved@label \let\ref\pip@saved@ref
+}
+
+%% --- the user-facing command ------------------------------------------------
+
+% Everything per-article hangs off the manuscript's own \documentclass line, so
+% say something useful rather than misbehaving silently if there isn't one.
+\newcommand{\pipaddarticle}[2][manuscript]{%
+  \def\pip@artdir{#2}%
+  \def\pip@artbase{#1}%
+  \edef\pip@artcheck{\thepip@article}%
+  \include{#2/#1}%
+  \edef\pip@tempa{\thepip@article}%
+  \ifx\pip@tempa\pip@artcheck
+    \ClassWarning{physicsinprogress}%
+      {No \protect\documentclass\space line in #2/#1.tex.
+       \protect\pipaddarticle\space expects a standalone manuscript; without
+       that line the article's options, counters and banner are never reset}%
+  \fi
+}
+
+\else   % ------------------------------------------------- not full-issue mode
+
+\newcommand{\pipaddarticle}[2][manuscript]{%
+  \ClassError{physicsinprogress}
+    {\protect\pipaddarticle\space needs the `issue' class option}
+    {\protect\pipaddarticle\space assembles a whole issue out of standalone
+     manuscripts, which only works in a document declared as
+     \protect\documentclass[issue]{physicsinprogress}.}%
+}
+
+\fi
+
+\AtBeginDocument{\ifpip@issue\pip@fmsave\fi}
 
 \endinput
