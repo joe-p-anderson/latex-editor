@@ -112,7 +112,7 @@
             <div class="group">{label}</div>
             {#each group as s (s.id)}
               <button class="item" class:on={chosen?.id === s.id} role="option" aria-selected={chosen?.id === s.id} onclick={() => pick(s)}>
-                {s.name}<span class="ext">{s.ext}</span>
+                <span class="name">{s.name}</span><span class="ext">{s.ext}</span>
               </button>
             {/each}
           {/if}
@@ -187,30 +187,53 @@
     overflow: auto;
     display: flex;
     flex-direction: column;
+    gap: 1px;
     border-right: 1px solid var(--line);
-    padding-right: 8px;
+    padding: 2px 6px 2px 0;
   }
+  /* Labels share the rows' 6px inset so their text lines up. */
   .group {
-    margin: 8px 0 2px;
+    margin: 10px 0 2px;
+    padding: 0 6px;
     font-size: 11px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--ink-soft);
   }
+  .group:first-child {
+    margin-top: 0;
+  }
   .item {
+    flex: none;
+    display: flex;
+    align-items: baseline;
+    width: 100%;
+    min-width: 0;
     text-align: left;
     border: 0;
     border-radius: 4px;
     background: none;
     padding: 4px 6px;
   }
+  .name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* Inside the row: .list scrolls, so an outside ring would be clipped. */
+  .item:focus-visible {
+    outline-offset: -2px;
+  }
   .item:hover,
   .item.on {
     background: var(--sel);
   }
   .ext {
+    flex: none;
     color: var(--ink-soft);
-    margin-left: 6px;
+    margin-left: auto;
+    padding-left: 8px;
     font-size: 12px;
   }
   .form {

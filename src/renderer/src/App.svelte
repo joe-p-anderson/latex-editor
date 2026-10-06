@@ -1190,7 +1190,8 @@
       if (tabs.length) openFile(tabs[(i + (key === 'pagedown' ? 1 : -1) + tabs.length) % tabs.length])
     } else if (key === 'w' && plain) {
       if (active) closeTab(active)
-    } else if (key === 'p' && plain) quickOpen = true
+    } else if (key === 'n' && plain) newFile(tree?.targetDir() ?? '')
+    else if (key === 'p' && plain) quickOpen = true
     else if (key === 'p' && e.shiftKey && !e.altKey) palette = true
     else if (key === 's' && e.altKey && !e.shiftKey) saveAll()
     else if (key === 'h' && e.shiftKey && !e.altKey) openSearch()
