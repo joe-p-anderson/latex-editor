@@ -24,7 +24,6 @@ What would make this a better LaTeX editor, roughly in order of payoff. Items ma
 - **Drawing help.** Live-preview a single `tikzpicture` without compiling the whole document. Start from free-body diagram and circuit templates.
 - **Copying from the PDF.** Select text in the PDF and jump to the source that made it.
 - **A print dialog.** Print the current PDF from the app, with the usual printer, page range and copies options.
-- **Drag a PDF's filename to copy it.** Drag the compiled PDF (from the header or the viewer) into Explorer, an email or an LMS upload box, and the file goes with it.
 
 ## Across a semester
 
@@ -42,6 +41,41 @@ What would make this a better LaTeX editor, roughly in order of payoff. Items ma
 - **New paper from a journal template.** Recently used classes, the template folder, and a curated journal list (revtex, elsarticle, IEEEtran, …). Each is marked installed or available, and MiKTeX installs a missing class, with progress shown.
 - **Submission bundle.** Flatten the `\input`s into one file, include the `.bbl`, keep only the figures used, and zip it for arXiv or a journal.
 - **Page checks before printing.** Flag an overfull box as a visible marker in the PDF. Warn when a question splits across a page break, and give a page count.
+
+## Teaching
+
+Making the app usable by students learning LaTeX, who need to produce *Physics in Progress* manuscripts (`fixtures/vaults/Physics_in_Progress_Issue_2`). The diagnosed errors and quick fixes already cover what breaks the build. These ideas cover the rest: starting a manuscript correctly, and the house-style mistakes that compile fine. Every example below comes from a Volume 2 manuscript.
+
+- **New PiP manuscript.** A form that asks for the title, author, article type (`rc`/`oa`), Editor's Suggestion, and the received and published dates. It creates `Manuscripts/<Lastname_Topic>/manuscript.tex` from `template.tex`, plus an empty `bib.bib`, and opens it. This is a narrower first step towards "New paper from a journal template". It would stop the leftovers in the vault: `apssamp.bib`, `sorsamp.bib` and `sorsamp.tex` in `Semaje_ElecDiff`, the APS sample's comments in `Semaje_PhotoElect`, and `%PIP-…OA046` tracking comments that contradict an `rc` option.
+- **A locked preamble.** In a teaching mode the folded preamble is read-only, and a few named controls stand in for it: Editor's Suggestion, article type, add siunitx.
+- **A section skeleton.** The required sections in order: Introduction, …, Conclusion, Acknowledgments, Data Availability Statement, `\bibliography`. Each holds a line of guidance that is flagged until it's replaced. Template placeholders (the `Logo.pdf` figure, "Replace with a real figure") are flagged the same way.
+- **A house-style checker.** Warnings with a one-click fix and a one-line "why", switched on per vault and worded to teach rather than nag. It builds on "Warnings while you edit" above. The rules, each from a real manuscript:
+  - `\ref` with no "Fig." (`As can be seen in \ref{fig:FBDs}`), and `fig \ref`, `eq. \ref`, `eq.\ref`: use `\cref`, which the template uses, or `Eq.~\eqref`.
+  - Units typed by hand (`$\text{C}$`, `$2.78\text{eV}$`, `$546 $ nm`, `7.560 mm`): use `\qty{…}{…}`, and add `\usepackage{siunitx}` if it's missing.
+  - A number with no leading zero (`.0913`): add the zero. An uncertainty becomes `\qty{1.569 \pm 0.091}{…}`.
+  - A word written as an italic subscript (`V_{stop}`): use `V_{\text{stop}}`.
+  - An accent over a subscript (`\bar{v_f}`): use `\bar{v}_f`.
+  - Labels with no prefix (`noPolEq`, `Frequency`) or with a space (`E electron`): suggest `eq:`, `fig:` and `tab:`.
+  - `\ \\` and a bare `\\` used for spacing: remove them, and explain how paragraphs work.
+  - Unicode pasted from Word (`Pa·m`, `°C`, curly `’`): use `\unit{\pascal\metre}`, `\qty{25.5}{\celsius}` and a plain `'`.
+  - `width=1\linewidth` on a detailed plot: explain that this is one column of a two-column page, and offer `figure*`.
+  - No comma or full stop after a display equation: a gentle hint only, since this is less certain.
+- **A units helper for students.** Typing `9.81 m/s^2` or `6.5(2)e-34 J s` in prose offers the `\qty` form. This is the same helper as under "Faster math typing", made a priority. `\SI` or `\qty` with no siunitx loaded gets a direct fix: the class leaves siunitx out on purpose, and the undefined-command error doesn't make that clear.
+- **Drag in a figure.** Dropping an image on the editor copies it into the manuscript's folder and inserts the figure that Ctrl+Shift+F makes. It warns about spaces in filenames (`Graph of Indicies.png`, `Sv vs Dist.png`, `Lab 4 Schematic.pdf`).
+- **A citation from a DOI.** Paste a DOI and get a `.bib` entry, for students who don't have Zotero set up.
+- **A pre-submission check.** Before the PDF goes to the editor, check for:
+  - undefined refs and cites;
+  - placeholders still in the text;
+  - a `\cite` in the abstract;
+  - a page count over the limit for the article type;
+  - overfull boxes;
+  - labels that clash with another manuscript's, which would break `issue.tex`.
+- **Revision rounds.** Students now mark changes by hand: `Braedon_EoverM/marked.tex` wraps each change in `\textcolor{red}{…}`, adds "% TITLE COMPLETELY CHANGED" comments, and has gone back to bare `revtex4-2`.
+  - **Snapshot as submitted / Show changes since submission.** This produces the red-marked PDF automatically, latexdiff-style, from the snapshot. It goes with "Git history for each file".
+  - **Instructor comments anchored to source lines.** They show in the live view and in Problems, so feedback sits where the fix goes.
+- **Click to learn.** Alt+click a rendered construct (a `\qty`, an `align`, a `\cref` chip) for a short paragraph on the LaTeX behind it.
+
+Suggested order: the new-manuscript form and skeleton; the checker, starting with the refs, units and labels rules; the units helper; the pre-submission check; revision snapshots.
 
 ## Plugins
 

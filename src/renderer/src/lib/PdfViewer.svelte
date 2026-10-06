@@ -16,6 +16,7 @@
     onsyncclick,
     onclose,
     scope = null,
+    canDrag = true,
   }: {
     pdf: string | null
     version: number
@@ -27,6 +28,8 @@
      * section (`label`, e.g. §III) or the whole paper, and the switch.
      */
     scope?: { label: string; section: boolean; onchange: (section: boolean) => void } | null
+    /** Whether the PDF is a finished build, which can be dragged out into other apps (not a draft preview). */
+    canDrag?: boolean
   } = $props()
 
   let scroller: HTMLDivElement
@@ -158,7 +161,21 @@
         <button class:on={scope.section} onclick={() => scope.onchange(true)} title="Build just this section as you work, numbered as in the paper">{scope.label}</button>
         <button class:on={!scope.section} onclick={() => scope.onchange(false)} title="Build the whole paper{pageCount ? ` (showing ${pageCount} page${pageCount === 1 ? '' : 's'})` : ''}">Paper</button>
       </span>
-    {:else if pdf}<span class="what" title={pdf}>{pdf.split(/[\\/]/).pop()}{#if pageCount} · {pageCount} {pageCount === 1 ? 'page' : 'pages'}{/if}</span>{/if}
+    {:else if pdf}
+      {#if canDrag}
+        <span
+          class="grip"
+          role="img"
+          aria-label="Drag the PDF into another app"
+          title="Drag the PDF into email, a folder or an upload"
+          draggable="true"
+          ondragstart={(e) => {
+            e.preventDefault()
+            if (pdf) window.api.dragPdf(pdf)
+          }}>⠿</span>
+      {/if}
+      <span class="what" title={pdf}>{pdf.split(/[\\/]/).pop()}{#if pageCount} · {pageCount} {pageCount === 1 ? 'page' : 'pages'}{/if}</span>
+    {/if}
     <button onclick={() => (zoom = Math.max(0.4, zoom - 0.1))} title="Zoom out">−</button>
     <button onclick={() => (zoom = 1)} title="Fit the width ({Math.round(zoom * 100)}% now)">Fit</button>
     <button onclick={() => (zoom = Math.min(3, zoom + 0.1))} title="Zoom in">+</button>
@@ -179,6 +196,15 @@
     position: relative;
     /* the PDF lies on the vault's endpaper */
     background: var(--marbleimg) center / cover, var(--desk);
+  }
+  .grip {
+    cursor: grab;
+    opacity: 0.7;
+    margin-right: -4px;
+    user-select: none;
+  }
+  .grip:hover {
+    opacity: 1;
   }
   .scope {
     display: inline-flex;

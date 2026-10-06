@@ -8,12 +8,15 @@ import type { CompletionContext, CompletionResult } from '@codemirror/autocomple
 import { EditorState, type Extension } from '@codemirror/state'
 import { EditorView, hoverTooltip } from '@codemirror/view'
 import { fuzzyFilter, includegraphicsArgAt, isImage } from '@shared/images'
+import { dropText } from '@shared/paths'
 import { thumbnail } from './thumbnails'
 
 /** What the editor adds to the app's hooks: where the open file is. */
 export type ImageSupportHooks = ImageHooks & {
   /** The open file's folder, vault-relative ('' at the root): relative image paths are tried there first. */
   dir(): string
+  /** Whether the open file is LaTeX (files dropped in from the tree insert commands only there). */
+  isTex(): boolean
 }
 
 export interface ImageHooks {
@@ -60,6 +63,16 @@ export function imageSupport(hooks: ImageSupportHooks): Extension {
 
     EditorView.domEventHandlers({
       drop(event, view) {
+        // Files dragged in from the file tree.
+        const dragged = event.dataTransfer?.getData('application/x-endleaf-rels')
+        if (dragged) {
+          event.preventDefault()
+          const pos = view.posAtCoords({ x: event.clientX, y: event.clientY }) ?? view.state.selection.main.head
+          const biblatex = /\\usepackage(\[[^\]]*\])?\{[^}]*biblatex/.test(view.state.doc.toString())
+          const rels = (JSON.parse(dragged) as string[]).filter((r) => !/\/$/.test(r))
+          insertAt(view, pos, dropText(rels, hooks.dir(), hooks.isTex(), biblatex, includegraphics))
+          return true
+        }
         const files = [...(event.dataTransfer?.files ?? [])].filter((f) => isImage(f.name))
         if (!files.length) return false
         event.preventDefault()

@@ -26,6 +26,9 @@
   import { renameKeyChanges, replacementChanges, searchText, type SearchMatch, type SearchOptions } from '@shared/search'
   import SearchPanel from './lib/SearchPanel.svelte'
   import PromptDialog from './lib/PromptDialog.svelte'
+  import NewFileDialog from './lib/NewFileDialog.svelte'
+  import { findReferences, retarget, type RefChange } from '@shared/references'
+  import { badName, basename as baseName, dirname as dirName, isInside, joinRel, movedPath, type Move } from '@shared/paths'
   import TableEditor from './lib/TableEditor.svelte'
   import { insertRow, newTable, packagesFor, parseTable, pasteGrid, serializeTable, type TableModel } from '@shared/tablemodel'
   import { normalizeEol } from '@shared/search'
@@ -74,16 +77,25 @@
   // A short-lived message in the header (e.g. why a jump went nowhere),
   // perhaps with an action such as Undo, which Ctrl+Z also runs while it shows.
   let note = $state<string | null>(null)
-  let noteAction = $state<{ label: string; run: () => void } | null>(null)
+  type NoteAction = { label: string; run: () => void; onExpire?: () => void }
+  let noteAction = $state<NoteAction | null>(null)
   let noteTimer: ReturnType<typeof setTimeout> | undefined
-  function flash(msg: string, action?: { label: string; run: () => void }): void {
+  /** `onExpire` runs when the message goes away without its action being taken (timed out, or replaced). */
+  function flash(msg: string, action?: NoteAction): void {
+    noteAction?.onExpire?.()
     note = msg
     noteAction = action ?? null
     clearTimeout(noteTimer)
-    noteTimer = setTimeout(() => ((note = null), (noteAction = null)), action ? 6000 : 3500)
+    noteTimer = setTimeout(() => {
+      const expired = noteAction
+      note = null
+      noteAction = null
+      expired?.onExpire?.()
+    }, action ? 6000 : 3500)
   }
   function runNoteAction(): void {
     const action = noteAction
+    clearTimeout(noteTimer)
     note = null
     noteAction = null
     action?.run()
@@ -479,16 +491,7 @@
       flash(`Couldn't rename: ${(e as Error).message}`)
       return false
     }
-    for (const r of plan) {
-      editor.rename(r.from, r.to)
-      tabs = tabs.map((t) => (t === r.from ? r.to : t))
-      mru = mru.map((t) => (t === r.from ? r.to : t))
-      if (dirty.has(r.from)) {
-        setDirty(r.from, false)
-        setDirty(r.to, true)
-      }
-      if (active === r.from) active = r.to
-    }
+    followMoves(plan)
     return true
   }
 
@@ -933,6 +936,7 @@
   /** Menu items the renderer carries out (most also have a shortcut, handled in onkeydown). */
   function menuCommand(name: string): void {
     if (name === 'quick-open') quickOpen = true
+    else if (name === 'new-file') newFile(tree?.targetDir() ?? '')
     else if (name === 'save-all') saveAll()
     else if (name === 'find-in-vault') openSearch()
     else if (name === 'insert-image' && active?.endsWith('.tex')) picker = { mode: 'insert', initial: '' }
@@ -1239,6 +1243,172 @@
     if (!to) return
     forgetTab(rel)
     flash(`Moved to ${to}`)
+  }
+
+  // --- File tree actions ------------------------------------------------------
+
+  let tree = $state<FileTree>()
+
+  /** Open files follow a move on disk: tabs, unsaved text, history and the editor's state. */
+  function followMoves(moves: Move[]): void {
+    if (!editor) return
+    const re = (r: string) => movedPath(r, moves) ?? r
+    for (const rel of new Set([...tabs, ...(active ? [active] : [])])) {
+      const to = movedPath(rel, moves)
+      if (to) editor.rename(rel, to)
+    }
+    tabs = tabs.map(re)
+    mru = mru.map(re)
+    if (dirty.size) dirty = new Set([...dirty].map(re))
+    if (active) active = re(active)
+    backStack = backStack.map((p) => ({ ...p, rel: re(p.rel) }))
+    forwardStack = forwardStack.map((p) => ({ ...p, rel: re(p.rel) }))
+    keptInVault = new Set([...keptInVault].map(re))
+  }
+
+  /** Moves files on disk, takes the open tabs along, and offers an Undo. */
+  async function moveFiles(moves: Move[], what?: string): Promise<boolean> {
+    if (!moves.length) return false
+    // What existed before, for working out which references the move breaks.
+    const before = vault ? [...allFiles(vault.tree), ...allFolders(vault.tree)] : []
+    try {
+      await window.api.moveFiles(moves)
+    } catch (e) {
+      flash(`Couldn't move: ${(e as Error).message}`)
+      return false
+    }
+    // Before the watcher reports the old paths gone, which would close their tabs.
+    followMoves(moves)
+    const back = moves.map((m) => ({ from: m.to, to: m.from }))
+    flash(what ?? `Moved ${moves.length} item${moves.length === 1 ? '' : 's'}`, {
+      label: 'Undo',
+      run: () => void moveFiles(back, 'Move undone'),
+    })
+    void offerReferenceUpdates(moves, before)
+    return true
+  }
+
+  // After a move, the references in .tex files that it broke, offered for fixing.
+  interface RefFile {
+    rel: string
+    before: string
+    changes: RefChange[]
+  }
+  let refOffer = $state<{ files: RefFile[]; count: number; show: boolean } | null>(null)
+
+  async function offerReferenceUpdates(moves: Move[], before: string[]): Promise<void> {
+    refOffer = null
+    const known = new Set(before)
+    const found: RefFile[] = []
+    for (const old of before.filter((f) => /\.tex$/i.test(f))) {
+      const now = movedPath(old, moves) ?? old
+      const text = editor?.textOf(now) ?? (await window.api.readFile(now).catch(() => null))
+      if (text == null) continue
+      const changes = retarget(findReferences(normalizeEol(text), old, (r) => known.has(r)), moves, old)
+      if (changes.length) found.push({ rel: now, before: normalizeEol(text), changes })
+    }
+    const count = found.reduce((n, f) => n + f.changes.length, 0)
+    if (count) refOffer = { files: found, count, show: false }
+  }
+
+  const applyChanges = (text: string, changes: { from: number; to: number; insert: string }[]) =>
+    [...changes].sort((a, b) => b.from - a.from).reduce((t, c) => t.slice(0, c.from) + c.insert + t.slice(c.to), text)
+
+  async function updateReferences(): Promise<void> {
+    const offer = refOffer
+    refOffer = null
+    if (!offer) return
+    try {
+      for (const f of offer.files) await editAndSave(f.rel, () => f.changes)
+    } catch (e) {
+      flash(`Couldn't update the references: ${(e as Error).message}`)
+      return
+    }
+    const n = offer.count
+    flash(`Updated ${n} reference${n === 1 ? '' : 's'} in ${offer.files.length} file${offer.files.length === 1 ? '' : 's'}`, {
+      label: 'Undo',
+      run: async () => {
+        for (const f of offer.files) {
+          const after = applyChanges(f.before, f.changes)
+          await editAndSave(f.rel, (cur) => (cur === after ? [{ from: 0, to: cur.length, insert: f.before }] : []))
+        }
+      },
+    })
+  }
+
+  async function renameInTree(rel: string, name: string): Promise<void> {
+    const to = joinRel(dirName(rel), name)
+    await moveFiles([{ from: rel, to }], `Renamed to ${name}`)
+  }
+
+  async function copyIntoVault(paths: string[], dir: string): Promise<void> {
+    try {
+      const rels = await window.api.copyIn(paths, dir)
+      flash(`Copied ${rels.length} item${rels.length === 1 ? '' : 's'} into ${dir || vault?.name}`)
+    } catch (e) {
+      flash(`Couldn't copy: ${(e as Error).message}`)
+    }
+  }
+
+  async function createFolder(dir: string, name: string): Promise<void> {
+    try {
+      await window.api.createDir(joinRel(dir, name))
+    } catch (e) {
+      flash(`Couldn't make the folder: ${(e as Error).message}`)
+    }
+  }
+
+  async function deleteFiles(rels: string[]): Promise<void> {
+    // The only delete that ever asks: files with unsaved changes.
+    const unsaved = [...dirty].filter((d) => rels.some((r) => isInside(d, r)))
+    if (unsaved.length) {
+      const answer = await window.api.askAboutUnsaved(unsaved, 'deleting')
+      if (answer === 'cancel') return
+      // Saving first means Undo brings the saved text back.
+      if (answer === 'save') {
+        for (const rel of unsaved) {
+          const text = editor?.textOf(rel)
+          if (text != null) await window.api.writeFile(rel, text)
+        }
+      }
+    }
+    let token: string
+    try {
+      token = await window.api.deleteFiles(rels)
+    } catch (e) {
+      flash(`Couldn't delete: ${(e as Error).message}`)
+      return
+    }
+    for (const rel of tabs.filter((t) => rels.some((r) => isInside(t, r)))) forgetTab(rel)
+    const what = rels.length === 1 ? baseName(rels[0]) : `${rels.length} items`
+    flash(`Deleted ${what}`, {
+      label: 'Undo',
+      run: () => window.api.undeleteFiles(token).catch((e: Error) => flash(`Couldn't undo: ${e.message}`)),
+      onExpire: () => void window.api.releaseFiles(token),
+    })
+  }
+
+  // The New File dialog, with the folder it opened for.
+  let newFileIn = $state<string | null>(null)
+  const newFile = (dir: string) => (newFileIn = dir)
+  const allFolders = (nodes: TreeNode[]): string[] => nodes.flatMap((n) => (n.kind === 'dir' ? [n.rel, ...allFolders(n.children ?? [])] : []))
+
+  async function createFromStarter(rel: string, text: string): Promise<string | null> {
+    try {
+      await window.api.createFile(rel, text)
+    } catch (e) {
+      return (e as Error).message
+    }
+    newFileIn = null
+    // The watcher hasn't listed it yet; open it straight away.
+    await go(rel)
+    return null
+  }
+
+  /** A click on a file in the tree: text opens here, images in the picker, the rest in its own app. */
+  function openFromTree(rel: string): void {
+    if (isImage(rel) || TEXT_FILE.test(rel)) void go(rel)
+    else void window.api.openInDefaultApp(rel).catch((e: Error) => flash(e.message))
   }
 
   function setDirty(rel: string, isDirty: boolean): void {
@@ -1676,10 +1846,53 @@
         <!-- Each view stays mounted, so search keeps its query and results. -->
         <div class="side-body" hidden={view !== 'files'}>
           <section class="sec grow" class:open={filesSection}>
-            <button class="sec-h" onclick={() => (filesSection = !filesSection)}>
-              <Icon name="chev" size={12} /><span class="t">{vault.name}</span>
-            </button>
-            {#if filesSection}<div class="sec-b"><FileTree nodes={vault.tree} {active} {dirty} onopen={(rel) => go(rel)} /></div>{/if}
+            <div class="sec-hw">
+              <button class="sec-h" onclick={() => (filesSection = !filesSection)}>
+                <Icon name="chev" size={12} /><span class="t">{vault.name}</span>
+              </button>
+              {#if filesSection}
+                <span class="minis">
+                  <button class="mini" title="New file (Ctrl+N)" onclick={() => newFile(tree?.targetDir() ?? '')}><Icon name="newfile" size={15} /></button>
+                  <button class="mini" title="New folder" onclick={() => tree?.newFolder()}><Icon name="folder" size={15} /></button>
+                  <button class="mini" title="Collapse folders" onclick={() => tree?.collapseAll()}><Icon name="collapse" size={15} /></button>
+                </span>
+              {/if}
+            </div>
+            {#if refOffer}
+              <div class="paper-offer">
+                <span>Update {refOffer.count} reference{refOffer.count === 1 ? '' : 's'} in {refOffer.files.length} file{refOffer.files.length === 1 ? '' : 's'} to match?</span>
+                {#if refOffer.show}
+                  <ul class="ref-list">
+                    {#each refOffer.files as f (f.rel)}
+                      {#each f.changes as c}<li title={f.rel}>{f.rel}:{c.line} <code>{c.old}</code> → <code>{c.insert}</code></li>{/each}
+                    {/each}
+                  </ul>
+                {/if}
+                <span class="row">
+                  <button onclick={updateReferences}>Update</button>
+                  <button onclick={() => refOffer && (refOffer.show = !refOffer.show)}>{refOffer.show ? 'Hide' : 'Show'}</button>
+                  <button onclick={() => (refOffer = null)}>Not now</button>
+                </span>
+              </div>
+            {/if}
+            {#if filesSection}
+              <div class="sec-b">
+                <FileTree
+                  bind:this={tree}
+                  nodes={vault.tree}
+                  root={vault.root}
+                  {active}
+                  {dirty}
+                  onopen={openFromTree}
+                  onmove={(moves) => moveFiles(moves)}
+                  oncopyin={copyIntoVault}
+                  ondelete={deleteFiles}
+                  onrename={renameInTree}
+                  onnewfile={newFile}
+                  oncreatefolder={createFolder}
+                />
+              </div>
+            {/if}
           </section>
         </div>
         <!-- Contents: the open file's outline, or the paper map for a file of a marked paper. -->
@@ -1825,7 +2038,7 @@
           </section>
           <div class="splitter v" hidden={!showPdf} role="separator" aria-orientation="vertical" onpointerdown={startDrag}></div>
           <section class="pdf-pane" hidden={!showPdf}>
-            <PdfViewer bind:this={viewer} {pdf} version={pdfVersion} scope={pdfScope} onsyncclick={syncInverse} onclose={() => (pdfOpen = false)} />
+            <PdfViewer bind:this={viewer} {pdf} version={pdfVersion} scope={pdfScope} canDrag={!!result && !result.draft && !result.section} onsyncclick={syncInverse} onclose={() => (pdfOpen = false)} />
           </section>
         </div>
         <div class="splitter h" hidden={!panelOpen} role="separator" aria-orientation="horizontal" onpointerdown={dragPanel}></div>
@@ -1871,6 +2084,9 @@
   />
 {/if}
 
+{#if newFileIn !== null && vault}
+  <NewFileDialog dir={newFileIn} folders={allFolders(vault.tree)} vaultName={vault.name} oncreate={createFromStarter} oncancel={() => (newFileIn = null)} />
+{/if}
 {#if renaming}
   {@const from = renaming}
   <PromptDialog
@@ -2054,15 +2270,44 @@
   .sec-h :global(.ic) {
     transition: transform 0.15s;
   }
-  .sec.open > .sec-h :global(.ic) {
-    transform: rotate(90deg);
-  }
   .sec-h .t {
     flex: 1;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .sec-hw {
+    position: relative;
+    flex: none;
+  }
+  .sec-hw .sec-h {
+    width: 100%;
+  }
+  .sec.open > .sec-hw > .sec-h :global(.ic) {
+    transform: rotate(90deg);
+  }
+  .minis {
+    position: absolute;
+    right: 6px;
+    top: 5px;
+    display: flex;
+    gap: 2px;
+  }
+  .mini {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: var(--ink-soft);
+  }
+  .mini:hover {
+    background: var(--sel);
+    color: var(--ink);
   }
   .sec-b {
     flex: 1;
@@ -2075,6 +2320,14 @@
   .paper-offer .row {
     display: flex;
     gap: 6px;
+  }
+  .ref-list {
+    margin: 0;
+    padding-left: 14px;
+    max-height: 140px;
+    overflow: auto;
+    align-self: stretch;
+    word-break: break-all;
   }
   .paper-offer {
     display: flex;

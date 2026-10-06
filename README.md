@@ -153,6 +153,37 @@ Prose is spellchecked against a US English dictionary, and misspelled words get 
 
 Right-click an underlined word, or press Ctrl+. in it, for suggestions, **Add to words.txt** or **Ignore** (for this session). The vault's `words.txt` holds its own words, one per line, and `#` starts a comment. You can edit it directly; saving reloads it. **View → Check Spelling** turns spelling on and off.
 
+### Working with files
+
+The Files tree is a place to work, not only to open things. The header buttons make a new file or folder and collapse every folder. Right-click for the same, plus Rename, Delete, Reveal in the file manager and Copy path.
+
+| Action | How |
+|---|---|
+| Select | Click; Ctrl+click toggles; Shift+click selects a range; Ctrl+A selects every visible row |
+| Move around | ↑ ↓ Home End; → and ← open and close folders (or step into / out of them); Enter opens |
+| Rename | F2 (the name is selected, not its extension) |
+| Delete | Delete. The file goes out of sight at once and an **Undo** (or Ctrl+Z) shows for a few seconds; after that it is in the OS trash. Only a file with unsaved changes asks first |
+| New file | Ctrl+N, **File → New File…**, or the header button |
+| Move | Drag files and folders onto a folder (hover over a closed one to open it). Open tabs, unsaved text and undo history go with them |
+| Copy in | Drop files or folders from the file manager onto the tree. A name clash becomes `name (2).ext` |
+| Insert | Drag a file from the tree into the editor: `.tex` gives `\input`, an image `\includegraphics`, `.bib` `\bibliography` (`\addbibresource` with biblatex). Paths are relative to the open file |
+| Other files | Anything that isn't text or an image opens in its own app, after a confirm |
+
+After a move or rename, the app looks through every `.tex` file for `\input`, `\include`, `\subfile`, `\import`, `\includegraphics`, `\bibliography`, `\addbibresource` and `\graphicspath` arguments that now point at the wrong place, and offers to update them (**Update**, **Show** the list, or **Not now**). Paths are written the way they were: relative to the file or to the vault root, and without the extension if they had none. Update has its own Undo.
+
+The compiled PDF has a grip (⠿) in the viewer's bar. Drag it into an email, a folder or an upload box.
+
+#### New file and starters
+
+The New File dialog picks a starter, a name (the starter's extension is added if you type none), a folder (or a new one) and the starter's fields, with a preview of the result. Built-in starters are a blank file, a section, an article, a standalone figure, a bibliography, a Markdown note and plain text.
+
+Your own starters are `.tex`, `.bib`, `.md` or `.txt` files in a `starters/` folder inside the vault's template folder or the global one (**File → Template Folder**). In one:
+
+- `{{Name}}` or `{{Name|default}}` becomes a field. The same name used twice is asked for once.
+- `{{date}}`, `{{filename}}` and `{{basename}}` are filled in for you.
+- `\{{` writes a literal `{{`.
+- A first line `%% starter: A short description` describes it in the dialog and is left out of the new file.
+
 ### Tabs
 
 Each opened file gets a tab, placed after the current one. A dot marks unsaved changes. Close a tab with × or a middle click, and drag tabs to reorder them. Each tab keeps its own cursor, scroll position and undo history. Quitting, or opening another vault, with unsaved files asks whether to save them.
@@ -255,7 +286,7 @@ In the grid:
   - bibliography keys inside `\cite{…}` (see Citations);
   - the vault's snippets.
 - Environments, sections and questions fold from the gutter.
-- The **Outline** under the file tree lists the open file's sections and questions. Click one to jump there.
+- The **Contents** view lists the open file's sections and questions. Click one to jump there.
 
 Per vault, in `.vault.json`:
 
@@ -283,6 +314,7 @@ Per vault, in `.vault.json`:
   - `bibliography.ts`: running BibTeX or biber during a build, and reading a document's `.bib` files for the editor.
   - `shadow.ts`: the shadow folder that previews build from, and the mapping back to vault paths.
   - `search.ts`: vault-wide search.
+  - `fileops.ts`: the file tree's operations (create, move, copy in, and delete that can be undone), and `starters.ts`: the New File starters.
   - `spell.ts`: the spellchecker (nspell with dictionary-en) and the vault's word list.
   - `index.ts`: the window and the IPC handlers.
 - `src/preload/`: the bridge that exposes `window.api` to the UI.
@@ -291,6 +323,7 @@ Per vault, in `.vault.json`:
   - `CitePicker` is the cite picker, and `lib/citations.ts` holds the bibliography the editor uses. `TabBar`, `QuickOpen`, `SearchPanel` and `TableEditor` are the components for tabs, quick open, search and the table editor.
 - `src/shared/latexedit.ts`: the text logic behind those helpers (lists, environments, formatting, outline, snippets), unit tested.
 - `src/shared/bibtex.ts`: parses `.bib` files, BibTeX and biber logs, and `\bibcite` labels, and searches entries, as pure text logic.
+- `src/shared/paths.ts`, `references.ts` and `starters.ts`: path helpers, finding and rewriting file references after a move, and the starter `{{field}}` format, as pure text logic.
 - `src/shared/search.ts`: search, replace and label rename, as pure text logic.
 - `src/shared/tablemodel.ts`: parses and writes tables, the grid operations, and reading clipboard data.
 - `src/shared/pairs.ts`, `mathsnippets.ts` and `spellwords.ts`: the text logic for brackets and quotes, math shortcuts (including the built-in list), and finding the prose words to spellcheck.

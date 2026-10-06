@@ -6,6 +6,7 @@ import type { PaperFile } from './project'
 import type { Counters } from './livemodel'
 import type { SearchOptions, SearchResult } from './search'
 import type { PluginState, SettingValues } from './plugin'
+import type { Starter } from './starters'
 
 // Types shared by the main process, the preload bridge and the renderer.
 // Paths called `rel` are vault-relative with forward slashes; paths called
@@ -189,6 +190,25 @@ export interface Api {
   renameFile(from: string, to: string): Promise<void>
   /** Sends a vault file to the Recycle Bin. */
   trashFile(rel: string): Promise<void>
+  /** Makes a file (and its parent folders) holding `text`; fails if it exists. */
+  createFile(rel: string, text: string): Promise<void>
+  createDir(rel: string): Promise<void>
+  /** Moves files and folders; nothing moves unless every target is free. */
+  moveFiles(moves: { from: string; to: string }[]): Promise<void>
+  /** Copies files/folders from disk into vault folder `dirRel` ('' for the root); the new rels. */
+  copyIn(paths: string[], dirRel: string): Promise<string[]>
+  /** Deletes so it can be undone; a token for undeleteFiles / releaseFiles. */
+  deleteFiles(rels: string[]): Promise<string>
+  undeleteFiles(token: string): Promise<void>
+  /** Sends a deleted batch to the OS trash for good. */
+  releaseFiles(token: string): Promise<void>
+  revealFile(rel: string): Promise<void>
+  /** Opens a vault file in its default app, after asking. */
+  openInDefaultApp(rel: string): Promise<void>
+  /** Starters for the New File dialog: the built-in ones and those in the template folders. */
+  listStarters(): Promise<Starter[]>
+  /** Starts an OS drag of a compiled PDF, for dropping into other apps. */
+  dragPdf(pdf: string): void
   compile(rel: string): Promise<CompileResult>
   /** A preview build of `rel` with unsaved `buffers` in place of the files on disk; null if it isn't part of a document. */
   compileDraft(rel: string, buffers: Record<string, string>): Promise<CompileResult | null>

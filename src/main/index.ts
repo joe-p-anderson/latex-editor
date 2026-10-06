@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, nativeTheme, net, protocol, shell } from 'electron'
 import { execFile } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { copyFile, mkdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises'
 import { basename, join, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -15,6 +16,8 @@ import { addWord, misspelled, reloadWords, suggestions } from './spell'
 import { startTouchpad, stopTouchpad } from './touchpad'
 import { forward, inverse } from './synctex'
 import { Vault } from './vault'
+import * as fileops from './fileops'
+import { listStarters } from './starters'
 import { PluginHost } from './plugins'
 import type { SettingValues } from '../shared/plugin'
 import { isImage } from '../shared/images'
@@ -59,8 +62,15 @@ function updateIcon(palette = iconPalette): void {
   win?.setIcon(windowIcon())
 }
 
+/** Closes the open vault, sending any delete nobody undid to the OS trash. */
+async function closeVault(): Promise<void> {
+  if (!vault) return
+  await fileops.releaseAll(vault, trash).catch(() => {})
+  await vault.close()
+}
+
 async function openVault(root: string): Promise<Vault> {
-  await vault?.close()
+  await closeVault()
   vault = new Vault(resolve(root), await globalTemplatesDir())
   await vault.load()
   vault.watch(async () => win?.webContents.send('tree-changed', await vault!.tree()))
@@ -182,7 +192,7 @@ ipcMain.handle('vault:recent', () => recentVaults())
 ipcMain.handle('vault:open-path', async (_e, root: string) => (await openVault(root)).info())
 ipcMain.handle('vault:new', async () => (await newVault())?.info() ?? null)
 ipcMain.handle('vault:close', async () => {
-  await vault?.close()
+  await closeVault()
   vault = null
   await plugins.open(null)
   await saveSettings({ lastVault: undefined })
@@ -202,6 +212,43 @@ ipcMain.handle('file:rename', async (_e, from: string, to: string) => {
   await rename(v.abs(from), v.abs(to))
 })
 ipcMain.handle('file:trash', (_e, rel: string) => shell.trashItem(requireVault().abs(rel)))
+const trash = (abs: string) => shell.trashItem(abs)
+ipcMain.handle('file:create', (_e, rel: string, text: string) => fileops.createFile(requireVault(), rel, text))
+ipcMain.handle('dir:create', (_e, rel: string) => fileops.createDir(requireVault(), rel))
+ipcMain.handle('file:move', (_e, moves: { from: string; to: string }[]) => fileops.move(requireVault(), moves))
+ipcMain.handle('file:copyIn', (_e, paths: string[], dirRel: string) => fileops.copyIn(requireVault(), paths, dirRel))
+ipcMain.handle('file:delete', (_e, rels: string[]) => fileops.hold(requireVault(), rels))
+ipcMain.handle('file:undelete', async (_e, token: string) => void (await fileops.restore(requireVault(), token)))
+ipcMain.handle('file:release', (_e, token: string) => fileops.release(requireVault(), token, trash))
+ipcMain.handle('starters:list', () => listStarters(requireVault()))
+ipcMain.handle('shell:reveal', (_e, rel: string) => {
+  const abs = requireVault().abs(rel)
+  shell.showItemInFolder(abs)
+})
+ipcMain.handle('shell:openFile', async (_e, rel: string) => {
+  const abs = requireVault().abs(rel)
+  const r = await dialog.showMessageBox(win!, {
+    type: 'question',
+    message: `Open ${basename(abs)} in its default app?`,
+    detail: 'Endleaf can\'t show this kind of file itself.',
+    buttons: ['Open', 'Cancel'],
+    defaultId: 0,
+    cancelId: 1,
+  })
+  if (r.response === 0) {
+    const err = await shell.openPath(abs)
+    if (err) throw new Error(err)
+  }
+})
+// Dragging the compiled PDF out of the viewer into other apps: the published
+// copy in pdf/ when there is one (it has the real name), else the cache build.
+ipcMain.on('pdf:drag', (e, pdf: string) => {
+  const v = requireVault()
+  let file = requireCompiledPdf(pdf)
+  const published = join(v.root, 'pdf', basename(file))
+  if (existsSync(published)) file = published
+  e.sender.startDrag({ file, icon: nativeImage.createFromPath(join(app.getAppPath(), 'resources', 'pdf-drag.png')) })
+})
 ipcMain.handle('compile', (_e, rel: string) => compile(requireVault(), rel))
 ipcMain.handle('compile:draft', (_e, rel: string, buffers: Record<string, string>) => compileDraft(requireVault(), rel, buffers))
 ipcMain.handle('compile:section', async (_e, rel: string, buffers: Record<string, string>, target: SectionTarget, saving: boolean) => {
@@ -399,6 +446,7 @@ function buildMenu(): void {
       {
         label: 'File',
         submenu: [
+          { label: 'New File…', ...shown('CmdOrCtrl+N'), click: send('new-file') },
           { label: 'Open Vault…', accelerator: 'CmdOrCtrl+O', click: () => win?.webContents.send('menu:open-vault') },
           { label: 'Close Vault', click: send('close-vault') },
           { label: 'Go to File…', ...shown('CmdOrCtrl+P'), click: send('quick-open') },
@@ -540,4 +588,12 @@ app.whenReady().then(async () => {
   createWindow()
 })
 app.on('window-all-closed', () => app.quit())
+// Deletes nobody undid go to the OS trash on the way out.
+let released = false
+app.on('before-quit', (e) => {
+  if (released || !vault) return
+  e.preventDefault()
+  released = true
+  closeVault().finally(() => app.quit())
+})
 app.on('will-quit', () => stopTouchpad())

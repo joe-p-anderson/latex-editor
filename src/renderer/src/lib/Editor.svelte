@@ -93,6 +93,7 @@
   const images = imageSupport({
     images: () => imageHooks.images(),
     dir: () => dirOfCurrent(),
+    isTex: () => !!current?.toLowerCase().endsWith('.tex'),
     openPicker: () => imageHooks.openPicker(),
     importFiles: (files) => imageHooks.importFiles(files),
     savePasted: (blob) => imageHooks.savePasted(blob),
