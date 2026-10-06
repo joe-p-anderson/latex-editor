@@ -41,6 +41,8 @@ export interface LiveHooks {
   render(): RenderFn
   /** The vault's images, for figures. */
   images(): string[]
+  /** The open file's folder, vault-relative ('' at the root). */
+  dir(): string
   /** List environment → item command, without the backslash. */
   lists(): Record<string, string>
   /** The document's bibliography, for citation chips (null until loaded). */
@@ -265,7 +267,7 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
           break
         }
         const images = hooks.images()
-        const resolved = n.images.map((a): [string, string | null] => [a, resolveImage(a, images)])
+        const resolved = n.images.map((a): [string, string | null] => [a, resolveImage(a, images, hooks.dir())])
         widget(n.from, n.to, () => new FigureWidget(resolved, n.caption, n.number, n.labels, render))
         break
       }
@@ -282,7 +284,7 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
         break
       case 'image': {
         if (touches(n.from, n.to)) break
-        const rel = resolveImage(n.path, hooks.images())
+        const rel = resolveImage(n.path, hooks.images(), hooks.dir())
         widget(n.from, n.to, (block) => new ImageWidget(n.path, rel, block))
         break
       }

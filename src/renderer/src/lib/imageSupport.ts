@@ -10,6 +10,12 @@ import { EditorView, hoverTooltip } from '@codemirror/view'
 import { fuzzyFilter, includegraphicsArgAt, isImage } from '@shared/images'
 import { thumbnail } from './thumbnails'
 
+/** What the editor adds to the app's hooks: where the open file is. */
+export type ImageSupportHooks = ImageHooks & {
+  /** The open file's folder, vault-relative ('' at the root): relative image paths are tried there first. */
+  dir(): string
+}
+
 export interface ImageHooks {
   /** The vault's images, vault-relative. */
   images(): string[]
@@ -23,7 +29,7 @@ export interface ImageHooks {
 
 export const includegraphics = (rel: string) => `\\includegraphics[width=0.5\\linewidth]{${rel}}`
 
-export function imageSupport(hooks: ImageHooks): Extension {
+export function imageSupport(hooks: ImageSupportHooks): Extension {
   // Created once: CodeMirror matches a finished query to its source by
   // identity, so a fresh function per lookup leaves completion stuck pending.
   const source = (ctx: CompletionContext) => complete(ctx, hooks)
@@ -42,7 +48,7 @@ export function imageSupport(hooks: ImageHooks): Extension {
     hoverTooltip((view, pos) => {
       const line = view.state.doc.lineAt(pos)
       const arg = includegraphicsArgAt(line.text, pos - line.from)
-      const rel = arg && resolveImage(arg.text.trim(), hooks.images())
+      const rel = arg && resolveImage(arg.text.trim(), hooks.images(), hooks.dir())
       if (!arg || !rel) return null
       return {
         pos: line.from + arg.from,
@@ -105,14 +111,25 @@ function complete(ctx: CompletionContext, hooks: ImageHooks): CompletionResult |
 }
 
 /**
- * The image an \includegraphics argument names. Like graphicx, an argument
- * without an extension tries .pdf, .png, .jpg, .jpeg in turn.
+ * The image an \includegraphics argument names. Like the build (whose search
+ * path is the document's folder, then the vault root), the folder of the open
+ * file `dir` is tried before the vault root; and like graphicx, an argument
+ * without an extension tries .pdf, .png, .jpg, .jpeg in turn. Case is ignored
+ * as a last resort, as it is on Windows.
  */
-export function resolveImage(arg: string, images: string[]): string | null {
+export function resolveImage(arg: string, images: string[], dir = ''): string | null {
   const norm = arg.replace(/^\.\//, '')
   const set = new Set(images)
-  if (set.has(norm)) return norm
-  for (const ext of ['.pdf', '.png', '.jpg', '.jpeg']) if (set.has(norm + ext)) return norm + ext
+  const lower = new Map(images.map((p) => [p.toLowerCase(), p]))
+  const bases = dir ? [`${dir}/${norm}`, norm] : [norm]
+  for (const lookup of [(p: string) => (set.has(p) ? p : undefined), (p: string) => lower.get(p.toLowerCase())]) {
+    for (const base of bases) {
+      for (const ext of ['', '.pdf', '.png', '.jpg', '.jpeg']) {
+        const hit = lookup(base + ext)
+        if (hit) return hit
+      }
+    }
+  }
   return null
 }
 

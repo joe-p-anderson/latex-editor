@@ -65,6 +65,7 @@
   let host: HTMLDivElement
   let view: EditorView
   let current: string | null = null
+  const dirOfCurrent = () => (current && current.includes('/') ? current.slice(0, current.lastIndexOf('/')) : '')
 
   // One EditorState per opened file, so switching files keeps each file's
   // cursor, scroll and undo history. `saved` is the text as last written to
@@ -91,6 +92,7 @@
   const preview = mathPreview(() => render)
   const images = imageSupport({
     images: () => imageHooks.images(),
+    dir: () => dirOfCurrent(),
     openPicker: () => imageHooks.openPicker(),
     importFiles: (files) => imageHooks.importFiles(files),
     savePasted: (blob) => imageHooks.savePasted(blob),
@@ -130,6 +132,7 @@
     {
       render: () => render,
       images: () => imageHooks.images(),
+      dir: () => dirOfCurrent(),
       lists: () => editingHooks.lists(),
       citations: () => editingHooks.citations(),
       paper: (rel) => livePaper(rel),

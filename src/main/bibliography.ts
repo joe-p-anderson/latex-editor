@@ -41,20 +41,29 @@ export interface BibNeeds {
   key: string
   /** The vault's .bib files it reads (absolute), not generated ones. */
   files: string[]
+  /**
+   * The .aux files (cache-relative, without the extension) the tool runs on.
+   * One for an ordinary document; with chapterbib, one per \include'd part
+   * that has its own \bibdata, and none for the master, which has none.
+   */
+  auxes: string[]
 }
 
 /** The tool the .aux asks for, and the fingerprint of what it depends on; null when there's no bibliography. */
 export async function bibNeeds(job: BibJob): Promise<BibNeeds | null> {
   const auxPath = join(job.cacheDir, `${job.name}.aux`)
-  const aux = await readAuxTree(auxPath, job.cacheDir)
+  const parts: AuxPart[] = []
+  const aux = await readAuxTree(auxPath, job.cacheDir, 0, parts, job.name)
   if (aux == null) return null
   const hash = createHash('sha1')
   let tool: BibTool
   let bibNames: string[]
+  let auxes = [job.name]
   if (/\\bibdata\{/.test(aux)) {
     tool = 'bibtex'
     const relevant = aux.split(/\r?\n/).filter((l) => /^\\(citation|bibdata|bibstyle)\{/.test(l))
     hash.update(relevant.join('\n'))
+    auxes = parts.filter((p) => /\\bibdata\{/.test(p.text)).map((p) => p.stem)
     bibNames = [...aux.matchAll(/\\bibdata\{([^}]*)\}/g)].flatMap((m) => m[1].split(',')).map((s) => s.trim()).filter(Boolean)
   } else {
     const bcfPath = join(job.cacheDir, `${job.name}.bcf`)
@@ -85,16 +94,18 @@ export async function bibNeeds(job: BibJob): Promise<BibNeeds | null> {
     }
     if (rel && !file.startsWith(job.cacheDir)) files.push(file)
   }
-  return { tool, key: hash.digest('hex'), files }
+  return { tool, key: hash.digest('hex'), files, auxes }
 }
 
 /** Whether the tool must run: its inputs changed since last time, or its output is missing. */
-export async function bibStale(job: BibJob, key: string): Promise<boolean> {
-  const [old, bbl] = await Promise.all([
-    readFile(join(job.cacheDir, `${job.name}.bibkey`), 'utf8').catch(() => null),
-    stat(join(job.cacheDir, `${job.name}.bbl`)).catch(() => null),
-  ])
-  return !bbl || old?.trim() !== key
+export async function bibStale(job: BibJob, needs: BibNeeds): Promise<boolean> {
+  const old = await readFile(join(job.cacheDir, `${job.name}.bibkey`), 'utf8').catch(() => null)
+  if (old?.trim() !== needs.key) return true
+  // Every .bbl the tool writes has to be there (chapterbib has one per part, none for the master).
+  for (const stem of needs.auxes) {
+    if (!(await stat(join(job.cacheDir, `${stem}.bbl`)).catch(() => null))) return true
+  }
+  return false
 }
 
 export const saveBibKey = (job: BibJob, key: string) => writeFile(join(job.cacheDir, `${job.name}.bibkey`), key)
@@ -109,9 +120,8 @@ type Runner = (cmd: string, args: string[], cwd: string, env: NodeJS.ProcessEnv)
  * runner), and returns the problems in its log.
  */
 export async function runBib(job: BibJob, needs: BibNeeds, env: NodeJS.ProcessEnv, run: Runner): Promise<Problem[]> {
-  const c = bibCommand(job, needs.tool, env)
   // Never report the last run's log as this one's.
-  await rm(join(job.cacheDir, `${job.name}.blg`), { force: true })
+  for (const stem of needs.auxes) await rm(join(job.cacheDir, `${stem}.blg`), { force: true })
   if (job.shadow) {
     // biber reads relative paths (../refs.bib) from its working folder in
     // the shadow: it has to exist, with the saved .bib files beside the unsaved ones.
@@ -124,40 +134,57 @@ export async function runBib(job: BibJob, needs: BibNeeds, env: NodeJS.ProcessEn
       await copyFile(f, copy).catch(() => {})
     }
   }
-  try {
-    await run(c.cmd, c.args, c.cwd, c.env)
-  } catch (e) {
-    return [{
-      rule: `${needs.tool}-missing`, severity: 'error', file: job.root, line: null, fixes: [], tex: String(e),
-      title: `${needs.tool === 'bibtex' ? 'BibTeX' : 'biber'} couldn't run`,
-      explanation: `The document needs ${needs.tool} for its bibliography, but it couldn't be started. It comes with MiKTeX; check that it's installed (MiKTeX Console → Packages).`,
-    }]
+  const problems: Problem[] = []
+  for (const stem of needs.auxes) {
+    const c = bibCommand(job, needs.tool, env, stem)
+    try {
+      await run(c.cmd, c.args, c.cwd, c.env)
+    } catch (e) {
+      return [...problems, couldntRun(job, needs.tool, e)]
+    }
+    problems.push(...(await bibProblems(job, needs.tool, needs.files, stem)))
   }
-  return bibProblems(job, needs.tool, needs.files)
+  return problems
+}
+
+function couldntRun(job: BibJob, tool: BibTool, e: unknown): Problem {
+  return {
+    rule: `${tool}-missing`, severity: 'error', file: job.root, line: null, fixes: [], tex: String(e),
+    title: `${tool === 'bibtex' ? 'BibTeX' : 'biber'} couldn't run`,
+    explanation: `The document needs ${tool} for its bibliography, but it couldn't be started. It comes with MiKTeX; check that it's installed (MiKTeX Console → Packages).`,
+  }
 }
 
 /** The command line, working folder and environment for running `tool`. */
-export function bibCommand(job: BibJob, tool: BibTool, env: NodeJS.ProcessEnv): { cmd: string; args: string[]; cwd: string; env: NodeJS.ProcessEnv } {
+export function bibCommand(job: BibJob, tool: BibTool, env: NodeJS.ProcessEnv, stem = job.name): { cmd: string; args: string[]; cwd: string; env: NodeJS.ProcessEnv } {
   const docDir = posix.dirname(job.root)
   const inShadow = (d: string) => (job.shadow ? [join(job.shadow, d), job.shadow] : [])
-  const bibDirs = [...new Set([...inShadow(docDir), job.vault.abs(docDir), job.vault.root])]
+  // The cache folder first: the generated <name>Notes.bib must win over a stale copy in the vault.
+  const bibDirs = [...new Set([job.cacheDir, ...inShadow(docDir), job.vault.abs(docDir), job.vault.root])]
   const toolEnv = {
     ...env,
     BIBINPUTS: bibDirs.map((d) => `${d}${delimiter}`).join(''),
     BSTINPUTS: job.vault.templateDirs.map((d) => `${d}//${delimiter}`).join('') || undefined,
   }
-  if (tool === 'bibtex') return { cmd: 'bibtex', args: [job.name], cwd: job.cacheDir, env: toolEnv }
+  // A chapterbib part's .aux sits in a subfolder of the cache; its \bibdata names are
+  // vault-relative, which BIBINPUTS resolves from the vault root.
+  if (tool === 'bibtex') return { cmd: 'bibtex', args: [stem], cwd: job.cacheDir, env: toolEnv }
   const cwd = job.shadow ? join(job.shadow, docDir) : job.vault.abs(docDir)
   return { cmd: 'biber', args: [`--input-directory=${job.cacheDir}`, `--output-directory=${job.cacheDir}`, job.name], cwd, env: toolEnv }
 }
 
+/** One .aux file of a build: its cache-relative name (no extension) and text. */
+interface AuxPart { stem: string; text: string }
+
 /** The .aux, with the .aux files of \include'd parts appended. Null when there's none. */
-async function readAuxTree(auxPath: string, cacheDir: string, depth = 0): Promise<string | null> {
+async function readAuxTree(auxPath: string, cacheDir: string, depth = 0, parts?: AuxPart[], stem?: string): Promise<string | null> {
   const aux = await readFile(auxPath, 'utf8').catch(() => null)
-  if (aux == null || depth > 5) return aux
+  if (aux == null) return aux
+  parts?.push({ stem: stem ?? '', text: aux })
+  if (depth > 5) return aux
   let out = aux
   for (const m of aux.matchAll(/\\@input\{([^}]+\.aux)\}/g)) {
-    const child = await readAuxTree(resolve(cacheDir, m[1]), cacheDir, depth + 1)
+    const child = await readAuxTree(resolve(cacheDir, m[1]), cacheDir, depth + 1, parts, m[1].replace(/\.aux$/, ''))
     if (child) out += `\n${child}`
   }
   return out
@@ -167,8 +194,8 @@ async function readAuxTree(auxPath: string, cacheDir: string, depth = 0): Promis
  * The problems in the tool's log, with files made vault-relative. BibTeX
  * names .bib files as it found them (full paths when found via BIBINPUTS).
  */
-export async function bibProblems(job: BibJob, tool: BibTool, files: string[] = []): Promise<Problem[]> {
-  const blg = await readFile(join(job.cacheDir, `${job.name}.blg`), 'utf8').catch(() => '')
+export async function bibProblems(job: BibJob, tool: BibTool, files: string[] = [], stem = job.name): Promise<Problem[]> {
+  const blg = await readFile(join(job.cacheDir, `${stem}.blg`), 'utf8').catch(() => '')
   const out: Problem[] = []
   for (const m of parseBlg(blg)) {
     let file: string | null = null

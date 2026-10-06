@@ -155,7 +155,7 @@ async function build(vault: Vault, rel: string, buffers: Record<string, string> 
       if (!bibChecked) {
         bibChecked = true
         const needs = await bibNeeds(bibJob)
-        if (needs && (await bibStale(bibJob, needs.key))) {
+        if (needs && (await bibStale(bibJob, needs))) {
           bibIssues = await runBib(bibJob, needs, env, runTool)
           if (gen !== generation) return null
           bibRan = needs.tool
