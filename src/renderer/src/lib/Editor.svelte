@@ -15,7 +15,8 @@
   import { latexEditing, type EditingHooks } from './editing'
   import { refreshSpelling, spellcheck, type SpellHooks } from './spellcheck'
   import { outline, type OutlineItem } from '@shared/latexedit'
-  import { liveMode, isLive, liveFile, setLive, toggleLive, type LivePaper } from './live/live'
+  import { imageFolders, liveMode, isLive, liveFile, setLive, toggleLive, type LivePaper } from './live/live'
+  import { graphicsPaths } from '@shared/images'
   import { EDIT_TABLE_EVENT } from './live/widgets'
   import { tableRangeAt } from '@shared/tablemodel'
   import { OPEN_LOCATION_EVENT, type OpenLocation } from './citations'
@@ -93,6 +94,7 @@
   const images = imageSupport({
     images: () => imageHooks.images(),
     dir: () => dirOfCurrent(),
+    folders: (state) => imageFolders(graphicsPaths(state.doc.toString()), livePaper(current), dirOfCurrent()),
     isTex: () => !!current?.toLowerCase().endsWith('.tex'),
     openPicker: () => imageHooks.openPicker(),
     importFiles: (files) => imageHooks.importFiles(files),

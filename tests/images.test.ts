@@ -4,7 +4,8 @@ import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { importImage, saveImage } from '../src/main/images'
 import { Vault } from '../src/main/vault'
-import { fuzzyFilter, includegraphicsArgAt, isImage, safeFileName } from '../src/shared/images'
+import { fuzzyFilter, graphicsFolders, graphicsPaths, includegraphicsArgAt, isImage, safeFileName } from '../src/shared/images'
+import { resolveImage } from '../src/renderer/src/lib/imageSupport'
 
 describe('fuzzyFilter', () => {
   const paths = ['Images/mirror.png', 'Images/mirrorproblem.pdf', 'Images/law of cosines.pdf', 'Images/lensFocus.png', 'Assets/Logo.pdf']
@@ -84,5 +85,22 @@ describe('importImage / saveImage', () => {
   it('refuses non-images', async () => {
     expect(isImage('notes.txt')).toBe(false)
     await expect(saveImage(vault, 'notes.txt', new Uint8Array([1]))).rejects.toThrow(/Not an image/)
+  })
+})
+
+describe('graphicspath', () => {
+  it('reads the last uncommented \\graphicspath, across lines', () => {
+    expect(graphicsPaths('\\graphicspath{{old/}}\n% \\graphicspath{{commented/}}\n\\graphicspath{\n  {Images/}\n  {../shared/}\n}')).toEqual(['Images/', '../shared/'])
+    expect(graphicsPaths('no paths here')).toEqual([])
+  })
+
+  it('finds images in its folders, from the document folder then the vault root', () => {
+    const folders = graphicsFolders(['figs/', '../shared/'], 'paper')
+    expect(folders).toEqual(['paper/figs', 'figs', 'shared'])
+    const images = ['paper/figs/plot.pdf', 'shared/logo.png', 'paper/plot.png']
+    expect(resolveImage('plot', images, 'paper', folders)).toBe('paper/plot.png') // the folder itself comes first
+    expect(resolveImage('logo', images, 'paper', folders)).toBe('shared/logo.png')
+    expect(resolveImage('plot.pdf', images, 'paper', folders)).toBe('paper/figs/plot.pdf')
+    expect(resolveImage('logo', images, 'paper')).toBeNull()
   })
 })

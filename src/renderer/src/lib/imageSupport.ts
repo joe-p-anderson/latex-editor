@@ -9,12 +9,15 @@ import { EditorState, type Extension } from '@codemirror/state'
 import { EditorView, hoverTooltip } from '@codemirror/view'
 import { fuzzyFilter, includegraphicsArgAt, isImage } from '@shared/images'
 import { dropText } from '@shared/paths'
+import { joinRel } from '@shared/project'
 import { thumbnail } from './thumbnails'
 
 /** What the editor adds to the app's hooks: where the open file is. */
 export type ImageSupportHooks = ImageHooks & {
   /** The open file's folder, vault-relative ('' at the root): relative image paths are tried there first. */
   dir(): string
+  /** The \graphicspath folders for the file `state` holds, vault-relative: tried after `dir` and the vault root. */
+  folders(state: EditorState): string[]
   /** Whether the open file is LaTeX (files dropped in from the tree insert commands only there). */
   isTex(): boolean
 }
@@ -51,7 +54,7 @@ export function imageSupport(hooks: ImageSupportHooks): Extension {
     hoverTooltip((view, pos) => {
       const line = view.state.doc.lineAt(pos)
       const arg = includegraphicsArgAt(line.text, pos - line.from)
-      const rel = arg && resolveImage(arg.text.trim(), hooks.images(), hooks.dir())
+      const rel = arg && resolveImage(arg.text.trim(), hooks.images(), hooks.dir(), hooks.folders(view.state))
       if (!arg || !rel) return null
       return {
         pos: line.from + arg.from,
@@ -128,13 +131,14 @@ function complete(ctx: CompletionContext, hooks: ImageHooks): CompletionResult |
  * path is the document's folder, then the vault root), the folder of the open
  * file `dir` is tried before the vault root; and like graphicx, an argument
  * without an extension tries .pdf, .png, .jpg, .jpeg in turn. Case is ignored
- * as a last resort, as it is on Windows.
+ * as a last resort, as it is on Windows. After those, each of `folders` (the
+ * \graphicspath ones, vault-relative; see graphicsFolders) is tried in turn.
  */
-export function resolveImage(arg: string, images: string[], dir = ''): string | null {
+export function resolveImage(arg: string, images: string[], dir = '', folders: string[] = []): string | null {
   const norm = arg.replace(/^\.\//, '')
   const set = new Set(images)
   const lower = new Map(images.map((p) => [p.toLowerCase(), p]))
-  const bases = dir ? [`${dir}/${norm}`, norm] : [norm]
+  const bases = [...(dir ? [`${dir}/${norm}`, norm] : [norm]), ...folders.map((f) => joinRel(f, norm))]
   for (const lookup of [(p: string) => (set.has(p) ? p : undefined), (p: string) => lower.get(p.toLowerCase())]) {
     for (const base of bases) {
       for (const ext of ['', '.pdf', '.png', '.jpg', '.jpeg']) {

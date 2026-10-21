@@ -11,9 +11,10 @@ import { Facet, Prec, StateEffect, StateField, type EditorState, type Extension,
 import { Decoration, EditorView, GutterMarker, MatchDecorator, ViewPlugin, gutterLineClass, keymap, type DecorationSet, type ViewUpdate } from '@codemirror/view'
 import { RangeSet } from '@codemirror/state'
 import { isCite, liveModel, type LiveModel, type LiveOptions } from '@shared/livemodel'
-import { parseIncludes } from '@shared/project'
+import { dirOf, parseIncludes } from '@shared/project'
 import { entryText } from '@shared/bibtex'
 import type { Citations } from '../citations'
+import { graphicsFolders } from '@shared/images'
 import { resolveImage } from '../imageSupport'
 import { refreshMath, type RenderFn } from '../mathPreview'
 import { liveTheme } from './theme'
@@ -62,6 +63,8 @@ export interface LivePaper {
   next: { rel: string; label: string | null } | null
   /** The paper's root file, linked from those cards; null in the root itself. */
   root: { rel: string; name: string } | null
+  /** The root's \graphicspath folders, vault-relative (see graphicsFolders). */
+  graphicspath: string[]
 }
 
 /** The vault-relative file an editor state holds (set when the state is made). */
@@ -146,6 +149,16 @@ export function liveMode(hooks: LiveHooks, on: () => boolean): Extension {
   ]
 }
 
+/**
+ * The \graphicspath folders images are looked for in, vault-relative, for a
+ * file in folder `dir` whose own \graphicspath is `own`: those (relative to
+ * the folder the build runs in), else the paper root's.
+ */
+export function imageFolders(own: string[], paper: LivePaper | null, dir: string): string[] {
+  if (own.length) return graphicsFolders(own, paper?.root ? dirOf(paper.root.rel) : dir)
+  return paper?.graphicspath ?? []
+}
+
 function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): DecorationSet {
   if (!model) return Decoration.none
   const doc = state.doc
@@ -154,6 +167,7 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
   const out: Range<Decoration>[] = []
   const render = hooks.render()
   const paper = hooks.paper(state.facet(liveFile))
+  const imageDirs = imageFolders(model.graphicspath, paper, hooks.dir())
   const touches = (from: number, to: number) => sel.some((r) => r.from <= to && r.to >= from)
   const lineTouched = (pos: number) => {
     const l = doc.lineAt(pos)
@@ -267,7 +281,7 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
           break
         }
         const images = hooks.images()
-        const resolved = n.images.map((a): [string, string | null] => [a, resolveImage(a, images, hooks.dir())])
+        const resolved = n.images.map((a): [string, string | null] => [a, resolveImage(a, images, hooks.dir(), imageDirs)])
         widget(n.from, n.to, () => new FigureWidget(resolved, n.caption, n.number, n.labels, render))
         break
       }
@@ -284,7 +298,7 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
         break
       case 'image': {
         if (touches(n.from, n.to)) break
-        const rel = resolveImage(n.path, hooks.images(), hooks.dir())
+        const rel = resolveImage(n.path, hooks.images(), hooks.dir(), imageDirs)
         widget(n.from, n.to, (block) => new ImageWidget(n.path, rel, block))
         break
       }

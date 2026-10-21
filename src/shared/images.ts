@@ -1,4 +1,5 @@
 // Image helpers shared by the picker, the editor and the tests.
+import { commentStart, joinRel } from './project'
 
 /** Files \includegraphics can use (pdfLaTeX), plus SVG and GIF for previewing. */
 export const IMAGE_EXT = /\.(png|jpe?g|pdf|gif|svg|eps)$/i
@@ -75,3 +76,30 @@ export function safeFileName(name: string): string {
 
 /** URL the renderer uses to load a vault file (served by main/index.ts). */
 export const vaultUrl = (rel: string) => `vault://files/${rel.split('/').map(encodeURIComponent).join('/')}`
+
+/**
+ * The folders the \graphicspath in `text` adds to graphicx's image search, as
+ * written (e.g. ['Images/', '../shared/']). The last \graphicspath wins, as in
+ * LaTeX; commented-out ones don't count.
+ */
+export function graphicsPaths(text: string): string[] {
+  const code = text
+    .split('\n')
+    .map((l) => {
+      const cut = commentStart(l)
+      return cut < 0 ? l : l.slice(0, cut)
+    })
+    .join('\n')
+  const all = [...code.matchAll(/\\graphicspath\s*\{((?:\s*\{[^{}]*\}\s*)*)\}/g)]
+  if (!all.length) return []
+  return [...all[all.length - 1][1].matchAll(/\{([^{}]*)\}/g)].map((d) => d[1].trim()).filter((d) => d && !/[\\#]/.test(d))
+}
+
+/**
+ * Those folders vault-relative, for a document in folder `dir`: each from
+ * the document's folder, then from the vault root, as the build's search path
+ * has them.
+ */
+export function graphicsFolders(paths: string[], dir: string): string[] {
+  return [...new Set(paths.flatMap((p) => [joinRel(dir, p), joinRel(p)]))]
+}

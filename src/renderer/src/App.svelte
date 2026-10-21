@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import type { BibInfo, CompileResult, EditorContext, PaperInfo, Problem, QuickFix, SectionTarget, TextEdit, TreeNode, VaultInfo } from '@shared/api'
-  import { isDocument, magicRoot, parseIncludes, rootComment, type Include } from '@shared/project'
+  import { dirOf, isDocument, magicRoot, parseIncludes, rootComment, type Include } from '@shared/project'
   import { extractRange, extractSection, includeBlock, inlineInclude, moveInclude, placeNewFile, renameIncludes, renumberPlan, slugify, toggleInclude } from '@shared/paperedit'
   import PaperMap, { type PaperMapActions } from './lib/PaperMap.svelte'
   import { PaperModel } from '@shared/papermodel'
@@ -22,7 +22,7 @@
   import { blankComments, mergeTextSnippets, parseSnippets, type OutlineItem, type Snippet } from '@shared/latexedit'
   import { includegraphics, type ImageHooks } from './lib/imageSupport'
   import { clearThumbnails } from './lib/thumbnails'
-  import { isImage } from '@shared/images'
+  import { graphicsFolders, graphicsPaths, isImage } from '@shared/images'
   import { renameKeyChanges, replacementChanges, searchText, type SearchMatch, type SearchOptions } from '@shared/search'
   import SearchPanel from './lib/SearchPanel.svelte'
   import PromptDialog from './lib/PromptDialog.svelte'
@@ -292,6 +292,7 @@
     return {
       options: model.options(rel),
       root: paper && paper.root !== rel ? { rel: paper.root, name: paper.root.split('/').pop()! } : null,
+      graphicspath: paper ? graphicsFolders(graphicsPaths(editor?.textOf(paper.root) ?? paper.texts[paper.root] ?? ''), dirOf(paper.root)) : [],
       prev: i > 0 ? neighbour(readingOrder[i - 1]) : null,
       next: i >= 0 ? neighbour(readingOrder[i + 1]) : null,
       card: (inc, off) => {

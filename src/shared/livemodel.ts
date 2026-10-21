@@ -9,6 +9,7 @@
 // line break), so callers pass state.doc.toString().
 import { blankComments, closingBrace, envTokens, matchEnd, type EnvToken } from './latexedit'
 import { findMathRegions } from './mathregions'
+import { graphicsPaths } from './images'
 
 export type ItemStyle = 'bullet' | 'number' | 'term' | 'box'
 
@@ -133,6 +134,8 @@ export interface LiveModel {
   end: Counters
   /** The style used. */
   style: NumberStyle
+  /** The folders its \graphicspath names, as written. */
+  graphicspath: string[]
 }
 
 const SECTION_LEVEL: Record<string, number> = { chapter: 0, section: 1, subsection: 2, subsubsection: 3 }
@@ -434,7 +437,7 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
   for (const h of headings) h.node.level = Math.min(3, h.level - topLevel + 1) as 1 | 2 | 3
 
   nodes.sort((a, b) => a.from - b.from)
-  return { nodes, lists: listBodies, insets, labels, end: c, style }
+  return { nodes, lists: listBodies, insets, labels, end: c, style, graphicspath: graphicsPaths(text) }
 
   function group(at: number): { body: string; end: number } | null {
     const ws = /^\s*/.exec(src.slice(at, at + 20))![0].length
