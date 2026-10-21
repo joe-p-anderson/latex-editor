@@ -4,7 +4,7 @@ What would make this a better LaTeX editor, roughly in order of payoff. Items ma
 
 ## Biggest wins
 
-- **Vault-wide search and replace (done).** Search every file, not just the open one, with regex, case, whole-word and skip-comments options. Includes renaming a `\label` everywhere, so every `\ref`, `\eqref` and `\cref` to it changes too.
+- **Vault-wide search and replace (done).** Search every file, not just the open one, with regex, case, whole-word and skip-comments options. Includes renaming a `\label` everywhere, so every `\ref`, `\eqref` and `\cref` to it changes too. Ctrl+F (find) and Ctrl+H (replace) use the same sidebar in place of CodeMirror's panel. A File / Paper / Vault switch sets where it searches, the open file's matches are highlighted, and Enter or F3 steps through them, on into the next file. After a Replace All, a report lists where each change was made, with Undo and Save all.
 - **Faster compiles (done).**
   - Precompile the preamble into a format once, so a save only rebuilds the body.
   - Compile a preview of the unsaved buffers when typing pauses, not only on Ctrl+S.

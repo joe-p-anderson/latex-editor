@@ -23,8 +23,9 @@
   import { includegraphics, type ImageHooks } from './lib/imageSupport'
   import { clearThumbnails } from './lib/thumbnails'
   import { graphicsFolders, graphicsPaths, isImage } from '@shared/images'
-  import { renameKeyChanges, replacementChanges, searchText, type SearchMatch, type SearchOptions } from '@shared/search'
-  import SearchPanel from './lib/SearchPanel.svelte'
+  import { applyChanges, renameKeyChanges, replacementChanges, searchText, type SearchMatch, type SearchOptions, type SearchResult } from '@shared/search'
+  import SearchPanel, { type Scope } from './lib/SearchPanel.svelte'
+  import ReplaceReport from './lib/ReplaceReport.svelte'
   import PromptDialog from './lib/PromptDialog.svelte'
   import NewFileDialog from './lib/NewFileDialog.svelte'
   import { findReferences, retarget, type RefChange } from '@shared/references'
@@ -939,7 +940,9 @@
     if (name === 'quick-open') quickOpen = true
     else if (name === 'new-file') newFile(tree?.targetDir() ?? '')
     else if (name === 'save-all') saveAll()
-    else if (name === 'find-in-vault') openSearch()
+    else if (name === 'find-in-vault') openSearch('vault')
+    else if (name === 'find-in-file') openSearch('file')
+    else if (name === 'replace-in-file') openSearch('file', true)
     else if (name === 'insert-image' && active?.endsWith('.tex')) picker = { mode: 'insert', initial: '' }
     else if (name === 'cite') openCitePicker()
     else if (name === 'toggle-live') editor?.toggleLiveMode()
@@ -1075,15 +1078,26 @@
 
   /** Writes every unsaved file, then compiles once. */
   async function saveAll(): Promise<void> {
-    if (!editor) return
+    await compileAfter(await writeUnsaved())
+  }
+
+  /** Writes every unsaved file (or just those of `only`), returning which. */
+  async function writeUnsaved(only?: string[]): Promise<string[]> {
+    if (!editor) return []
     const texts = editor.dirtyTexts()
+    if (only) for (const rel of texts.keys()) if (!only.includes(rel)) texts.delete(rel)
     for (const [rel, text] of texts) {
       await window.api.writeFile(rel, text)
       editor.markSaved(rel, text)
       await reloadIfSettings(rel)
     }
     if (texts.size) flash(`Saved ${texts.size} file${texts.size === 1 ? '' : 's'}`)
-    const target = active && COMPILES.test(active) ? active : [...texts.keys()].find((r) => COMPILES.test(r))
+    return [...texts.keys()]
+  }
+
+  /** Compiles once after saving `rels`: the open file if it builds, else the first saved one that does. */
+  async function compileAfter(rels: string[]): Promise<void> {
+    const target = active && COMPILES.test(active) ? active : rels.find((r) => COMPILES.test(r))
     if (target) await compile(target)
   }
 
@@ -1195,7 +1209,9 @@
     else if (key === 'p' && plain) quickOpen = true
     else if (key === 'p' && e.shiftKey && !e.altKey) palette = true
     else if (key === 's' && e.altKey && !e.shiftKey) saveAll()
-    else if (key === 'h' && e.shiftKey && !e.altKey) openSearch()
+    else if (key === 'f' && plain) openSearch('file')
+    else if (key === 'h' && plain) openSearch('file', true)
+    else if (key === 'h' && e.shiftKey && !e.altKey) openSearch('vault')
     else if (key === 'c' && e.shiftKey && !e.altKey) openCitePicker()
     else if (key === 'j' && plain) togglePanel()
     else if (key === 'j' && e.altKey && !e.shiftKey) syncForward()
@@ -1312,9 +1328,6 @@
     const count = found.reduce((n, f) => n + f.changes.length, 0)
     if (count) refOffer = { files: found, count, show: false }
   }
-
-  const applyChanges = (text: string, changes: { from: number; to: number; insert: string }[]) =>
-    [...changes].sort((a, b) => b.from - a.from).reduce((t, c) => t.slice(0, c.from) + c.insert + t.slice(c.to), text)
 
   async function updateReferences(): Promise<void> {
     const offer = refOffer
@@ -1550,16 +1563,41 @@
   /** Unsaved buffers, which search reads instead of the disk copies. */
   const overrides = () => Object.fromEntries(editor?.dirtyTexts() ?? [])
 
-  async function openSearch(): Promise<void> {
+  /** Ctrl+F (the open file), Ctrl+H (the same, with replace), Ctrl+Shift+H (the vault). */
+  async function openSearch(scope: Scope, replace = false): Promise<void> {
     view = 'search'
     sideOpen = true
     await tick()
-    searchPanel?.focusWith(editor?.selectedText() ?? '')
+    searchPanel?.focusWith(editor?.selectedText() ?? '', scope, replace)
   }
 
-  /** Adds a tab for `rel` without switching to it. */
-  function addTab(rel: string): void {
-    if (!tabs.includes(rel)) tabs = [...tabs, rel]
+  /** Searches the open file's current text, for the search panel's File scope. */
+  function searchActive(query: string, opts: SearchOptions): SearchResult {
+    const text = active ? editor?.textOf(active) : null
+    if (!active || text == null) return { files: [], truncated: false }
+    const matches = searchText(text, query, opts)
+    return { files: matches.length ? [{ rel: active, matches }] : [], truncated: false }
+  }
+
+  /**
+   * Enter in the search box, F3 in the editor: the open file's next (or
+   * previous) match. Searching more than the file, past its last match goes
+   * on to the next file with results.
+   */
+  async function findStep(dir: 1 | -1): Promise<void> {
+    if (!searchPanel || !editor) return
+    const wide = searchPanel.currentScope() !== 'file'
+    if (editor.findStep(dir, !wide)) return
+    if (!wide) return
+    const next = searchPanel.nextFile(active, dir)
+    if (next) await openMatch(next.rel, next.match)
+  }
+
+  /** Adds a tab for `rel` without switching to it. Returns whether it wasn't open already. */
+  function addTab(rel: string): boolean {
+    if (tabs.includes(rel)) return false
+    tabs = [...tabs, rel]
+    return true
   }
 
   const textOf = async (rel: string) => editor?.textOf(rel) ?? (await window.api.readFile(rel))
@@ -1569,6 +1607,10 @@
     editor?.select(m.from, m.to)
   }
 
+  // What the last Replace All changed, file by file, for its report (with Undo and Save all).
+  type Replaced = { rel: string; before: string; changes: { from: number; to: number; insert: string }[]; lines: number[]; opened: boolean }
+  let replaced = $state<Replaced[] | null>(null)
+
   /**
    * Replaces matches of the search, searching each file's current text again
    * first (it may have changed since the results were shown). The changed
@@ -1576,20 +1618,65 @@
    */
   async function replaceMatches(query: string, opts: SearchOptions, replacement: string, files: string[] | null, one?: SearchMatch): Promise<void> {
     const targets = files ?? (await window.api.search(query, opts, overrides())).files.map((f) => f.rel)
-    let count = 0
-    let changed = 0
+    const done: Replaced[] = []
     for (const rel of targets) {
-      let matches = searchText(await textOf(rel), query, opts)
+      const before = await textOf(rel)
+      let matches = searchText(before, query, opts)
       if (one) matches = matches.filter((m) => m.from === one.from && m.to === one.to)
       if (!matches.length) continue
-      await editor?.applyChangesTo(rel, replacementChanges(matches, replacement))
-      addTab(rel)
-      count += matches.length
-      changed++
+      const changes = replacementChanges(matches, replacement)
+      await editor?.applyChangesTo(rel, changes)
+      done.push({ rel, before: normalizeEol(before), changes, lines: lineNumbersAfter(before, changes), opened: addTab(rel) })
     }
     searchVersion++
     if (one && targets[0]) await openFile(targets[0])
-    else if (count) flash(`Replaced ${count} in ${changed} file${changed === 1 ? '' : 's'}, unsaved. Ctrl+Alt+S saves all`)
+    else if (done.length) replaced = done
+  }
+
+  /** The line each change starts on once all of `changes` are made to `text`. */
+  function lineNumbersAfter(text: string, changes: { from: number; to: number; insert: string }[]): number[] {
+    const src = normalizeEol(text)
+    const out: number[] = []
+    let line = 1
+    let at = 0
+    let shift = 0 // lines added (or removed) by the changes so far
+    for (const c of [...changes].sort((a, b) => a.from - b.from)) {
+      for (; at < c.from; at++) if (src.charCodeAt(at) === 10) line++
+      out.push(line + shift)
+      shift += c.insert.split('\n').length - src.slice(c.from, c.to).split('\n').length
+    }
+    return out
+  }
+
+  /** Puts back what the last Replace All changed, in each file not edited since. */
+  async function undoReplace(): Promise<void> {
+    const done = replaced
+    replaced = null
+    if (!done || !editor) return
+    const kept: string[] = []
+    for (const f of done) {
+      const now = await textOf(f.rel)
+      const cur = normalizeEol(now)
+      if (cur !== applyChanges(f.before, f.changes)) {
+        kept.push(f.rel.split('/').pop()!)
+        continue
+      }
+      await editor.applyChangesTo(f.rel, [{ from: 0, to: cur.length, insert: f.before }])
+    }
+    // Tabs the replace opened go again, now there's nothing to save in them.
+    for (const f of done) if (f.opened && tabs.includes(f.rel) && !dirty.has(f.rel)) forgetTab(f.rel)
+    searchVersion++
+    if (kept.length) flash(`Left ${kept.join(', ')} as ${kept.length === 1 ? 'it is' : 'they are'}: edited since the replace`)
+  }
+
+  /** Saves the files the last Replace All changed, closing the tabs it opened (but not the one showing). */
+  async function saveReplaced(): Promise<void> {
+    const done = replaced
+    replaced = null
+    if (!done) return
+    const written = await writeUnsaved(done.map((f) => f.rel))
+    for (const f of done) if (f.opened && f.rel !== active && tabs.includes(f.rel) && !dirty.has(f.rel)) forgetTab(f.rel)
+    await compileAfter(written)
   }
 
   /** Where F2 renames a label: the open paper's files, or (outside a paper) the whole vault. */
@@ -1948,9 +2035,15 @@
           <SearchPanel
             bind:this={searchPanel}
             search={(q, o) => window.api.search(q, o, overrides())}
+            searchFile={searchActive}
             version={searchVersion}
+            {active}
+            visible={sideOpen && view === 'search'}
             onopen={openMatch}
             onreplace={replaceMatches}
+            onhighlight={(find) => editor?.setFind(find)}
+            onstep={findStep}
+            onescape={() => editor?.focus()}
             paper={paper?.declared && inPaper(active) ? { name: paper.name, files: paper.files.map((f) => f.rel) } : null}
           />
         </div>
@@ -2029,9 +2122,19 @@
                 {livePaper}
                 onextract={(rel, what, title) => askExtract(rel, what, title)}
                 onopenlocation={(loc) => go(loc.file, loc.line)}
+                onfindstep={findStep}
               />
             </div>
             {#if !active}<EmptyPlate logo={logoUrl(endpaper.palette, 'mid')} />{/if}
+            {#if replaced}
+              <ReplaceReport
+                files={replaced}
+                onjump={(rel, line) => go(rel, line)}
+                onundo={undoReplace}
+                onsave={saveReplaced}
+                onclose={() => (replaced = null)}
+              />
+            {/if}
             {#if note}
               <div class="note" class:acts={!!noteAction}>
                 {note}{#if noteAction}<button onclick={runNoteAction} title={noteAction.label === 'Undo' ? 'Undo (Ctrl+Z)' : undefined}>{noteAction.label}</button>{/if}

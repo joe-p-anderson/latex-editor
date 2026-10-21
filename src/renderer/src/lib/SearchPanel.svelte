@@ -1,34 +1,61 @@
+<script lang="ts" module>
+  export type Scope = 'file' | 'paper' | 'vault'
+</script>
+
 <script lang="ts">
   import { tick } from 'svelte'
   import type { SearchMatch, SearchOptions, SearchResult } from '@shared/search'
 
   /**
-   * Search (and replace) across every text file in the vault. Results are
-   * grouped by file; clicking one opens the file with the match selected.
+   * Find (and replace) in the open file, its multi-part paper or the whole
+   * vault. Results are grouped by file; clicking one opens the file with the
+   * match selected, and the open file's matches are highlighted in the editor.
    * Replacing leaves the changed files open and unsaved.
    */
   let {
     search,
+    searchFile,
     version,
+    active,
+    visible,
     onopen,
     onreplace,
+    onhighlight,
+    onstep,
+    onescape,
     paper = null,
   }: {
     search: (query: string, opts: SearchOptions) => Promise<SearchResult>
+    /** Searches just the open file (its current text, saved or not). */
+    searchFile: (query: string, opts: SearchOptions) => SearchResult
     /** Changes whenever files may have changed (a save, a replace), to search again. */
     version: number
+    /** The open file, for the File scope. */
+    active: string | null
+    /** The panel is showing: its query is highlighted in the editor only then. */
+    visible: boolean
     onopen: (rel: string, match: SearchMatch) => void
     /** Replace in these files (null: every file with results), or just `match` in the one file. */
     onreplace: (query: string, opts: SearchOptions, replacement: string, files: string[] | null, match?: SearchMatch) => Promise<void>
+    /** The query to highlight in the editor (null: none). */
+    onhighlight: (find: { query: string; opts: SearchOptions } | null) => void
+    /** Enter / Shift+Enter: go to the next or previous match. */
+    onstep: (dir: 1 | -1) => Promise<void>
+    /** Escape: back to the editor. */
+    onescape: () => void
     /** The open file's multi-part paper (its name and files in reading order), to search just it. */
     paper?: { name: string; files: string[] } | null
   } = $props()
 
-  // Just the paper: its files only, in reading order.
-  let inPaper = $state(false)
-  const scoped = $derived(inPaper && !!paper)
+  const name = (p: string) => p.slice(p.lastIndexOf('/') + 1)
+  const folder = (p: string) => p.slice(0, p.lastIndexOf('/'))
+
+  let chosen = $state<Scope>('vault')
+  // Paper falls back to the vault when the open file isn't in one; File, when nothing's open.
+  const scope = $derived<Scope>((chosen === 'paper' && !paper) || (chosen === 'file' && !active) ? 'vault' : chosen)
+  const scopeName = $derived(scope === 'file' ? name(active ?? '') : scope === 'paper' ? (paper?.name ?? '') : 'the vault')
   const shown = $derived.by(() => {
-    if (!result || !scoped || !paper) return result
+    if (!result || scope !== 'paper' || !paper) return result
     const order = new Map(paper.files.map((f, i) => [f, i]))
     const files = result.files.filter((f) => order.has(f.rel)).sort((a, b) => order.get(a.rel)! - order.get(b.rel)!)
     return { ...result, files }
@@ -51,30 +78,66 @@
   $effect(() => {
     const q = query
     const o = { ...opts }
+    const s = scope
     void version
+    if (s === 'file') void active
     clearTimeout(timer)
-    timer = setTimeout(() => run(q, o), q ? 200 : 0)
+    timer = setTimeout(() => run(q, o, s), q && s !== 'file' ? 200 : 0)
   })
 
-  async function run(q: string, o: SearchOptions): Promise<void> {
+  // The open file's matches are highlighted while the panel shows a query.
+  $effect(() => {
+    onhighlight(visible && query && !result?.error ? { query, opts: { ...opts } } : null)
+  })
+
+  async function run(q: string, o: SearchOptions, s: Scope): Promise<void> {
     const mine = ++seq
     if (!q) {
       result = null
       return
     }
     busy = true
-    const r = await search(q, o).catch((e: Error) => ({ files: [], truncated: false, error: e.message }))
+    const r = await (s === 'file' ? Promise.resolve().then(() => searchFile(q, o)) : search(q, o)).catch((e: Error) => ({ files: [], truncated: false, error: e.message }))
     if (mine !== seq) return
     result = r
     busy = false
   }
 
-  /** Focuses the query box, seeded with `text` when given (the editor's selection). */
-  export async function focusWith(text: string): Promise<void> {
+  /** Focuses the query box, seeded with `text` (the editor's selection), searching in `to`, with the replace box shown if asked. */
+  export async function focusWith(text: string, to?: Scope, replace = false): Promise<void> {
     if (text && !text.includes('\n')) query = text
+    if (to) chosen = to
+    if (replace) showReplace = true
     await tick()
     input?.focus()
     input?.select()
+  }
+
+  /** The first (dir 1) or last (-1) match of the file after or before `rel` among the results, wrapping round. */
+  export function nextFile(rel: string | null, dir: 1 | -1): { rel: string; match: SearchMatch } | null {
+    const files = shown?.files ?? []
+    if (!files.length) return null
+    const at = files.findIndex((f) => f.rel === rel)
+    const f = files[at < 0 ? (dir > 0 ? 0 : files.length - 1) : (at + dir + files.length) % files.length]
+    return { rel: f.rel, match: dir > 0 ? f.matches[0] : f.matches[f.matches.length - 1] }
+  }
+
+  /** Where the panel searches now. */
+  export const currentScope = (): Scope => scope
+
+  async function step(dir: 1 | -1): Promise<void> {
+    await onstep(dir)
+    input?.focus()
+  }
+
+  function onkey(e: KeyboardEvent): void {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      step(e.shiftKey ? -1 : 1)
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      onescape()
+    }
   }
 
   const toggle = (k: keyof SearchOptions) => (opts = { ...opts, [k]: !opts[k] })
@@ -88,12 +151,10 @@
 
   async function replaceAll(files: string[] | null): Promise<void> {
     if (!shown?.files.length) return
-    // Searching just the paper: replace in just its files.
-    await onreplace(query, { ...opts }, replacement, files ?? (scoped ? shown.files.map((f) => f.rel) : null))
+    // Searching the file or the paper: replace in just its files.
+    await onreplace(query, { ...opts }, replacement, files ?? (scope !== 'vault' ? shown.files.map((f) => f.rel) : null))
   }
 
-  const name = (p: string) => p.slice(p.lastIndexOf('/') + 1)
-  const folder = (p: string) => p.slice(0, p.lastIndexOf('/'))
 </script>
 
 <div class="panel">
@@ -104,16 +165,16 @@
         <input
           bind:this={input}
           bind:value={query}
-          placeholder={scoped ? `Search ${paper?.name}` : 'Search the vault'}
+          placeholder="Search {scopeName}"
           spellcheck="false"
-          onkeydown={(e) => e.key === 'Enter' && run(query, { ...opts })}
+          title="Enter: next match · Shift+Enter: previous · Esc: back to the text"
+          onkeydown={onkey}
         />
         <span class="opts">
           <button class:on={opts.caseSensitive} title="Match case" onclick={() => toggle('caseSensitive')}>Aa</button>
           <button class:on={opts.wholeWord} title="Whole word" onclick={() => toggle('wholeWord')}><u>ab</u></button>
           <button class:on={opts.regex} title="Regular expression" onclick={() => toggle('regex')}>.*</button>
           <button class:on={opts.includeComments} title="Include % comments" onclick={() => toggle('includeComments')}>%</button>
-          {#if paper}<button class:on={inPaper} title="Just {paper.name}'s files, in reading order" onclick={() => (inPaper = !inPaper)}>§</button>{/if}
         </span>
       </div>
     </div>
@@ -125,7 +186,7 @@
             bind:value={replacement}
             placeholder={opts.regex ? 'Replace ($1 for groups)' : 'Replace'}
             spellcheck="false"
-            onkeydown={(e) => e.key === 'Enter' && e.ctrlKey && e.altKey && replaceAll(null)}
+            onkeydown={(e) => (e.key === 'Enter' && e.ctrlKey && e.altKey ? replaceAll(null) : e.key === 'Escape' && onescape())}
           />
           <span class="opts">
             <button disabled={!total} title="Replace all (Ctrl+Alt+Enter)" onclick={() => replaceAll(null)}>All</button>
@@ -133,13 +194,25 @@
         </div>
       </div>
     {/if}
+    <div class="row">
+      <span class="chev-space"></span>
+      <div class="scopes" role="radiogroup" aria-label="Search in">
+        <button role="radio" aria-checked={scope === 'file'} class:on={scope === 'file'} disabled={!active} title="Just the open file (Ctrl+F)" onclick={() => (chosen = 'file')}>File</button>
+        {#if paper}<button role="radio" aria-checked={scope === 'paper'} class:on={scope === 'paper'} title="{paper.name}'s files, in reading order" onclick={() => (chosen = 'paper')}>Paper</button>{/if}
+        <button role="radio" aria-checked={scope === 'vault'} class:on={scope === 'vault'} title="Every file in the vault (Ctrl+Shift+H)" onclick={() => (chosen = 'vault')}>Vault</button>
+      </div>
+    </div>
   </div>
 
   <div class="summary">
     {#if result?.error}
       <span class="err">{result.error}</span>
     {:else if shown}
-      {total} result{total === 1 ? '' : 's'} in {shown.files.length} file{shown.files.length === 1 ? '' : 's'}{scoped ? ` of ${paper?.name}` : ''}{shown.truncated ? ' (showing the first ones)' : ''}
+      {#if scope === 'file'}
+        {total} result{total === 1 ? '' : 's'} in {scopeName}
+      {:else}
+        {total} result{total === 1 ? '' : 's'} in {shown.files.length} file{shown.files.length === 1 ? '' : 's'}{scope === 'paper' ? ` of ${paper?.name}` : ''}{shown.truncated ? ' (showing the first ones)' : ''}
+      {/if}
       {#if busy}…{/if}
     {:else if busy}
       Searching…
@@ -148,7 +221,8 @@
 
   <div class="results">
     {#each shown?.files ?? [] as f (f.rel)}
-      <div class="file">
+      <!-- One file needs no heading. -->
+      <div class="file" hidden={scope === 'file'}>
         <button class="file-row" onclick={() => toggleFile(f.rel)} title={f.rel}>
           <span class="tri">{collapsed.has(f.rel) ? '▸' : '▾'}</span>
           <span class="name">{name(f.rel)}</span>
@@ -159,7 +233,7 @@
           <button class="act" title="Replace all in this file" onclick={() => replaceAll([f.rel])}>↺</button>
         {/if}
       </div>
-      {#if !collapsed.has(f.rel)}
+      {#if scope === 'file' || !collapsed.has(f.rel)}
         {#each f.matches as m (m.from)}
           <div class="match">
             <button class="match-row" onclick={() => onopen(f.rel, m)} title="Line {m.line}">
@@ -245,6 +319,30 @@
     border-color: var(--detail);
     background: var(--sel);
   }
+  .scopes {
+    display: flex;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .scopes button {
+    border: none;
+    border-radius: 0;
+    background: none;
+    padding: 1px 10px;
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+  .scopes button + button {
+    border-left: 1px solid var(--line);
+  }
+  .scopes button.on {
+    color: var(--detail);
+    background: var(--sel);
+  }
+  .scopes button:disabled {
+    opacity: 0.5;
+  }
   .summary {
     padding: 2px 10px 6px;
     color: var(--ink-soft);
@@ -264,6 +362,9 @@
   .match {
     display: flex;
     align-items: center;
+  }
+  .file[hidden] {
+    display: none;
   }
   .file:hover,
   .match:hover {

@@ -474,6 +474,8 @@ function buildMenu(): void {
           { role: 'selectAll' },
           { type: 'separator' },
           { label: 'Find in Vault', ...shown('CmdOrCtrl+Shift+H'), click: send('find-in-vault') },
+          { label: 'Find', ...shown('CmdOrCtrl+F'), click: send('find-in-file') },
+          { label: 'Replace', ...shown('CmdOrCtrl+H'), click: send('replace-in-file') },
           { type: 'separator' },
           { label: 'Insert Image…', click: send('insert-image') },
           { label: 'Cite…', ...shown('CmdOrCtrl+Shift+C'), click: send('cite') },

@@ -21,6 +21,7 @@
   import { tableRangeAt } from '@shared/tablemodel'
   import { OPEN_LOCATION_EVENT, type OpenLocation } from './citations'
   import { endleafEditorTheme } from './editorTheme'
+  import { findHighlight, findOf, setFind as setFindEffect, stepFind, type Find } from './findHighlight'
 
   let {
     onsave,
@@ -36,6 +37,7 @@
     onopenlocation,
     livePaper,
     onextract,
+    onfindstep,
   }: {
     onsave: (rel: string, text: string) => void
     ondirtychange: (rel: string, dirty: boolean) => void
@@ -61,6 +63,8 @@
     livePaper: (rel: string | null) => LivePaper | null
     /** Right-click, "Move to a file of its own": a section by its heading's line, or a range of the text. */
     onextract: (rel: string, what: { line: number } | { from: number; to: number }, title: string) => void
+    /** F3 / Shift+F3: the next or previous match of the search sidebar's query. */
+    onfindstep: (dir: 1 | -1) => void
   } = $props()
 
   let host: HTMLDivElement
@@ -171,6 +175,7 @@
         fileName.of(liveFile.of(rel)),
         pluginSlot.of(pluginExts),
         basicSetup,
+        findHighlight,
         endleafEditorTheme,
         latex,
         lintGutter(),
@@ -184,6 +189,9 @@
           keymap.of([
             { key: 'Mod-s', preventDefault: true, run: () => (save(), true) },
             { key: 'Mod-Alt-j', preventDefault: true, run: () => (onsyncforward(), true) },
+            // Find lives in the search sidebar (Ctrl+F, in App.svelte), in place of CodeMirror's own panel.
+            { key: 'F3', preventDefault: true, run: () => (onfindstep(1), true), shift: () => (onfindstep(-1), true) },
+            { key: 'Mod-g', preventDefault: true, run: () => (onfindstep(1), true), shift: () => (onfindstep(-1), true) },
           ]),
         ),
         keymap.of([indentWithTab]),
@@ -232,6 +240,7 @@
     }
     current = rel
     view.setState(state)
+    if (findOf(state) !== find) view.dispatch({ effects: setFindEffect.of(find) })
     // A newly opened file starts at its cursor; one opened before, where it was left.
     const scroll = scrolls.get(rel)
     if (fresh || !scroll) view.dispatch({ effects: EditorView.scrollIntoView(state.selection.main.head, { y: 'start', yMargin: 60 }) })
@@ -408,6 +417,23 @@
       effects: EditorView.scrollIntoView(Math.min(from, len), { y: 'center' }),
     })
     view.focus()
+  }
+
+  // The search sidebar's query, highlighted in whichever file is open.
+  let find: Find | null = null
+
+  /** Highlights matches of the search sidebar's query (null: none). */
+  export function setFind(next: Find | null): void {
+    find = next
+    if (current) view.dispatch({ effects: setFindEffect.of(find) })
+  }
+
+  /**
+   * Selects the open file's next or previous highlighted match; `wrap`
+   * goes round from the last to the first. False if there's none to go to.
+   */
+  export function findStep(dir: 1 | -1, wrap: boolean): boolean {
+    return stepFind(view, dir, wrap)
   }
 
   /** Undoes the open file's last change, as Ctrl+Z does. */
