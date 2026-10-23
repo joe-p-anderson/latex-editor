@@ -938,7 +938,7 @@
   /** Menu items the renderer carries out (most also have a shortcut, handled in onkeydown). */
   function menuCommand(name: string): void {
     if (name === 'quick-open') quickOpen = true
-    else if (name === 'new-file') newFile(tree?.targetDir() ?? '')
+    else if (name === 'new-file') newFile(newFileDir())
     else if (name === 'save-all') saveAll()
     else if (name === 'find-in-vault') openSearch('vault')
     else if (name === 'find-in-file') openSearch('file')
@@ -1205,7 +1205,7 @@
       if (tabs.length) openFile(tabs[(i + (key === 'pagedown' ? 1 : -1) + tabs.length) % tabs.length])
     } else if (key === 'w' && plain) {
       if (active) closeTab(active)
-    } else if (key === 'n' && plain) newFile(tree?.targetDir() ?? '')
+    } else if (key === 'n' && plain) newFile(newFileDir())
     else if (key === 'p' && plain) quickOpen = true
     else if (key === 'p' && e.shiftKey && !e.altKey) palette = true
     else if (key === 's' && e.altKey && !e.shiftKey) saveAll()
@@ -1406,6 +1406,8 @@
   // The New File dialog, with the folder it opened for.
   let newFileIn = $state<string | null>(null)
   const newFile = (dir: string) => (newFileIn = dir)
+  /** Ctrl+N and File > New File: the open file's folder, else the tree's. */
+  const newFileDir = () => (active ? dirName(active) : (tree?.targetDir() ?? ''))
   const allFolders = (nodes: TreeNode[]): string[] => nodes.flatMap((n) => (n.kind === 'dir' ? [n.rel, ...allFolders(n.children ?? [])] : []))
 
   async function createFromStarter(rel: string, text: string): Promise<string | null> {

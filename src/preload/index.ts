@@ -27,6 +27,7 @@ const api: Api & { onMenuOpenVault(cb: () => void): () => void } = {
   revealFile: (rel) => ipcRenderer.invoke('shell:reveal', rel),
   openInDefaultApp: (rel) => ipcRenderer.invoke('shell:openFile', rel),
   listStarters: () => ipcRenderer.invoke('starters:list'),
+  openStartersFolder: (source) => ipcRenderer.invoke('starters:openFolder', source),
   dragPdf: (pdf) => ipcRenderer.send('pdf:drag', pdf),
   compile: (rel) => ipcRenderer.invoke('compile', rel),
   compileDraft: (rel, buffers) => ipcRenderer.invoke('compile:draft', rel, buffers),

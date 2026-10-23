@@ -14,14 +14,16 @@ import { appAppearance, globalSnippets, globalTemplatesDir, loadSettings, migrat
 import { searchVault } from './search'
 import { addWord, misspelled, reloadWords, suggestions } from './spell'
 import { startTouchpad, stopTouchpad } from './touchpad'
+import { ensureTeX } from './tex'
 import { forward, inverse } from './synctex'
 import { Vault } from './vault'
 import * as fileops from './fileops'
-import { listStarters } from './starters'
+import { listStarters, startersFolder } from './starters'
 import { PluginHost } from './plugins'
 import type { SettingValues } from '../shared/plugin'
 import { isImage } from '../shared/images'
 import type { SearchOptions } from '../shared/search'
+import type { Starter } from '../shared/starters'
 import { normalizeVaultAppearance, PALETTES, type AppAppearance, type PaletteId, type VaultAppearance } from '../shared/appearance'
 import type { RecentVault, SectionTarget } from '../shared/api'
 
@@ -221,6 +223,12 @@ ipcMain.handle('file:delete', (_e, rels: string[]) => fileops.hold(requireVault(
 ipcMain.handle('file:undelete', async (_e, token: string) => void (await fileops.restore(requireVault(), token)))
 ipcMain.handle('file:release', (_e, token: string) => fileops.release(requireVault(), token, trash))
 ipcMain.handle('starters:list', () => listStarters(requireVault()))
+ipcMain.handle('starters:openFolder', async (_e, source: Starter['source']) => {
+  const folder = await startersFolder(requireVault(), source)
+  if (!folder) throw new Error('No template folder')
+  const err = await shell.openPath(folder)
+  if (err) throw new Error(err)
+})
 ipcMain.handle('shell:reveal', (_e, rel: string) => {
   const abs = requireVault().abs(rel)
   shell.showItemInFolder(abs)
@@ -473,9 +481,9 @@ function buildMenu(): void {
           { role: 'paste' },
           { role: 'selectAll' },
           { type: 'separator' },
-          { label: 'Find in Vault', ...shown('CmdOrCtrl+Shift+H'), click: send('find-in-vault') },
           { label: 'Find', ...shown('CmdOrCtrl+F'), click: send('find-in-file') },
           { label: 'Replace', ...shown('CmdOrCtrl+H'), click: send('replace-in-file') },
+          { label: 'Find in Vault', ...shown('CmdOrCtrl+Shift+H'), click: send('find-in-vault') },
           { type: 'separator' },
           { label: 'Insert Image…', click: send('insert-image') },
           { label: 'Cite…', ...shown('CmdOrCtrl+Shift+C'), click: send('cite') },
@@ -577,7 +585,22 @@ async function serveVaultFile(request: Request): Promise<Response> {
   }
 }
 
+// Groups the taskbar button and pins under the installed app's identity
+// (electron-builder.yml's appId) rather than Electron's.
+app.setAppUserModelId('com.endleaf.app')
+
+// An installed copy runs once: starting it again brings the open window
+// forward. Development builds skip this, so several can run side by side.
+const primary = !app.isPackaged || app.requestSingleInstanceLock()
+if (!primary) app.quit()
+app.on('second-instance', () => {
+  if (!win) return
+  if (win.isMinimized()) win.restore()
+  win.focus()
+})
+
 app.whenReady().then(async () => {
+  if (!primary) return
   await migrateSettings()
   protocol.handle('vault', serveVaultFile)
   buildMenu()
@@ -587,7 +610,8 @@ app.whenReady().then(async () => {
     taskbarDark = await readTaskbarDark()
     updateIcon()
   })
-  createWindow()
+  await createWindow()
+  if (win) await ensureTeX(win)
 })
 app.on('window-all-closed', () => app.quit())
 // Deletes nobody undid go to the OS trash on the way out.

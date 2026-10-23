@@ -2,6 +2,7 @@
   import { onMount } from 'svelte'
   import { badName, joinRel, splitExt } from '@shared/paths'
   import { fields, fill, type Starter } from '@shared/starters'
+  import Icon from './Icon.svelte'
 
   /** Pick a starter, name the file, fill in its fields, choose a folder. */
   let {
@@ -41,7 +42,11 @@
 
   onMount(async () => {
     starters = await window.api.listStarters()
-    pick(starters.find((s) => s.name === 'Section') ?? starters[0])
+    let last: string | null = null
+    try {
+      last = localStorage.getItem(LAST_KEY)
+    } catch {}
+    pick(starters.find((s) => s.id === last) ?? starters.find((s) => s.name === 'Section') ?? starters[0])
     nameInput?.focus()
   })
 
@@ -85,6 +90,10 @@
     const text = fill(chosen.text, values, { date: today(), filename: fileName, basename: base })
     error = await oncreate(rel, text)
     busy = false
+    if (!error)
+      try {
+        localStorage.setItem(LAST_KEY, chosen.id)
+      } catch {}
   }
 
   function onkeydown(e: KeyboardEvent) {
@@ -103,7 +112,15 @@
 <div class="backdrop" onclick={oncancel}>
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div class="dialog" onclick={(e) => e.stopPropagation()} {onkeydown} role="dialog" aria-label="New file" tabindex="-1">
-    <strong>New file</strong>
+    <div class="head">
+      <strong>New file</strong>
+      <button
+        class="mini"
+        title="Open the starters folder"
+        aria-label="Open the starters folder"
+        onclick={() => window.api.openStartersFolder(chosen?.source ?? 'built-in').catch((e: Error) => (error = `Couldn't open the folder: ${e.message}`))}
+      ><Icon name="folder" size={15} /></button>
+    </div>
     <div class="cols">
       <div class="list" role="listbox" aria-label="Template">
         {#each SOURCES as [source, label]}
@@ -174,6 +191,23 @@
     border-radius: 8px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
     outline: none;
+  }
+  .head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .mini {
+    display: flex;
+    padding: 3px;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: var(--ink-soft);
+  }
+  .mini:hover {
+    background: var(--sel);
+    color: var(--ink);
   }
   .cols {
     display: flex;

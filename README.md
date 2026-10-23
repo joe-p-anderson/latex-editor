@@ -15,6 +15,27 @@ Pass `-- --vault=<folder>` to open a vault directly. For example, `npm run dev -
 
 `npm run check` type-checks everything.
 
+## Building the Windows executable
+
+```bash
+npm run dist
+```
+
+This builds the app and packages it with electron-builder (configured in `electron-builder.yml`). It writes two files to `dist/`:
+
+- `endleaf-setup-<version>.exe`: an installer. It installs per user (no admin rights needed) and adds Start menu and desktop shortcuts.
+- `endleaf-portable-<version>.exe`: a single exe that runs without installing.
+
+`dist/win-unpacked/endleaf.exe` is the unpacked app, which is handy for a quick test. Bump `version` in `package.json` before building a release, since it names the files.
+
+Users need MiKTeX installed. If the app can't find `pdflatex` (on PATH or in MiKTeX's usual install folders), it shows a dialog on startup with a link to miktex.org.
+
+Only `dependencies` in `package.json` ship with the app, because they're what the main process loads at runtime. Everything the renderer uses is bundled by Vite, so it belongs in `devDependencies`. A new package that the main process imports must go in `dependencies`.
+
+The exes aren't code-signed, so Windows SmartScreen warns on first run (**More info → Run anyway**).
+
+If the build fails with `EPERM: operation not permitted, rename …\electron-builder\Cache\…`, antivirus is holding a freshly downloaded tool archive. Run `npx electron-builder --win` again. Each attempt caches a bit more, so it succeeds after one or two retries, and later builds don't download anything.
+
 ## Testing
 
 ```bash

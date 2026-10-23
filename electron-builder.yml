@@ -1,0 +1,29 @@
+# Packages the app for Windows: `npm run dist` writes the installer and a
+# portable exe to dist/. electron-vite has already built everything into out/;
+# the renderer is fully bundled, so only the main process's own dependencies
+# (package.json "dependencies") ship in node_modules.
+appId: com.endleaf.app
+productName: endleaf
+directories:
+  output: dist
+  buildResources: resources
+files:
+  - out/**
+  - resources/pdf-drag.png
+  - endleaf-marbled-themes/icons/*.ico
+  - package.json
+win:
+  icon: endleaf-marbled-themes/icons/bookbinders-blue-dark-full.ico
+  target:
+    - target: nsis
+      arch: x64
+    - target: portable
+      arch: x64
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  artifactName: endleaf-setup-${version}.exe
+  shortcutName: endleaf
+portable:
+  artifactName: endleaf-portable-${version}.exe

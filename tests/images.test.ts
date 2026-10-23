@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { importImage, saveImage } from '../src/main/images'
 import { Vault } from '../src/main/vault'
 import { fuzzyFilter, graphicsFolders, graphicsPaths, includegraphicsArgAt, isImage, safeFileName } from '../src/shared/images'
-import { resolveImage } from '../src/renderer/src/lib/imageSupport'
+import { graphicsNames, resolveImage } from '../src/renderer/src/lib/imageSupport'
 
 describe('fuzzyFilter', () => {
   const paths = ['Images/mirror.png', 'Images/mirrorproblem.pdf', 'Images/law of cosines.pdf', 'Images/lensFocus.png', 'Assets/Logo.pdf']
@@ -102,5 +102,20 @@ describe('graphicspath', () => {
     expect(resolveImage('logo', images, 'paper', folders)).toBe('shared/logo.png')
     expect(resolveImage('plot.pdf', images, 'paper', folders)).toBe('paper/figs/plot.pdf')
     expect(resolveImage('logo', images, 'paper')).toBeNull()
+  })
+})
+
+describe('graphicsNames', () => {
+  it('names images by their path inside the first \\graphicspath folder that has them', () => {
+    const images = ['paper/figs/plot.pdf', 'figs/plot.pdf', 'shared/logo.png', 'other/x.png']
+    const names = graphicsNames(images, ['paper/figs', 'figs', 'shared'])
+    expect([...names]).toEqual([
+      ['plot.pdf', 'paper/figs/plot.pdf'],
+      ['logo.png', 'shared/logo.png'],
+    ])
+    expect([...graphicsNames(['a.png', 'b/c.png'], [''])]).toEqual([
+      ['a.png', 'a.png'],
+      ['b/c.png', 'b/c.png'],
+    ])
   })
 })

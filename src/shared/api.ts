@@ -207,6 +207,8 @@ export interface Api {
   openInDefaultApp(rel: string): Promise<void>
   /** Starters for the New File dialog: the built-in ones and those in the template folders. */
   listStarters(): Promise<Starter[]>
+  /** Opens the starters/ folder that starters from `source` live in (see startersFolder). */
+  openStartersFolder(source: Starter['source']): Promise<void>
   /** Starts an OS drag of a compiled PDF, for dropping into other apps. */
   dragPdf(pdf: string): void
   compile(rel: string): Promise<CompileResult>

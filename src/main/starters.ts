@@ -1,4 +1,4 @@
-import { readdir, readFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile } from 'node:fs/promises'
 import { join, extname, basename } from 'node:path'
 import { splitHeader, type Starter } from '../shared/starters'
 import type { Vault } from './vault'
@@ -87,4 +87,17 @@ export async function listStarters(vault: Vault): Promise<Starter[]> {
     }
   }
   return out
+}
+
+/**
+ * The starters/ folder a starter from `source` lives in, made if missing: the
+ * vault's for vault starters, the global one for global starters, and for the
+ * built-in ones the vault's when it has a template folder, else the global one.
+ */
+export async function startersFolder(vault: Vault, source: Starter['source']): Promise<string | null> {
+  const dir = source === 'global' ? vault.globalTemplates : (vault.vaultTemplates ?? vault.globalTemplates)
+  if (!dir) return null
+  const folder = join(dir, 'starters')
+  await mkdir(folder, { recursive: true })
+  return folder
 }

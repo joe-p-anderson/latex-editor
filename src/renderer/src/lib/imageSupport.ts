@@ -106,24 +106,50 @@ export function insertAt(view: EditorView, pos: number, text: string): void {
   view.focus()
 }
 
-function complete(ctx: CompletionContext, hooks: ImageHooks): CompletionResult | null {
+function complete(ctx: CompletionContext, hooks: ImageSupportHooks): CompletionResult | null {
   const line = ctx.state.doc.lineAt(ctx.pos)
   const arg = includegraphicsArgAt(line.text, ctx.pos - line.from)
   if (!arg) return null
   // Filter by what's typed up to the cursor; replace the whole argument.
   const typed = line.text.slice(arg.from, ctx.pos - line.from)
-  const matches = fuzzyFilter(typed, hooks.images().filter((p) => !/\.(svg|gif)$/i.test(p)))
-  if (!matches.length) return null
+  const images = hooks.images().filter((p) => !/\.(svg|gif)$/i.test(p))
+  const short = graphicsNames(images, hooks.folders(ctx.state))
+  // The \graphicspath images first, by the name they're found by there; then
+  // every image by its path. With nothing typed, just the \graphicspath ones.
+  const options: [string, string][] = fuzzyFilter(typed, [...short.keys()]).map((n) => [n, short.get(n)!])
+  if (typed || !short.size) {
+    const named = new Set(short.keys())
+    for (const p of fuzzyFilter(typed, images)) if (!named.has(p)) options.push([p, p])
+  }
+  if (!options.length) return null
   return {
     from: line.from + arg.from,
     to: line.from + arg.to,
     filter: false, // already ranked by fuzzyFilter
-    options: matches.slice(0, 50).map((p) => ({
-      label: p,
+    options: options.slice(0, 50).map(([label, p]) => ({
+      label,
+      detail: label === p ? undefined : p,
       type: 'file',
       info: () => previewDom(p),
     })),
   }
+}
+
+/**
+ * The images in the \graphicspath `folders` (vault-relative), by the name
+ * \includegraphics finds them by there: name → vault-relative path. The
+ * first folder an image is in gives its name, as graphicx searches them in
+ * order.
+ */
+export function graphicsNames(images: string[], folders: string[]): Map<string, string> {
+  const out = new Map<string, string>()
+  for (const f of folders) {
+    for (const p of images) {
+      const name = f ? (p.startsWith(f + '/') ? p.slice(f.length + 1) : null) : p
+      if (name && !out.has(name)) out.set(name, p)
+    }
+  }
+  return out
 }
 
 /**
