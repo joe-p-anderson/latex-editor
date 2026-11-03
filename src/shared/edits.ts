@@ -17,9 +17,15 @@ export function locateOnLine(lineText: string, find: string, near?: number): { f
   return { from: pick, to: pick + find.length }
 }
 
+/** The line break a file's text uses: CRLF if it has any, else LF. */
+export const lineBreakOf = (text: string): string => (text.includes('\r\n') ? '\r\n' : '\n')
+
+/** `text` with every line break (CRLF, LF or a lone CR) written as `eol`. */
+export const withLineBreaks = (text: string, eol: string): string => text.replace(/\r\n?|\n/g, eol)
+
 /** Applies edits to a whole file's text, keeping its line endings. */
 export function applyEdits(text: string, edits: TextEdit[]): string {
-  const eol = text.includes('\r\n') ? '\r\n' : '\n'
+  const eol = lineBreakOf(text)
   for (const e of edits) {
     if ('append' in e) {
       text += e.append.replace(/\r?\n/g, eol)

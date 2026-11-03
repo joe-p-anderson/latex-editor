@@ -8,7 +8,7 @@
   import { stex } from '@codemirror/legacy-modes/mode/stex'
   import { lintGutter, setDiagnostics, type Diagnostic } from '@codemirror/lint'
   import type { Problem, TextEdit } from '@shared/api'
-  import { locateOnLine } from '@shared/edits'
+  import { lineBreakOf, locateOnLine, withLineBreaks } from '@shared/edits'
   import { createRenderer, type MacroDefs } from '@shared/mathrender'
   import { mathPreview, refreshMath, type RenderFn } from './mathPreview'
   import { imageSupport, insertAt, type ImageHooks } from './imageSupport'
@@ -163,15 +163,20 @@
     // In live mode a file opens past its (folded) preamble and its title
     // block. CodeMirror counts a line break as one character, so the offset
     // is taken with \n breaks.
-    const lf = text.replace(/\r\n/g, '\n')
+    const lf = withLineBreaks(text, '\n')
     const body = liveDefault() && /\.tex$/i.test(rel) ? (/^[^%\n]*\\maketitle[^\n]*\n/m.exec(lf) ?? /\\begin\s*\{document\}[^\n]*\n/.exec(lf)) : null
+    // A break of the other kind (say, a CR pasted in before this was fixed)
+    // would show as a red mark, so every break takes the file's own kind.
+    const eol = lineBreakOf(text)
     return EditorState.create({
-      doc: text,
+      doc: withLineBreaks(text, eol),
       selection: body ? { anchor: body.index + body[0].length } : undefined,
       extensions: [
         // Keep the file's own line endings: CodeMirror otherwise joins lines
         // with \n, and saving would rewrite every line of a CRLF file.
-        EditorState.lineSeparator.of(text.includes('\r\n') ? '\r\n' : '\n'),
+        EditorState.lineSeparator.of(eol),
+        // Text pasted or dropped from a file with the other line endings.
+        EditorView.clipboardInputFilter.of((t, state) => withLineBreaks(t, state.lineBreak)),
         fileName.of(liveFile.of(rel)),
         pluginSlot.of(pluginExts),
         basicSetup,
@@ -225,6 +230,8 @@
       saved.set(rel, text)
       state = makeState(text, rel)
       states.set(rel, state)
+      // Mixed line breaks were evened out, so saving would change the file.
+      if (state.sliceDoc() !== text) ondirtychange(rel, true)
     }
     return state
   }
