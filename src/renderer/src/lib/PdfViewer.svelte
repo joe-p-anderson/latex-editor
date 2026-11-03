@@ -17,6 +17,7 @@
     onclose,
     scope = null,
     canDrag = true,
+    onmessage = () => {},
   }: {
     pdf: string | null
     version: number
@@ -30,7 +31,15 @@
     scope?: { label: string; section: boolean; onchange: (section: boolean) => void } | null
     /** Whether the PDF is a finished build, which can be dragged out into other apps (not a draft preview). */
     canDrag?: boolean
+    /** Something to tell the user, e.g. why the PDF wouldn't open. */
+    onmessage?: (msg: string) => void
   } = $props()
+
+  /** The PDF in the system's PDF app, for printing. */
+  function openOutside(): void {
+    if (!pdf) return
+    window.api.openPdf(pdf).catch((e: Error) => onmessage(`Couldn't open the PDF: ${e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')}`))
+  }
 
   let scroller: HTMLDivElement
   let pages: HTMLDivElement
@@ -174,7 +183,9 @@
             if (pdf) window.api.dragPdf(pdf)
           }}>⠿</span>
       {/if}
-      <span class="what" title={pdf}>{pdf.split(/[\\/]/).pop()}{#if pageCount} · {pageCount} {pageCount === 1 ? 'page' : 'pages'}{/if}</span>
+      <button class="what" title="Open in your PDF app, to print it ({pdf})" onclick={openOutside}
+        >{pdf.split(/[\\/]/).pop()}{#if pageCount} · {pageCount} {pageCount === 1 ? 'page' : 'pages'}{/if}</button
+      >
     {/if}
     <button onclick={() => (zoom = Math.max(0.4, zoom - 0.1))} title="Zoom out">−</button>
     <button onclick={() => (zoom = 1)} title="Fit the width ({Math.round(zoom * 100)}% now)">Fit</button>
@@ -245,7 +256,18 @@
   .bar .what {
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
     margin-right: 4px;
+    min-width: 0;
+    height: auto;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: inherit;
+  }
+  .bar .what:hover {
+    text-decoration: underline;
   }
   .bar button {
     height: 22px;

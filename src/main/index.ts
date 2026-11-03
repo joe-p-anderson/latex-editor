@@ -254,14 +254,20 @@ ipcMain.handle('shell:openFile', async (_e, rel: string) => {
     if (err) throw new Error(err)
   }
 })
-// Dragging the compiled PDF out of the viewer into other apps: the published
-// copy in pdf/ when there is one (it has the real name), else the cache build.
+// Dragging the compiled PDF out of the viewer into other apps, or opening it
+// in the PDF app: the published copy in pdf/ when there is one (it has the
+// real name), else the cache build.
+function shareablePdf(pdf: string): string {
+  const file = requireCompiledPdf(pdf)
+  const published = join(requireVault().root, 'pdf', basename(file))
+  return existsSync(published) ? published : file
+}
 ipcMain.on('pdf:drag', (e, pdf: string) => {
-  const v = requireVault()
-  let file = requireCompiledPdf(pdf)
-  const published = join(v.root, 'pdf', basename(file))
-  if (existsSync(published)) file = published
-  e.sender.startDrag({ file, icon: nativeImage.createFromPath(join(app.getAppPath(), 'resources', 'pdf-drag.png')) })
+  e.sender.startDrag({ file: shareablePdf(pdf), icon: nativeImage.createFromPath(join(app.getAppPath(), 'resources', 'pdf-drag.png')) })
+})
+ipcMain.handle('pdf:open', async (_e, pdf: string) => {
+  const err = await shell.openPath(shareablePdf(pdf))
+  if (err) throw new Error(err)
 })
 ipcMain.handle('compile', (_e, rel: string) => compile(requireVault(), rel))
 ipcMain.handle('compile:draft', (_e, rel: string, buffers: Record<string, string>) => compileDraft(requireVault(), rel, buffers))

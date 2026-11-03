@@ -219,6 +219,8 @@ export interface Api {
   /** A preview build of `rel` with unsaved `buffers` in place of the files on disk; null if it isn't part of a document. */
   compileDraft(rel: string, buffers: Record<string, string>): Promise<CompileResult | null>
   readPdf(abs: string): Promise<Uint8Array>
+  /** Opens a compiled PDF in the system's PDF app (the published copy in pdf/ when there is one). */
+  openPdf(pdf: string): Promise<void>
   /** Source line → where it appears in `pdf`. */
   syncForward(pdf: string, rel: string, line: number): Promise<SyncTarget | null>
   /** Point on a PDF page → the source line that produced it. */

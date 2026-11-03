@@ -2155,7 +2155,7 @@
           </section>
           <div class="splitter v" hidden={!showPdf} role="separator" aria-orientation="vertical" onpointerdown={startDrag}></div>
           <section class="pdf-pane" hidden={!showPdf}>
-            <PdfViewer bind:this={viewer} {pdf} version={pdfVersion} scope={pdfScope} canDrag={!!result && !result.draft && !result.section} onsyncclick={syncInverse} onclose={() => (pdfOpen = false)} />
+            <PdfViewer bind:this={viewer} {pdf} version={pdfVersion} scope={pdfScope} canDrag={!!result && !result.draft && !result.section} onsyncclick={syncInverse} onclose={() => (pdfOpen = false)} onmessage={flash} />
           </section>
         </div>
         <div class="splitter h" hidden={!panelOpen} role="separator" aria-orientation="horizontal" onpointerdown={dragPanel}></div>

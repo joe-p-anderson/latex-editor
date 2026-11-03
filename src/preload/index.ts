@@ -31,6 +31,7 @@ const api: Api = {
   listStarters: () => ipcRenderer.invoke('starters:list'),
   openStartersFolder: (source) => ipcRenderer.invoke('starters:openFolder', source),
   dragPdf: (pdf) => ipcRenderer.send('pdf:drag', pdf),
+  openPdf: (pdf) => ipcRenderer.invoke('pdf:open', pdf),
   compile: (rel) => ipcRenderer.invoke('compile', rel),
   compileDraft: (rel, buffers) => ipcRenderer.invoke('compile:draft', rel, buffers),
   compileSection: (rel, buffers, target, saving) => ipcRenderer.invoke('compile:section', rel, buffers, target, saving),
