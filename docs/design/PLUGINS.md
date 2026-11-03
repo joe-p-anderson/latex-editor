@@ -57,11 +57,13 @@ export default {
     global: [{ key: 'library', label: 'Shared library', type: 'path', default: '' }],
   },
   links: ['https://www.zotero.org/download/'],  // optional: https pages ctx.openLink may open
+  starters: [{ name: 'Problem', description: 'A problem for the bank', text: '% problem: {{Title}}\n{{Problem text}}\n' }],  // optional: New File starters while it's on
 } satisfies PluginManifest
 ```
 
 - The setting types are `bool`, `string`, `path`, `vaultFile`, `vaultDir` (relative, kept inside the vault), `enum` (`options`) and `number` (`min`, `max`).
 - Stored values are checked against the fields. Unknown keys are dropped, and invalid values fall back to the default.
+- `starters` show under Built in in the New File dialog while the plugin is on in the vault (the format is in `src/shared/starters.ts`; `ext` defaults to `.tex`). A starter of the user's with the same name, in the vault's or the global template folder, is listed instead.
 
 ## Main half: `MainContext` (`src/main/plugins.ts`)
 
@@ -99,12 +101,12 @@ export default renderer
 | `ctx.views.add({ id, tip, component, icon?, contextual? })` | A sidebar view. Its icon goes in the activity bar, or under "tools" when `contextual`, shown only while `manifest.when` holds. The component gets `{ ctx, visible, docKey }`. `docKey` changes when the open file, its build or the vault's files change, so use it to refresh. Views stay mounted while the plugin is on. |
 | `ctx.commands.add({ id, title, run, key? })` | Listed in **Tools** under the plugin's name and in the command palette (Ctrl+Shift+P). `key` is a CodeMirror key (`"Mod-Alt-q"`) and works while the editor has focus. `ctx.commands.run(id)` runs one. |
 | `ctx.status.item({ text, tip?, onclick? })` | A status bar item; it returns `{ set(change) }`. |
-| `ctx.editor` | `file()`, `text()`, `cursor()`, `selection()`, `insert`, `insertBlock`, `replace(from, to, text)`, `applyTo(rel, changes)`, `textOf(rel)`, `focus()`, `math()` (the open document's MathJax renderer). It also has `extension(ext)`, a CodeMirror extension in every editor. Offsets count a line break as one character. |
+| `ctx.editor` | `file()`, `text()`, `cursor()`, `selection()`, `insert`, `insertBlock`, `replace(from, to, text)`, `applyTo(rel, changes)`, `textOf(rel)`, `focus()`, `math()` (the open document's MathJax renderer). It also has `extension(ext)`, a CodeMirror extension in every editor, and `contextMenu({ label, enabled?(sel), run })`, an item at the end of the editor's right-click menu (`enabled` gets `{ from, to, text }` each time the menu opens). Offsets count a line break as one character; `selection().text` has the file's own line breaks, so compare against `text().slice(from, to)`. |
 | `ctx.live.decorations((state, file) => Range<Decoration>[])` | Decorations shown only in the live view. They are recomputed when the text, the viewport or the mode changes. It returns `{ refresh() }`: call it when something else the function reads changes, such as the plugin's index. Otherwise open files keep stale decorations until the next edit. |
 | `ctx.cite.source({ label, search(q), add(hit), remove(key, file) })` | The cite picker (Ctrl+Shift+C) and the Citations view search it as you type. Its hits show dimmed below the document's own entries, because they aren't in the bibliography yet. Inserting one (click, Enter, or the right-click menu) calls `add`, which writes the entry into the `.bib`. `add` returns `{ key, file? }`, with `file` only when it wrote the entry just now. The app then cites the key and offers Undo: a button, or Ctrl+Z while the note shows. Undo takes the `\cite` back out if nothing was typed since, and calls `remove(key, file)`. "Add to the bibliography" in the menu adds without citing. |
 | `ctx.panel(component)` | Content under the plugin's entry in the Plugins panel (gets `{ ctx }`). It shows when the entry's settings are unfolded. `ctx.showSettings()` opens the Plugins view with them unfolded, e.g. from a status item. |
 | `ctx.openLink(url)` | Opens a page in the browser, if the manifest's `links` lists it (or a prefix of it). Only https. |
-| `ctx.host` | `vault()`, `files()`, `root()` (the open file's document), `macros()`, `packages.ensure / missing / loaded`, `notify`, `open(rel, line?)`, `prompt({ title, initial?, hint? })` (prompts can follow one another), `cite(keys)`, `reloadBib()`, `showView(id)`. |
+| `ctx.host` | `vault()`, `files()`, `root()` (the open file's document), `macros()`, `packages.ensure / missing / loaded`, `notify`, `open(rel, line?)`, `prompt({ title, initial?, hint? })` (prompts can follow one another), `newFile({ starter?, folder?, name?, values? })` (the New File dialog, filled in; resolves to the new file, not opened, or null), `cite(keys)`, `reloadBib()`, `showView(id)`. |
 | `ctx.invoke<T>(name, …args)` | `Promise<T>`: calls the main half's `ctx.handle(name, …)`. A handler that throws rejects it with the error's message. |
 | `ctx.settings`, `ctx.on`, `ctx.onDispose` | As in the main half. |
 
@@ -158,6 +160,10 @@ export default renderer
   - The right-click menu has Insert, plus "Show in <file>" or "Add to the bibliography".
   - Adding offers an Undo note that Ctrl+Z also triggers.
   - `CiteSource.pick` became `add`/`remove`, and `ctx.vault.trash` was added for undoing an add that created the `.bib`.
+- **Move to problem, from the user.**
+  - **Added:** `ctx.editor.contextMenu` for right-click items. Before, the menu was fixed in `editing.ts`.
+  - **Added:** `ctx.host.newFile`, which opens the New File dialog on a starter with its fields filled in. Fields named "… text", or filled with several lines, show as a box of several lines (Ctrl+Enter creates).
+  - **Added:** manifest `starters`, so a plugin's own feature always has a starter to open, which the user can replace with their own by name.
   - Zotero's undo restores the `.bib` byte for byte when nothing else has changed it since (the main half keeps the text from before the add). After other changes, it only removes the entries it marked.
   - In the app this hit the same Svelte trap as the round-1 prompt bug: a `{@const}` that reads state the handler had just cleared.
   - The Citations view works the same way: dimmed source cards, click to cite, and the same right-click menu (`CiteMenu.svelte`, with `citeMenu`/`searchSources` in `citations.ts`). Clicking a card's key no longer opens the entry; "Show in …" in the menu does.

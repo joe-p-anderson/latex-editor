@@ -228,7 +228,10 @@ ipcMain.handle('file:copyIn', (_e, paths: string[], dirRel: string) => fileops.c
 ipcMain.handle('file:delete', (_e, rels: string[]) => fileops.hold(requireVault(), rels))
 ipcMain.handle('file:undelete', async (_e, token: string) => void (await fileops.restore(requireVault(), token)))
 ipcMain.handle('file:release', (_e, token: string) => fileops.release(requireVault(), token, trash))
-ipcMain.handle('starters:list', () => listStarters(requireVault()))
+ipcMain.handle('starters:list', async () => {
+  const on = (await plugins.states()).filter((s) => s.enabled).map((s) => s.manifest)
+  return listStarters(requireVault(), on)
+})
 ipcMain.handle('starters:openFolder', async (_e, source: Starter['source']) => {
   const folder = await startersFolder(requireVault(), source)
   if (!folder) throw new Error('No template folder')

@@ -74,6 +74,8 @@ export interface EditingHooks {
   openCitePicker(): void
   /** Labels in the paper's other files, with what a \ref to them prints. */
   paperLabels(): PaperLabel[]
+  /** Plugins' right-click items (see ContextHooks). */
+  menuItems: ContextHooks['menuItems']
 }
 
 /** A label elsewhere in a multi-part paper. */
@@ -91,6 +93,8 @@ export interface ContextHooks {
   showInPdf(): void
   /** Move a section (its heading's line) or exactly a range into a file of its own; `title` names the file. */
   extract(what: { line: number } | { from: number; to: number }, title: string): void
+  /** Plugins' items for the menu, given the selection. */
+  menuItems(sel: { from: number; to: number; text: string }): { label: string; enabled: boolean; run: () => void }[]
 }
 
 const slug = (s: string) => s.replace(/%.*$/gm, '').replace(/\\[a-zA-Z]+\*?|[{}$\\]/g, ' ').trim().split(/\s+/).slice(0, 4).join(' ')
@@ -107,6 +111,7 @@ function contextMenu(hooks: ContextHooks): Extension {
       const text = view.state.doc.toString()
       const heading = sel.empty ? headingAt(text, view.state.doc.lineAt(sel.head).number) : null
       const canExtract = sel.empty ? !!heading : !!text.slice(sel.from, sel.to).trim()
+      const extra = hooks.menuItems({ from: sel.from, to: sel.to, text: text.slice(sel.from, sel.to) })
       void window.api
         .contextMenu([
           { id: 'cut', label: 'Cut', enabled: !sel.empty },
@@ -120,10 +125,12 @@ function contextMenu(hooks: ContextHooks): Extension {
           { id: 'pdf', label: 'Show in PDF' },
           { id: '', label: '', separator: true },
           { id: 'extract', label: 'Move to a file of its own…', enabled: canExtract },
+          ...extra.map((item, i) => ({ id: `plugin:${i}`, label: item.label, enabled: item.enabled })),
         ])
         .then(async (id) => {
           if (!id) return
           view.focus()
+          if (id.startsWith('plugin:')) return extra[Number(id.slice(7))]?.run()
           const s = view.state.selection.main
           switch (id) {
             case 'cut':

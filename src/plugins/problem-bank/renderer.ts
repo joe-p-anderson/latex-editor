@@ -3,7 +3,7 @@ import type { Range } from '@codemirror/state'
 import type { PluginRenderer } from '../../renderer/src/lib/plugins.svelte'
 import { dirOf, includeCandidates } from '../../shared/project'
 import { scanIncludes, type BankIndex, type Fragment } from './bank'
-import { addQuestionToBank, newAssignment } from './ui/actions'
+import { addQuestionToBank, moveToProblem, newAssignment } from './ui/actions'
 import ProblemsView from './ui/ProblemsView.svelte'
 import { bank, resetStore, setIndex } from './ui/store.svelte'
 
@@ -67,6 +67,7 @@ const problemBank: PluginRenderer = (ctx) => {
   ctx.views.add({ id: 'problems', tip: 'Problems', component: ProblemsView })
 
   ctx.commands.add({ id: 'add-question', title: 'Add question to bank', run: () => addQuestionToBank(ctx) })
+  ctx.editor.contextMenu({ label: 'Move to problem…', enabled: (sel) => !!sel.text.trim(), run: () => moveToProblem(ctx) })
   ctx.commands.add({ id: 'new-assignment', title: 'New assignment from problems', run: () => newAssignment(ctx) })
   ctx.commands.add({
     id: 'check-all',

@@ -7,6 +7,7 @@ import {
   dedentBlock,
   detectNeeds,
   findQuestionBlock,
+  formatNeeds,
   guessTitle,
   insertText,
   missingDefinitions,
@@ -14,6 +15,9 @@ import {
   specName,
   type Fragment,
 } from '../bank'
+import { slugify } from '../../../shared/paperedit'
+import { joinRel } from '../../../shared/project'
+import { normalizeEol } from '../../../shared/search'
 import { bank } from './store.svelte'
 
 /** Puts a problem in the open document at the cursor, then adds the packages and definitions it needs. */
@@ -70,6 +74,40 @@ export async function addQuestionToBank(ctx: RendererContext): Promise<void> {
   const { rel, arg } = await ctx.invoke<{ rel: string; arg: string }>('save', { title, tags, needs, preamble }, body)
   editor.replace(again.from, again.to, `\\input{${arg}}`)
   ctx.host.notify(`Added "${title}" to the bank as ${rel}`)
+}
+
+/**
+ * Moves the selection into a new problem file: the New File dialog opens on
+ * the Problem starter (the user's own, if they have one) in the bank folder,
+ * filled in from the selection, and an \input takes the selection's place.
+ */
+export async function moveToProblem(ctx: RendererContext): Promise<void> {
+  const { editor } = ctx.host
+  const file = editor.file()
+  if (!file) return ctx.host.notify('Open a document first')
+  const sel = editor.selection()
+  // From text(), which has \n breaks like the offsets (the selection's own text has the file's).
+  const text = editor.text()
+  const source = text.slice(sel.from, sel.to)
+  if (!source.trim()) return ctx.host.notify('Select the problem first')
+  const root = (await ctx.host.root()) ?? file
+  const rootText = root === file ? text : await editor.textOf(root)
+  const begin = /\\begin\s*\{document\}/.exec(rootText)
+  const { needs, preamble } = detectNeeds(source, begin ? normalizeEol(rootText.slice(0, begin.index)) : '')
+  const title = guessTitle(source.trim())
+  const rel = await ctx.host.newFile({
+    starter: 'Problem',
+    folder: joinRel(String(ctx.settings.vault().bank ?? 'Problems')),
+    name: title ? slugify(title) : '',
+    values: { Title: title, 'Problem text': dedentBlock(text, sel).trim(), packages: formatNeeds(needs), 'preamble code': preamble.join(' ') },
+  })
+  if (!rel) return
+  // The document may have changed while the dialog was open.
+  if (editor.file() !== file || editor.text().slice(sel.from, sel.to) !== source) return ctx.host.notify(`Saved ${rel}, but the selection changed, so it wasn't replaced`)
+  // The selection's surrounding space stays, so the \input keeps its own line.
+  const [lead, trail] = [/^\s*/.exec(source)![0], /\s*$/.exec(source)![0]]
+  editor.replace(sel.from, sel.to, `${lead}\\input{${rel.replace(/\.tex$/i, '')}}${trail}`)
+  ctx.host.notify(`Moved to ${rel}`)
 }
 
 /** Asks for a file name and writes a new assignment from the marked problems, then opens it. */

@@ -216,6 +216,12 @@
         pluginPrompt?.done(null)
         pluginPrompt = { title: opts.title, initial: opts.initial ?? '', hint: opts.hint, done }
       }),
+    newFile: ({ folder, ...preset }) =>
+      new Promise((done) => {
+        closeNewFile(null)
+        newFileFor = { preset, done }
+        newFileIn = folder ?? ''
+      }),
     cite: (keys) => insertCitation(keys),
     reloadBib: () => void (active && loadBib(active)),
     showView: (id) => {
@@ -707,7 +713,7 @@
   }
 
   /** The vault folder's own name: it seeds the endpaper, whatever the vault is called. */
-  const folderName = (root: string) => root.split(/[\/]/).pop() ?? root
+  const folderName = (root: string) => root.split(/[\\/]/).pop() ?? root
 
   async function setVaultName(name: string): Promise<void> {
     if (!vault) return
@@ -765,6 +771,7 @@
       if (!model || !inPaper(active)) return []
       return [...model.labels].filter(([, t]) => t.file && t.file !== active).map(([key, t]) => ({ key, number: t.number, kind: t.kind, file: t.file! }))
     },
+    menuItems: (sel) => plugins.menuItems(sel),
   }
 
   // The open document's bibliography: `bib` for the picker, `citations`
@@ -1413,7 +1420,17 @@
 
   // The New File dialog, with the folder it opened for.
   let newFileIn = $state<string | null>(null)
-  const newFile = (dir: string) => (newFileIn = dir)
+  function newFile(dir: string): void {
+    closeNewFile(null)
+    newFileIn = dir
+  }
+  /** A plugin's New File dialog: what it starts with, and who gets the new file's path (null if cancelled). */
+  let newFileFor = $state<{ preset: { starter?: string; name?: string; values?: Record<string, string> }; done: (rel: string | null) => void } | null>(null)
+  function closeNewFile(rel: string | null): void {
+    newFileIn = null
+    newFileFor?.done(rel)
+    newFileFor = null
+  }
   /** Ctrl+N and File > New File: the open file's folder, else the tree's. */
   const newFileDir = () => (active ? dirName(active) : (tree?.targetDir() ?? ''))
   const allFolders = (nodes: TreeNode[]): string[] => nodes.flatMap((n) => (n.kind === 'dir' ? [n.rel, ...allFolders(n.children ?? [])] : []))
@@ -1424,9 +1441,11 @@
     } catch (e) {
       return (e as Error).message
     }
-    newFileIn = null
+    // A plugin asked for it, and does what comes next.
+    const forPlugin = !!newFileFor
+    closeNewFile(rel)
     // The watcher hasn't listed it yet; open it straight away.
-    await go(rel)
+    if (!forPlugin) await go(rel)
     return null
   }
 
@@ -2202,7 +2221,14 @@
 {/if}
 
 {#if newFileIn !== null && vault}
-  <NewFileDialog dir={newFileIn} folders={allFolders(vault.tree)} vaultName={vault.name} oncreate={createFromStarter} oncancel={() => (newFileIn = null)} />
+  <NewFileDialog
+    dir={newFileIn}
+    folders={allFolders(vault.tree)}
+    vaultName={vault.name}
+    preset={newFileFor?.preset}
+    oncreate={createFromStarter}
+    oncancel={() => closeNewFile(null)}
+  />
 {/if}
 {#if renaming}
   {@const from = renaming}

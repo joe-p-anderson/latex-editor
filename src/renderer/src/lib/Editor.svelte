@@ -117,6 +117,7 @@
     paperLabels: () => editingHooks.paperLabels(),
     showInPdf: () => onsyncforward(),
     extract: (what, title) => current && onextract(current, what, title),
+    menuItems: (sel) => editingHooks.menuItems(sel),
   })
   const spelling = spellcheck({
     // Documents only: not classes, packages or the vault's settings files.

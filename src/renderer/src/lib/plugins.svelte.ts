@@ -61,6 +61,13 @@ export interface HostServices {
   open(rel: string, line?: number): Promise<void>
   /** Asks for a line of text; null when cancelled. */
   prompt(opts: { title: string; initial?: string; hint?: string }): Promise<string | null>
+  /**
+   * Opens the New File dialog on a starter (by name, one of the user's
+   * before a built-in or plugin one), in `folder`, with the file name and
+   * field values (by field name, any case) filled in. Resolves to the new
+   * file, vault-relative, which is not opened; null if cancelled.
+   */
+  newFile(opts: { starter?: string; folder?: string; name?: string; values?: Record<string, string> }): Promise<string | null>
   /** Cites `keys` at the cursor (into the \cite it's in, or a new one). */
   cite(keys: string[]): void
   /** Re-reads the open document's bibliography (after a plugin wrote to a .bib). */
@@ -152,6 +159,8 @@ export interface RendererContext {
   readonly editor: EditorActions & {
     /** A CodeMirror extension in every open editor. */
     extension(ext: Extension): void
+    /** An item at the end of the editor's right-click menu; `enabled` (default: always) is asked with the selection each time it opens. */
+    contextMenu(item: { label: string; enabled?: (sel: { from: number; to: number; text: string }) => boolean; run: () => void | Promise<void> }): void
   }
   readonly settings: {
     global(): SettingValues
@@ -214,6 +223,7 @@ export class PluginRuntime {
   panels = $state.raw<{ plugin: string; component: Component<{ ctx: RendererContext }>; ctx: RendererContext }[]>([])
   /** Every plugin's editor extensions (and the command keys), for Editor.svelte. */
   extensions = $state.raw<Extension[]>([])
+  private menu: (Parameters<RendererContext['editor']['contextMenu']>[0] & { plugin: string })[] = []
 
   private running = new Map<string, Running>()
   private editorExts = new Map<string, Extension[]>()
@@ -257,6 +267,15 @@ export class PluginRuntime {
     return { views: shown.filter((v) => !v.contextual), tools: shown.filter((v) => v.contextual) }
   }
 
+  /** The plugins' right-click items for a selection, for the editor's menu. */
+  menuItems(sel: { from: number; to: number; text: string }): { label: string; enabled: boolean; run: () => void }[] {
+    return this.menu.map((m) => ({
+      label: m.label,
+      enabled: m.enabled?.(sel) ?? true,
+      run: () => void Promise.resolve(m.run()).catch((e) => this.host.notify(`${m.label.replace(/…$/, '')}: ${e?.message ?? e}`)),
+    }))
+  }
+
   runCommand(id: string): void {
     const c = this.commands.find((x) => x.id === id)
     if (!c) return this.host.notify(`No command ${id} (is its plugin switched on?)`)
@@ -284,7 +303,15 @@ export class PluginRuntime {
       id,
       manifest,
       host: this.host,
-      editor: { ...this.host.editor, extension: addExtension },
+      editor: {
+        ...this.host.editor,
+        extension: addExtension,
+        contextMenu: (item) => {
+          const entry = { ...item, plugin: id }
+          this.menu = [...this.menu, entry]
+          own(() => (this.menu = this.menu.filter((x) => x !== entry)))
+        },
+      },
       settings: {
         global: () => current().globalSettings,
         vault: () => current().vaultSettings,

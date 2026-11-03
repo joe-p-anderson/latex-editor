@@ -47,6 +47,7 @@ Open it from the book icon in the activity bar.
 ## Commands (Tools, Problem bank)
 
 - **Add question to bank**: with the cursor inside a `\question` (up to the next `\question` or `\end{questions}`), asks for a title and tags, writes the problem to the bank, and replaces the question in your document with an `\input`. It is one undo step. `needs:` and `preamble:` are filled in for you: packages for the commands the question uses (for example `\SI` gives `siunitx`), and the custom definitions from the document's preamble that it uses. A new file never overwrites an existing one.
+- **Move to problem…** (right-click on a selection): opens the New File dialog on the **Problem** starter, in the bank folder, with the title, file name, problem text, `needs:` and `preamble:` filled in from the selection. Creating the file replaces the selection with an `\input` (whatever *Insert as* says). The plugin ships a Problem starter; put a `problem.tex` in your vault's or global `starters/` folder to use your own instead. Its field named `Problem text` gets the selection, and `Title`, `packages` and `preamble code` are filled in too.
 - **New assignment from problems**: asks for a file name and writes a new `.tex` with a `questions` environment and one `\input` per marked problem, then opens it. If the bank has a `_preamble.tex` it is used for the preamble. Otherwise a minimal `\documentclass{exam}` document is written. The packages and definitions the problems need are added.
 - **Check all problems**: builds every problem (see below).
 

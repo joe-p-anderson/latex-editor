@@ -1,6 +1,7 @@
 import { mkdir, readdir, readFile } from 'node:fs/promises'
 import { join, extname, basename } from 'node:path'
 import { splitHeader, type Starter } from '../shared/starters'
+import type { PluginManifest } from '../shared/plugin'
 import type { Vault } from './vault'
 
 const BUILT_IN: Omit<Starter, 'source' | 'id'>[] = [
@@ -70,9 +71,17 @@ const BUILT_IN: Omit<Starter, 'source' | 'id'>[] = [
 
 const EXTS = new Set(['.tex', '.bib', '.md', '.txt'])
 
-/** The built-in starters plus those in `starters/` under each template folder. */
-export async function listStarters(vault: Vault): Promise<Starter[]> {
-  const out: Starter[] = BUILT_IN.map((s, i) => ({ ...s, id: `built-in:${i}`, source: 'built-in' }))
+/**
+ * The built-in starters, those the vault's plugins ship (`plugins`), and those
+ * in `starters/` under each template folder. A starter of the user's with a
+ * plugin starter's name is used in its place.
+ */
+export async function listStarters(vault: Vault, plugins: PluginManifest[] = []): Promise<Starter[]> {
+  const builtIn: Starter[] = BUILT_IN.map((s, i) => ({ ...s, id: `built-in:${i}`, source: 'built-in' }))
+  const shipped: Starter[] = plugins.flatMap((m) =>
+    (m.starters ?? []).map((s, i) => ({ ext: '.tex', ...s, id: `plugin:${m.id}:${i}`, source: 'built-in' as const })),
+  )
+  const out: Starter[] = []
   for (const dir of vault.templateDirs) {
     const source = dir === vault.globalTemplates ? 'global' : 'vault'
     const folder = join(dir, 'starters')
@@ -86,7 +95,8 @@ export async function listStarters(vault: Vault): Promise<Starter[]> {
       out.push({ id: `${source}:${file}`, name: basename(file, extname(file)), ext, description, source, text: raw })
     }
   }
-  return out
+  const own = new Set(out.map((s) => s.name.toLowerCase()))
+  return [...builtIn, ...shipped.filter((s) => !own.has(s.name.toLowerCase())), ...out]
 }
 
 /**

@@ -24,4 +24,12 @@ export default {
       { key: 'library', label: 'Shared library folder', type: 'path', default: '', help: 'A folder of problems shared by every vault, searched too. Its problems are always copied in. Leave empty for none.' },
     ],
   },
+  // Right-click, "Move to problem…", opens this (or a starter of the user's named Problem).
+  starters: [
+    {
+      name: 'Problem',
+      description: 'A problem for the bank',
+      text: '% problem: {{Title}}\n% tags: {{Tags}}\n% difficulty: {{difficulty}}\n% source: {{source}}\n% needs: {{packages}}\n% preamble: {{preamble code}}\n{{Problem text}}\n',
+    },
+  ],
 } satisfies PluginManifest

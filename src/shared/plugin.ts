@@ -35,6 +35,12 @@ export interface PluginManifest {
   settings?: { global?: SettingField[]; vault?: SettingField[] }
   /** https:// addresses (or prefixes of them) the plugin may open in the browser, e.g. its download and help pages. */
   links?: string[]
+  /**
+   * Starters for the New File dialog while it's on, listed with the built-in
+   * ones (src/shared/starters.ts has the format). A starter of the user's
+   * with the same name is used in its place. `ext` defaults to .tex.
+   */
+  starters?: { name: string; description: string; ext?: string; text: string }[]
 }
 
 /** Whether `url` is one of `links` (or starts with one), over https. */

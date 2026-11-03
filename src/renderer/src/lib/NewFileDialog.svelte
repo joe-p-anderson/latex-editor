@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import { lineBreakOf, withLineBreaks } from '@shared/edits'
   import { badName, joinRel, splitExt } from '@shared/paths'
   import { fields, fill, type Starter } from '@shared/starters'
   import Icon from './Icon.svelte'
@@ -9,14 +10,17 @@
     dir,
     folders,
     vaultName,
+    preset = null,
     oncreate,
     oncancel,
   }: {
-    /** The folder that was in context ('' for the vault root). */
+    /** The folder that was in context ('' for the vault root); it's offered as a new folder if it doesn't exist. */
     dir: string
     /** Every folder in the vault. */
     folders: string[]
     vaultName: string
+    /** What to start with: a starter by name (one of the user's before a built-in), the file name, and field values by field name (any case). */
+    preset?: { starter?: string; name?: string; values?: Record<string, string> } | null
     /** Makes the file; resolves to an error message to show here, or null when it worked. */
     oncreate: (rel: string, text: string) => Promise<string | null>
     oncancel: () => void
@@ -34,10 +38,14 @@
   let starters = $state<Starter[]>([])
   let chosen = $state<Starter | null>(null)
   // svelte-ignore state_referenced_locally
-  let folder = $state(dir)
-  let newFolder = $state('')
-  let name = $state('')
+  let folder = $state(dir && !folders.includes(dir) ? NEW_FOLDER : dir)
+  // svelte-ignore state_referenced_locally
+  let newFolder = $state(dir && !folders.includes(dir) ? dir : '')
+  // svelte-ignore state_referenced_locally
+  let name = $state(preset?.name ?? '')
   let values = $state<Record<string, string>>({})
+  /** Fields shown as a box of several lines: ones named "… text", or filled with several lines. */
+  let tall = $state(new Set<string>())
   let error = $state<string | null>(null)
   let busy = $state(false)
   let nameInput: HTMLInputElement
@@ -48,14 +56,18 @@
     try {
       last = localStorage.getItem(LAST_KEY)
     } catch {}
-    pick(starters.find((s) => s.id === last) ?? starters.find((s) => s.name === 'Section') ?? starters[0])
+    const asked = preset?.starter?.toLowerCase()
+    const named = asked ? starters.findLast((s) => s.name.toLowerCase() === asked) : undefined
+    pick(named ?? starters.find((s) => s.id === last) ?? starters.find((s) => s.name === 'Section') ?? starters[0])
     nameInput?.focus()
   })
 
   function pick(s: Starter | undefined) {
     if (!s) return
     chosen = s
-    values = Object.fromEntries(fields(s.text).map((f) => [f.name, f.default]))
+    const given = new Map(Object.entries(preset?.values ?? {}).map(([k, v]) => [k.toLowerCase(), v]))
+    values = Object.fromEntries(fields(s.text).map((f) => [f.name, given.get(f.name.toLowerCase()) ?? f.default]))
+    tall = new Set(fields(s.text).flatMap((f) => (/\btext$/i.test(f.name) || values[f.name].includes('\n') ? [f.name] : [])))
     error = null
   }
 
@@ -89,10 +101,12 @@
     if (!chosen || problem || busy) return
     busy = true
     const base = splitExt(fileName)[0]
-    const text = fill(chosen.text, values, { date: today(), filename: fileName, basename: base })
+    // Values typed or pasted in have \n breaks; the file takes the starter's.
+    const text = withLineBreaks(fill(chosen.text, values, { date: today(), filename: fileName, basename: base }), lineBreakOf(chosen.text))
     error = await oncreate(rel, text)
     busy = false
-    if (!error)
+    // A preset (another feature's dialog) isn't the user's own pick to remember.
+    if (!error && !preset)
       try {
         localStorage.setItem(LAST_KEY, chosen.id)
       } catch {}
@@ -103,7 +117,7 @@
       e.preventDefault()
       e.stopPropagation()
       oncancel()
-    } else if (e.key === 'Enter' && !(e.target instanceof HTMLSelectElement)) {
+    } else if (e.key === 'Enter' && !(e.target instanceof HTMLSelectElement) && (e.ctrlKey || !(e.target instanceof HTMLTextAreaElement))) {
       e.preventDefault()
       create()
     }
@@ -157,7 +171,11 @@
         {#each fieldList as f (f.name)}
           <label>
             {f.name}
-            <input bind:value={values[f.name]} spellcheck="false" />
+            {#if tall.has(f.name)}
+              <textarea bind:value={values[f.name]} rows="8" spellcheck="false" title="Ctrl+Enter creates the file"></textarea>
+            {:else}
+              <input bind:value={values[f.name]} spellcheck="false" />
+            {/if}
           </label>
         {/each}
         {#if preview}<pre class="preview" aria-label="Preview">{preview}</pre>{/if}
@@ -288,7 +306,8 @@
     color: var(--ink-soft);
   }
   input,
-  select {
+  select,
+  textarea {
     font: inherit;
     font-family: Consolas, 'Cascadia Mono', monospace;
     padding: 6px 8px;
@@ -297,6 +316,9 @@
     background: var(--paper);
     color: var(--ink);
     outline-color: var(--detail);
+  }
+  textarea {
+    resize: vertical;
   }
   .preview {
     margin: 0;
