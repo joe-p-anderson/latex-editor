@@ -421,7 +421,11 @@ export function buildDocument(o: { preamble: string | null; documentClass: strin
 
 // ------------------------------------------------------------ previews
 
-export type PreviewSeg = { t: 'text'; s: string } | { t: 'math'; tex: string; display: boolean }
+export type PreviewSeg = { t: 'text'; s: string } | { t: 'math'; tex: string; display: boolean } | { t: 'figure'; label: 'figure' | 'diagram' }
+
+// Where an image or a TikZ picture was, until textSegs turns it into a figure seg.
+const FIGURE = ''
+const DIAGRAM = ''
 
 /** A stretch of the problem: the stem, or one part. */
 export interface PreviewBlock {
@@ -432,8 +436,14 @@ export interface PreviewBlock {
 
 const SIUNITX_ARGS: Record<string, number> = { SI: 2, si: 1, num: 1, unit: 1, ang: 1, qty: 2, SIrange: 3, qtyrange: 3, numrange: 2, SIlist: 2 }
 
-/** `text` as plain text and siunitx quantities (which are math to the renderer). */
+/** `text` as plain text, siunitx quantities (which are math to the renderer) and figures. */
 function textSegs(text: string): PreviewSeg[] {
+  return text.split(/([])/).flatMap((chunk, k): PreviewSeg[] =>
+    k % 2 ? [{ t: 'figure', label: chunk === FIGURE ? 'figure' : 'diagram' }] : quantitySegs(chunk),
+  )
+}
+
+function quantitySegs(text: string): PreviewSeg[] {
   const segs: PreviewSeg[] = []
   let last = 0
   for (const m of text.matchAll(/\\(SI|si|num|unit|ang|qty|SIrange|qtyrange|numrange|SIlist)(?![A-Za-z@])/g)) {
@@ -456,7 +466,7 @@ function textSegs(text: string): PreviewSeg[] {
     last = pos
   }
   segs.push({ t: 'text', s: cleanText(text.slice(last)) })
-  return segs.filter((s) => s.t === 'math' || s.s)
+  return segs.filter((s) => s.t !== 'text' || s.s)
 }
 
 /** Takes the spaces off the ends of a block's text. */
@@ -466,10 +476,10 @@ function trimSegs(segs: PreviewSeg[]): PreviewSeg[] {
   if (first?.t === 'text') first.s = first.s.trimStart()
   const last = out[out.length - 1]
   if (last?.t === 'text') last.s = last.s.trimEnd()
-  return out.filter((s) => s.t === 'math' || s.s)
+  return out.filter((s) => s.t !== 'text' || s.s)
 }
 
-const DROP_WITH_ARG = /\\(?:label|vspace|hspace|ref|eqref|cite|answerspace|points|bonuspoints|includegraphics|fillin|pagebreak|newpage|clearpage)\*?(?:\[[^\]]*\])?(?:\{[^{}]*\})?/g
+const DROP_WITH_ARG = /\\(?:label|vspace|hspace|ref|eqref|cite|answerspace|points|bonuspoints|fillin|pagebreak|newpage|clearpage)\*?(?:\[[^\]]*\])?(?:\{[^{}]*\})?/g
 
 /** Readable text from running LaTeX (no math in it). */
 function cleanText(s: string): string {
@@ -497,12 +507,14 @@ function cleanText(s: string): string {
 
 /**
  * The problem as blocks of readable text and math for a card: `\question`
- * and the parts' environments dropped, parts labelled (a), (b), …, and any
- * solution left out.
+ * and the parts' environments dropped, parts labelled (a), (b), …, images
+ * and TikZ pictures as placeholders, and any solution left out.
  */
 export function previewBlocks(body: string): PreviewBlock[] {
   const src = blankComments(normalizeEol(body))
     .replace(/\\begin\s*\{solution\}[\s\S]*?\\end\s*\{solution\}/g, ' ')
+    .replace(/\\begin\s*\{tikzpicture\}[\s\S]*?\\end\s*\{tikzpicture\}/g, ` ${DIAGRAM} `)
+    .replace(/\\includegraphics\*?(?:\[[^\]]*\])?(?:\{[^{}]*\})?/g, ` ${FIGURE} `)
     .replace(/\\begin\s*\{(?:parts|subparts|subsubparts|questions|choices|oneparchoices|checkboxes|oneparcheckboxes)\}|\\end\s*\{(?:parts|subparts|subsubparts|questions|choices|oneparchoices|checkboxes|oneparcheckboxes)\}/g, ' ')
     .replace(/^\s*\\(?:titled)?question(?:\[[^\]]*\])?(?:\{[^}]*\})?/, '')
   const out: PreviewBlock[] = []
@@ -539,7 +551,7 @@ export function previewBlocks(body: string): PreviewBlock[] {
 /** The text of a problem to search through: its readable words, math as written. */
 export function searchableText(body: string): string {
   return previewBlocks(body)
-    .map((b) => b.segs.map((s) => (s.t === 'text' ? s.s : s.tex)).join(' '))
+    .map((b) => b.segs.flatMap((s) => (s.t === 'text' ? [s.s] : s.t === 'math' ? [s.tex] : [])).join(' '))
     .join(' ')
 }
 

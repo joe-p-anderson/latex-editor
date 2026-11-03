@@ -293,6 +293,19 @@ describe('previews', () => {
     expect(JSON.stringify(blocks)).not.toContain('No.')
   })
 
+  it('shows images and TikZ pictures as placeholders', () => {
+    const blocks = previewBlocks(
+      '\\question See \\includegraphics[width=3cm]{ramp} here.\n\\begin{tikzpicture}\\draw (0,0) -- (1,1);\\end{tikzpicture}\n\\begin{solution}\\includegraphics{key}\\end{solution}',
+    )
+    expect(blocks[0].segs).toEqual([
+      { t: 'text', s: 'See ' },
+      { t: 'figure', label: 'figure' },
+      { t: 'text', s: ' here. ' },
+      { t: 'figure', label: 'diagram' },
+    ])
+    expect(searchableText('\\question See \\includegraphics{ramp}')).toBe('See ')
+  })
+
   it('leaves solutions out', () => {
     expect(searchableText('\\question Q\n\\begin{solution}secret\\end{solution}')).toBe('Q')
   })

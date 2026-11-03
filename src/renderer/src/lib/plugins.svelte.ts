@@ -4,15 +4,15 @@
 // extensions, live-view decorations and citation sources. App.svelte reads
 // those lists and supplies the HostServices plugins act through.
 import type { Component } from 'svelte'
-import { StateEffect, type Extension, type EditorState, type Range } from '@codemirror/state'
-import { Decoration, EditorView, ViewPlugin, keymap, type DecorationSet, type ViewUpdate } from '@codemirror/view'
+import { StateEffect, StateField, type Extension, type EditorState, type Range } from '@codemirror/state'
+import { Decoration, EditorView, ViewPlugin, keymap, type DecorationSet } from '@codemirror/view'
 import type { VaultInfo } from '@shared/api'
 import type { MacroDefs } from '@shared/mathrender'
 import type { PackageSpec } from '@shared/packages'
 import { whenHolds, type PluginManifest, type PluginState, type SettingValues } from '@shared/plugin'
 import { RENDERER } from '../../../plugins/renderer'
 import { isLive, liveFile, setLive } from './live/live'
-import type { RenderFn } from './mathPreview'
+import { refreshMath, type RenderFn } from './mathPreview'
 
 /** What the open editor can do for a plugin. Offsets count a line break as one character. */
 export interface EditorActions {
@@ -45,6 +45,8 @@ export interface HostServices {
   editor: EditorActions
   /** The root document of the open file (itself, or the paper it's part of). */
   root(): Promise<string | null>
+  /** Whether `rel` is a file of a declared paper (whose \input lines the live view draws as cards). */
+  inPaper(rel: string | null): boolean
   /** The open document's math macros (MathJax form). */
   macros(): Promise<MacroDefs>
   packages: {
@@ -186,11 +188,13 @@ export interface RendererContext {
   }
   live: {
     /**
-     * Decorations shown only in the live view, recomputed when the text or
-     * the visible range changes, and when `refresh` is called (after what
-     * `fn` reads changes, e.g. the plugin's index). `file` is the editor's file.
+     * Decorations shown only in the live view, recomputed when the text,
+     * the selection or the paper changes, and when `refresh` is called
+     * (after what `fn` reads changes, e.g. the plugin's index). `file` is
+     * the editor's file; `inPaper`, whether it's a file of a declared paper.
+     * They may be block widgets.
      */
-    decorations(fn: (state: EditorState, file: string | null) => Range<Decoration>[]): { refresh(): void }
+    decorations(fn: (state: EditorState, file: string | null, inPaper: boolean) => Range<Decoration>[]): { refresh(): void }
   }
   cite: {
     source(s: Omit<CiteSource, 'plugin'>): void
@@ -356,7 +360,7 @@ export class PluginRuntime {
       },
       live: {
         decorations: (fn) => {
-          const live = liveDecorations(fn)
+          const live = liveDecorations(fn, (file) => this.host.inPaper(file))
           addExtension(live.extension)
           return { refresh: live.refresh }
         },
@@ -419,34 +423,40 @@ export function toAccelerator(key: string): string {
 /** Asks plugin live decorations to recompute. */
 const refreshLive = StateEffect.define<null>()
 
-/** An extension drawing `fn`'s decorations while the live view is on, and a way to redraw them in every editor. */
-function liveDecorations(fn: (state: EditorState, file: string | null) => Range<Decoration>[]): { extension: Extension; refresh(): void } {
+/**
+ * An extension drawing `fn`'s decorations while the live view is on, and a
+ * way to redraw them in every editor. A state field, not a view plugin, so
+ * they can be block widgets.
+ */
+function liveDecorations(
+  fn: (state: EditorState, file: string | null, inPaper: boolean) => Range<Decoration>[],
+  inPaper: (file: string | null) => boolean,
+): { extension: Extension; refresh(): void } {
   const views = new Set<EditorView>()
-  const compute = (view: EditorView): DecorationSet => {
-    if (!isLive(view.state)) return Decoration.none
+  const compute = (state: EditorState): DecorationSet => {
+    if (!isLive(state)) return Decoration.none
+    const file = state.facet(liveFile)
     try {
-      return Decoration.set(fn(view.state, view.state.facet(liveFile)), true)
+      return Decoration.set(fn(state, file, inPaper(file)), true)
     } catch (e) {
       console.error('Plugin live decorations failed:', e)
       return Decoration.none
     }
   }
-  const extension = ViewPlugin.fromClass(
-    class {
-      decorations: DecorationSet
-      constructor(readonly view: EditorView) {
-        views.add(view)
-        this.decorations = compute(view)
-      }
-      update(u: ViewUpdate) {
-        const asked = u.transactions.some((tr) => tr.effects.some((e) => e.is(setLive) || e.is(refreshLive)))
-        if (u.docChanged || u.viewportChanged || asked || isLive(u.state) !== isLive(u.startState)) this.decorations = compute(u.view)
-      }
-      destroy() {
-        views.delete(this.view)
-      }
+  const field = StateField.define<DecorationSet>({
+    create: compute,
+    update(value, tr) {
+      // refreshMath also says the paper changed.
+      const asked = tr.effects.some((e) => e.is(setLive) || e.is(refreshLive) || e.is(refreshMath))
+      if (tr.docChanged || tr.selection || asked || isLive(tr.state) !== isLive(tr.startState)) return compute(tr.state)
+      return value
     },
-    { decorations: (v) => v.decorations },
-  )
-  return { extension, refresh: () => views.forEach((v) => v.dispatch({ effects: refreshLive.of(null) })) }
+    provide: (f) => EditorView.decorations.from(f),
+  })
+  // The editors to ask on refresh.
+  const tracker = ViewPlugin.define((view) => {
+    views.add(view)
+    return { destroy: () => void views.delete(view) }
+  })
+  return { extension: [field, tracker], refresh: () => views.forEach((v) => v.dispatch({ effects: refreshLive.of(null) })) }
 }

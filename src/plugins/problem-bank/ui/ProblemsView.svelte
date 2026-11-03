@@ -8,9 +8,10 @@
   import type { PluginViewProps } from '../../../renderer/src/lib/plugins.svelte'
   import { needsSummary, previewBlocks, searchableText, usageLabel, type CheckResult, type Fragment } from '../bank'
   import { insertProblem } from './actions'
+  import { mathDrawer } from './draw'
   import { bank, toggleMark } from './store.svelte'
 
-  let { ctx, docKey }: PluginViewProps = $props()
+  let { ctx }: PluginViewProps = $props()
 
   let query = $state('')
   let tag = $state('')
@@ -42,27 +43,7 @@
     return bank.fragments.filter((f) => (!tag || f.tags.includes(tag)) && (!difficulty || f.difficulty === difficulty) && words.every((w) => haystack(f).includes(w)))
   })
 
-  // Math is drawn with the open document's macros; start again when it changes.
-  const drawn = new Map<string, string>()
-  $effect(() => {
-    void docKey
-    drawn.clear()
-  })
-  const draw = (tex: string, display: boolean): string => {
-    const key = (display ? 'D' : 'I') + tex
-    let svg = drawn.get(key)
-    if (svg === undefined) {
-      try {
-        const r = ctx.editor.math()(tex, display)
-        svg = r.error ? `<code class="bad">${escapeHtml(tex)}</code>` : r.svg
-      } catch {
-        svg = `<code class="bad">${escapeHtml(tex)}</code>`
-      }
-      drawn.set(key, svg)
-    }
-    return svg
-  }
-  const escapeHtml = (s: string) => s.replace(/[&<>]/g, (c) => (c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;'))
+  const draw = mathDrawer(() => ctx.editor.math())
 
   async function check(f: Fragment) {
     busy = new Set(busy).add(f.id)
@@ -138,7 +119,7 @@
           {#each previewBlocks(f.body) as block, i (i)}
             <p class:part={block.label}>
               {#if block.label}<span class="label">{block.label}</span>{/if}
-              {#each block.segs as s, k (k)}{#if s.t === 'text'}{s.s}{:else}<span class="math" class:display={s.display}>{@html draw(s.tex, s.display)}</span>{/if}{/each}
+              {#each block.segs as s, k (k)}{#if s.t === 'text'}{s.s}{:else if s.t === 'figure'}<span class="figure">{s.label}</span>{:else}<span class="math" class:display={s.display}>{@html draw(s.tex, s.display)}</span>{/if}{/each}
             </p>
           {/each}
         </div>
@@ -301,6 +282,13 @@
     display: block;
     text-align: center;
     overflow-x: auto;
+  }
+  .figure {
+    padding: 0 5px;
+    border: 1px dashed var(--line);
+    border-radius: 3px;
+    font: 11px var(--f-ui);
+    color: var(--ink-soft);
   }
   .math :global(.bad) {
     color: var(--err, #c0392b);

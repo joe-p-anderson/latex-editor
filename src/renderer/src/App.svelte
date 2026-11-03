@@ -203,6 +203,7 @@
       math: () => editor!.mathRenderer(),
     },
     root: () => rootOfActive(),
+    inPaper: (rel) => inPaper(rel),
     macros: async () => (active ? (await window.api.mathMacros(active).catch(() => ({ macros: {} }))).macros : {}),
     packages: {
       ensure: (pkgs) => ensurePackages(pkgs),

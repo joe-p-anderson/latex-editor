@@ -57,7 +57,7 @@ Open it from the book icon in the activity bar.
 
 ## Live view
 
-In the live view, an `\input` of a bank problem shows a small card after it with the problem's title, difficulty and tags.
+In the live view, an `\input` of a bank problem, on a line of its own, is drawn as a card in place of the line. It has the problem's title, difficulty and tags, then the whole problem as the Problems view shows it: parts labelled, math drawn, images and TikZ pictures as placeholders, solutions left out. Click the card to open the problem. Alt+click it, or move the cursor onto its line, to see and edit the `\input`. In a declared paper the core's `\input` card (the file's headings) is drawn instead. A card changes when the problem's file is saved.
 
 ## Not included
 
