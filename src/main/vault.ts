@@ -8,6 +8,8 @@ import type { SettingValues, VaultPluginEntry } from '../shared/plugin'
 
 /** Optional per-vault settings, read from <vault>/.vault.json. */
 interface VaultSettings {
+  /** The vault's name in the app; the folder's name when unset. */
+  name?: string
   /** A vault-only template library, absolute or relative to the vault root; searched before the global one. */
   templates?: string
   /** Folder (vault-relative) where imported and pasted images go. */
@@ -40,7 +42,8 @@ const HIDDEN_DIRS = new Set(['.texcache', 'pdf', 'build', '.git', 'node_modules'
 const HIDDEN_EXTS = /\.(aux|log|out|synctex\.gz|fls|fdb_latexmk|toc|nav|snm|vrb|bbl|blg|run\.xml)$/i
 
 export class Vault {
-  readonly name: string
+  /** The name shown in the app: .vault.json's, else the folder's. */
+  name: string
   /** The vault's own template library (from .vault.json), if any. */
   vaultTemplates: string | null = null
   /** Vault-relative folder for imported and pasted images. */
@@ -71,7 +74,12 @@ export class Vault {
     public globalTemplates: string | null = null,
   ) {
     this.name = basename(root)
-    this.appearance = normalizeVaultAppearance(undefined, this.name)
+    this.appearance = normalizeVaultAppearance(undefined, this.folderName)
+  }
+
+  /** The folder's own name. It seeds the default endpaper, so naming the vault doesn't remarble it. */
+  get folderName(): string {
+    return basename(this.root)
   }
 
   /** Template libraries in search order: the vault's own, then the global one. */
@@ -95,6 +103,7 @@ export class Vault {
 
   async load(): Promise<void> {
     const settings = await this.readSettings()
+    this.name = (typeof settings.name === 'string' && settings.name.trim()) || this.folderName
     this.vaultTemplates = settings.templates ? resolve(this.root, settings.templates) : null
     this.imagesDir = settings.images ?? (await this.firstExistingDir(IMAGE_DIR_CANDIDATES)) ?? 'Images'
     this.lists = { ...DEFAULT_LISTS }
@@ -106,7 +115,7 @@ export class Vault {
     this.fastCompile = settings.fastCompile !== false
     this.mathSnippets = settings.mathSnippets ?? 'math-snippets.txt'
     this.words = settings.words ?? 'words.txt'
-    this.appearance = normalizeVaultAppearance(settings.appearance, this.name)
+    this.appearance = normalizeVaultAppearance(settings.appearance, this.folderName)
     this.papers = Array.isArray(settings.papers) ? settings.papers.filter((p) => typeof p === 'string') : []
     this.plugins = settings.plugins && typeof settings.plugins === 'object' ? settings.plugins : {}
   }
@@ -144,10 +153,21 @@ export class Vault {
    */
   async saveAppearance(changes: Partial<VaultAppearance>): Promise<VaultAppearance> {
     const settings = await this.readSettings()
-    this.appearance = normalizeVaultAppearance({ ...this.appearance, ...changes }, this.name)
+    this.appearance = normalizeVaultAppearance({ ...this.appearance, ...changes }, this.folderName)
     settings.appearance = this.appearance
     await writeFile(this.settingsPath, JSON.stringify(settings, null, 2) + '\n')
     return this.appearance
+  }
+
+  /** Names the vault in .vault.json (blank goes back to the folder's name), keeping its other settings. Returns the name. */
+  async saveName(name: string): Promise<string> {
+    const settings = await this.readSettings()
+    const trimmed = name.trim()
+    if (trimmed && trimmed !== this.folderName) settings.name = trimmed
+    else delete settings.name
+    this.name = trimmed || this.folderName
+    await writeFile(this.settingsPath, JSON.stringify(settings, null, 2) + '\n')
+    return this.name
   }
 
   /** Marks `root` as a multi-part paper (or not) in .vault.json, keeping its other settings. */

@@ -26,6 +26,12 @@
     window.api.recentVaults().then((r) => (recent = r))
   })
 
+  async function forget(v: RecentVault): Promise<void> {
+    await window.api.forgetVault(v.root)
+    recent = recent.filter((r) => r.root !== v.root)
+    if (preview === v.appearance) preview = null
+  }
+
   const shown = $derived(preview ?? recent[0]?.appearance ?? defaultVaultAppearance('endleaf'))
 
   // Hover lingers a moment before the endpaper changes, so sweeping across the list doesn't flicker.
@@ -59,11 +65,14 @@
       <p class="lbl">Recent vaults</p>
       <div class="vaults">
         {#each recent as v (v.root)}
-          <button class="vault" onclick={() => onopenat(v.root)} onpointerenter={() => hover(v.appearance)} onfocus={() => hover(v.appearance)}>
-            <span class="chip" style:background-image={marbleCss(v.appearance, 'small')}></span>
-            <span class="what"><b>{v.name}</b><small>{v.root}</small></span>
-            <span class="when">{when(v.opened)}</span>
-          </button>
+          <div class="entry">
+            <button class="vault" onclick={() => onopenat(v.root)} onpointerenter={() => hover(v.appearance)} onfocus={() => hover(v.appearance)}>
+              <span class="chip" style:background-image={marbleCss(v.appearance, 'small')}></span>
+              <span class="what"><b>{v.name}</b><small>{v.root}</small></span>
+              <span class="when">{when(v.opened)}</span>
+            </button>
+            <button class="forget" title="Take off this list (the folder stays)" aria-label="Forget {v.name}" onclick={() => forget(v)}>×</button>
+          </div>
         {/each}
       </div>
     {/if}
@@ -146,6 +155,31 @@
     flex-direction: column;
     margin: 4px -10px 18px;
   }
+  .entry {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+  .entry:hover,
+  .entry:focus-within {
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+  }
+  .forget {
+    border: 0;
+    border-radius: 0;
+    padding: 0 10px;
+    align-self: stretch;
+    font: 18px var(--f-page);
+    color: var(--ink-soft);
+    opacity: 0;
+  }
+  .entry:hover .forget,
+  .forget:focus-visible {
+    opacity: 1;
+  }
+  .forget:hover {
+    color: var(--ink);
+  }
   .vault {
     display: grid;
     grid-template-columns: 44px minmax(0, 1fr) auto;
@@ -155,10 +189,6 @@
     border: 0;
     border-radius: 0;
     text-align: left;
-  }
-  .vault:hover:not(:disabled),
-  .vault:focus-visible {
-    background: color-mix(in srgb, var(--ink) 7%, transparent);
   }
   .chip {
     width: 44px;

@@ -180,6 +180,10 @@ export interface Api {
   newVault(): Promise<VaultInfo | null>
   /** Closes the vault, back to the welcome screen. */
   closeVault(): Promise<void>
+  /** Takes a vault off the welcome screen's recent list (the folder is left alone). */
+  forgetVault(root: string): Promise<void>
+  /** Names the open vault (blank for its folder's name); resolves to the name now shown. */
+  setVaultName(name: string): Promise<string>
   readFile(rel: string): Promise<string>
   /** Like readFile, but null when the file doesn't exist. */
   readOptional(rel: string): Promise<string | null>

@@ -23,6 +23,8 @@
   } = $props()
 
   const NEW_FOLDER = '\0new'
+  // The starter picked last, chosen first next time.
+  const LAST_KEY = 'endleaf-new-file-starter'
   const SOURCES = [
     ['built-in', 'Built in'],
     ['vault', 'This vault'],

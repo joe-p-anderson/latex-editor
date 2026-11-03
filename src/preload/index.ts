@@ -4,13 +4,15 @@ import type { PluginState } from '../shared/plugin'
 
 // The renderer's only door to the filesystem and compiler. Everything goes
 // through named IPC channels handled in src/main/index.ts.
-const api: Api & { onMenuOpenVault(cb: () => void): () => void } = {
+const api: Api = {
   openVault: () => ipcRenderer.invoke('vault:open'),
   getVault: () => ipcRenderer.invoke('vault:get'),
   recentVaults: () => ipcRenderer.invoke('vault:recent'),
   openVaultAt: (root) => ipcRenderer.invoke('vault:open-path', root),
   newVault: () => ipcRenderer.invoke('vault:new'),
   closeVault: () => ipcRenderer.invoke('vault:close'),
+  forgetVault: (root) => ipcRenderer.invoke('vault:forget', root),
+  setVaultName: (name) => ipcRenderer.invoke('vault:set-name', name),
   readFile: (rel) => ipcRenderer.invoke('file:read', rel),
   readOptional: (rel) => ipcRenderer.invoke('file:readOptional', rel),
   globalSnippets: () => ipcRenderer.invoke('snippets:global'),
@@ -104,11 +106,6 @@ const api: Api & { onMenuOpenVault(cb: () => void): () => void } = {
     const listener = (_e: unknown, id: string, event: string, data: unknown) => cb(id, event, data)
     ipcRenderer.on('plugins:event', listener)
     return () => ipcRenderer.removeListener('plugins:event', listener)
-  },
-  onMenuOpenVault: (cb) => {
-    const listener = () => cb()
-    ipcRenderer.on('menu:open-vault', listener)
-    return () => ipcRenderer.removeListener('menu:open-vault', listener)
   },
 }
 

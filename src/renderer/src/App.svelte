@@ -697,13 +697,21 @@
 
   async function setEndpaper(changes: Partial<VaultAppearance>): Promise<void> {
     if (!vault) return
-    vault.appearance = normalizeVaultAppearance({ ...vault.appearance, ...changes }, vault.name)
+    vault.appearance = normalizeVaultAppearance({ ...vault.appearance, ...changes }, folderName(vault.root))
     await window.api.setVaultAppearance(changes).catch((e: Error) => flash(`Couldn't save .vault.json: ${e.message}`))
   }
 
   function restoreDefaults(): void {
     setAppearance(DEFAULT_APP_APPEARANCE)
-    if (vault) setEndpaper(defaultVaultAppearance(vault.name))
+    if (vault) setEndpaper(defaultVaultAppearance(folderName(vault.root)))
+  }
+
+  /** The vault folder's own name: it seeds the endpaper, whatever the vault is called. */
+  const folderName = (root: string) => root.split(/[\/]/).pop() ?? root
+
+  async function setVaultName(name: string): Promise<void> {
+    if (!vault) return
+    vault.name = await window.api.setVaultName(name).catch((e: Error) => (flash(`Couldn't save .vault.json: ${e.message}`), vault!.name))
   }
 
   // The vault's images, for the picker, autocomplete and hover previews.
@@ -922,7 +930,6 @@
     const offClose = window.api.onCloseRequested(async () => {
       if (await settleUnsaved('closing')) window.api.closeWindow()
     })
-    const offMenu = window.api.onMenuOpenVault(openVault)
     const offVault = window.api.onVaultChanged((v) => (vault = v))
     const offPlugins = window.api.onPluginsChanged((states) => plugins.apply(states))
     const offAppMenu = window.api.onMenu((name, arg) => {
@@ -932,7 +939,7 @@
       else if (vault) menuCommand(name)
     })
     window.api.setSpellcheckMenu(spellOn)
-    return () => (offTree(), offMenu(), offVault(), offClose(), offAppMenu(), offPlugins())
+    return () => (offTree(), offVault(), offClose(), offAppMenu(), offPlugins())
   })
 
   /** Menu items the renderer carries out (most also have a shortcut, handled in onkeydown). */
@@ -954,10 +961,11 @@
     else if (name === 'command-palette') palette = true
     else if (name === 'recompile' && active) compile(active)
     else if (name === 'sync-forward') syncForward()
-    else if (name === 'close-vault') closeVault()
+    // Switching goes by the welcome screen, which lists the recent vaults; from there it opens a folder.
+    else if (name === 'switch-vault') vault ? closeVault() : openVault()
   }
 
-  /** File → Open Vault and the welcome screen's "Open a folder…". */
+  /** The welcome screen's "Open a folder…". */
   const openVault = () => switchVault(() => window.api.openVault())
 
   /**
@@ -2076,6 +2084,8 @@
               app={appearance}
               endpaper={vault.appearance}
               vaultName={vault.name}
+              folderName={folderName(vault.root)}
+              onname={setVaultName}
               onapp={setAppearance}
               onvault={setEndpaper}
               ondefaults={restoreDefaults}

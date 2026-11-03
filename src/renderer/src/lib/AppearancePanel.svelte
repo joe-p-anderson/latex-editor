@@ -28,6 +28,8 @@
     app,
     endpaper,
     vaultName,
+    folderName = '',
+    onname = () => {},
     onapp,
     onvault,
     ondefaults,
@@ -37,6 +39,10 @@
     /** The open vault's endpaper; null when no vault is open. */
     endpaper: VaultAppearance | null
     vaultName: string | null
+    /** The vault folder's name, which the vault goes by when it has no name of its own. */
+    folderName?: string
+    /** Names the vault (blank for the folder's name). */
+    onname?: (name: string) => void
     onapp: (changes: Partial<AppAppearance>) => void
     onvault: (changes: Partial<VaultAppearance>) => void
     /** Restores every setting, global and this vault's, to its default. */
@@ -133,6 +139,20 @@
 
     <div class="body">
       <div class="group">
+        <label class="label" for="vault-name">Name</label>
+        <input
+          id="vault-name"
+          class="name"
+          type="text"
+          value={vaultName === folderName ? '' : vaultName}
+          placeholder={folderName}
+          spellcheck="false"
+          onchange={(e) => onname(e.currentTarget.value)}
+          onkeydown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+        />
+        <p class="hint">Shown in the title bar and on the welcome screen. The folder keeps its name.</p>
+      </div>
+      <div class="group">
         <div class="label">Palette</div>
         <div class="swatches">
           {#each PALETTE_THEMES as theme (theme.id)}
@@ -222,6 +242,10 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--ink-soft);
+  }
+  .name {
+    width: 100%;
+    box-sizing: border-box;
   }
   .hint {
     margin: 6px 0 0;

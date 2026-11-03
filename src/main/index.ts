@@ -92,7 +92,8 @@ async function recentVaults(): Promise<RecentVault[]> {
   for (const r of (await loadSettings()).recentVaults ?? []) {
     if (!(await stat(r.root).then((s) => s.isDirectory(), () => false))) continue
     const settings = await readFile(join(r.root, '.vault.json'), 'utf8').then(JSON.parse, () => ({}))
-    out.push({ root: r.root, name: basename(r.root), opened: r.opened, appearance: normalizeVaultAppearance(settings.appearance, basename(r.root)) })
+    const name = (typeof settings.name === 'string' && settings.name.trim()) || basename(r.root)
+    out.push({ root: r.root, name, opened: r.opened, appearance: normalizeVaultAppearance(settings.appearance, basename(r.root)) })
   }
   return out
 }
@@ -191,6 +192,11 @@ ipcMain.handle('vault:open', async () => {
 })
 ipcMain.handle('vault:get', async () => vault?.info() ?? null)
 ipcMain.handle('vault:recent', () => recentVaults())
+ipcMain.handle('vault:forget', async (_e, root: string) => {
+  const recent = (await loadSettings()).recentVaults ?? []
+  await saveSettings({ recentVaults: recent.filter((r) => r.root !== root) })
+})
+ipcMain.handle('vault:set-name', (_e, name: string) => requireVault().saveName(name))
 ipcMain.handle('vault:open-path', async (_e, root: string) => (await openVault(root)).info())
 ipcMain.handle('vault:new', async () => (await newVault())?.info() ?? null)
 ipcMain.handle('vault:close', async () => {
@@ -455,8 +461,7 @@ function buildMenu(): void {
         label: 'File',
         submenu: [
           { label: 'New File…', ...shown('CmdOrCtrl+N'), click: send('new-file') },
-          { label: 'Open Vault…', accelerator: 'CmdOrCtrl+O', click: () => win?.webContents.send('menu:open-vault') },
-          { label: 'Close Vault', click: send('close-vault') },
+          { label: 'Switch Vault…', accelerator: 'CmdOrCtrl+O', click: send('switch-vault') },
           { label: 'Go to File…', ...shown('CmdOrCtrl+P'), click: send('quick-open') },
           { label: 'Save All', ...shown('CmdOrCtrl+Alt+S'), click: send('save-all') },
           {
