@@ -1,6 +1,6 @@
 # First-time hints
 
-Status: ready-for-agent
+Status: resolved
 
 Spec: [../spec.md](../spec.md#first-time-hints).
 
@@ -26,3 +26,7 @@ Keep the hints in one list in code. The spec caps them at three.
 - [ ] Dismissed hints don't come back after a restart, and Show Hints Again brings all three back.
 
 ## Comments
+
+## Comments
+
+Resolved on branch `onboarding` (2026-11-04).

@@ -1,6 +1,6 @@
 # Lab report starter and default starters
 
-Status: ready-for-agent
+Status: resolved
 
 Spec: [../spec.md](../spec.md#lab-report-starter-and-default-starters).
 
@@ -24,3 +24,7 @@ Use the term "starter", not "template", in all UI text ([GLOSSARY.md](../../../G
 - [ ] A test in `tests/` covers starter listing with a default, and the `.vault.json` round-trip.
 
 ## Comments
+
+## Comments
+
+Resolved on branch `onboarding` (2026-11-04).

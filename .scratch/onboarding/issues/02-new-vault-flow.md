@@ -1,6 +1,6 @@
 # New vault flow
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 01
 
 Spec: [../spec.md](../spec.md#new-vault-flow).
@@ -23,3 +23,7 @@ After New vault…'s folder picker (`Welcome.svelte` `onnew`, and the main-proce
 - [ ] A folder with existing `.tex` files opens directly, with no dialog.
 
 ## Comments
+
+## Comments
+
+Resolved on branch `onboarding` (2026-11-04).

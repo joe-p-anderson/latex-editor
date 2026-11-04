@@ -1,6 +1,6 @@
 # No-TeX detection and card
 
-Status: ready-for-agent
+Status: resolved
 
 Spec: [../spec.md](../spec.md#no-tex-installed).
 
@@ -20,3 +20,7 @@ Spec: [../spec.md](../spec.md#no-tex-installed).
 - [ ] Unit tests cover detection's search order using a fake filesystem.
 
 ## Comments
+
+## Comments
+
+Resolved on branch `onboarding` (2026-11-04).

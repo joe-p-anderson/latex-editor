@@ -1,6 +1,6 @@
 # Welcome screen, tooltips and empty editor
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: ux-fixes 01
 
 Spec: [../spec.md](../spec.md#welcome-screen-and-empty-states).
@@ -24,3 +24,7 @@ Spec: [../spec.md](../spec.md#welcome-screen-and-empty-states).
 - [ ] The empty editor's keys come from the registry, so changing a command's key in the registry changes the list.
 
 ## Comments
+
+## Comments
+
+Resolved on branch `onboarding` (2026-11-04).
