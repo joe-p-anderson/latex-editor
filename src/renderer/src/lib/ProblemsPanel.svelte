@@ -53,6 +53,11 @@
 
   const where = (p: Problem) => (p.file ? `${p.file.split(/[\\/]/).pop()}${p.line ? `:${p.line}` : ''}` : '')
   const icon: Record<Severity, string> = { error: '●', warning: '▲', layout: '◇' }
+  const SEVERITY_TIPS: Record<Severity, string | undefined> = {
+    error: undefined,
+    warning: undefined,
+    layout: 'How the text sits on the page: lines sticking out into the margin or stretched too loosely, figures that moved. The PDF still builds.',
+  }
 </script>
 
 <section class="panel">
@@ -64,7 +69,7 @@
     {#if tab === 'problems' && result}
       <span class="sevs">
         {#each [['error', 'Errors'], ['warning', 'Warnings'], ['layout', 'Layout']] as [key, label] (key)}
-          <button class="tab {key}" class:active={severity === key} onclick={() => (severity = key as Severity)}>
+          <button class="tab {key}" class:active={severity === key} title={SEVERITY_TIPS[key as Severity]} onclick={() => (severity = key as Severity)}>
             {label} <span class="n" class:hot={count(key as Severity) > 0}>{count(key as Severity)}</span>
           </button>
         {/each}

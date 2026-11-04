@@ -52,6 +52,7 @@
   import Icon from './lib/Icon.svelte'
   import Welcome from './lib/Welcome.svelte'
   import EmptyPlate from './lib/EmptyPlate.svelte'
+  import { EMPTY_PLATE_LINKS, emptyPlateKeys } from './lib/emptyPlate'
   import IndexTabs from './lib/IndexTabs.svelte'
   import { tick, untrack } from 'svelte'
   import {
@@ -305,6 +306,9 @@
   // (a plugin switched on) and when what's enabled may change (a vault, the active file).
   let commandsChanged = $state(0)
   commands.subscribe(() => commandsChanged++)
+  // The empty editor's keys and Help links, from the registry; a link shows once its command is registered.
+  const plateKeys = $derived((void commandsChanged, emptyPlateKeys(commands)))
+  const plateLinks = $derived((void commandsChanged, EMPTY_PLATE_LINKS.filter((l) => commands.get(l.id))))
   $effect(() => {
     void [commandsChanged, vault, active]
     untrack(() => window.api.setMenuBar(menuBar(commands.all(), commandContext())))
@@ -733,8 +737,12 @@
       ? `Just ${result.section} of ${result.root}, numbered as in the whole paper, with its labels and citations from the last full build. The whole paper builds when another of its files changes, or with Build → Recompile`
       : `${result.root}: ${result.passes} pass${result.passes === 1 ? '' : 'es'}${result.preloaded ? ', preamble preloaded' : ''}${result.fullReason ? `. Built in full: ${result.fullReason}` : ''}`
     const what = result.section ? result.section : result.draft ? 'Preview' : 'Built'
-    if (errors) return { kind: 'err', note: `${errors} error${errors === 1 ? '' : 's'}${result.section ? ` in ${result.section}` : result.draft ? ' in preview' : ' · pdf/ unchanged'}`, detail: how }
-    return { kind: 'ok', note: `${what} · ${(result.durationMs / 1000).toFixed(1)} s`, detail: how }
+    if (errors) {
+      const section = result.section ? { text: result.section, tip: 'The section of the document the error is in' } : undefined
+      return { kind: 'err', note: `${errors} error${errors === 1 ? '' : 's'}${result.section ? ` in ${result.section}` : result.draft ? ' in preview' : ' · pdf/ unchanged'}`, detail: how, section }
+    }
+    const section = result.section ? { text: result.section, tip: 'The section of the document that was built' } : undefined
+    return { kind: 'ok', note: `${what} · ${(result.durationMs / 1000).toFixed(1)} s`, detail: how, section }
   })
   const problemCounts = $derived({
     errors: result?.problems.filter((p) => p.severity === 'error' && !p.hidden && !p.followOn).length ?? 0,
@@ -2179,7 +2187,7 @@
                 onfindstep={findStep}
               />
             </div>
-            {#if !active}<EmptyPlate logo={logoUrl(endpaper.palette, 'mid')} />{/if}
+            {#if !active}<EmptyPlate logo={logoUrl(endpaper.palette, 'mid')} keys={plateKeys} links={plateLinks} onrun={(id) => commands.run(id, commandContext())} />{/if}
             {#if replaced}
               <ReplaceReport
                 files={replaced}
