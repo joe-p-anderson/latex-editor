@@ -338,7 +338,6 @@
     view.focus()
   }
 
-  /** Flips live mode for the open file. */
   /** Runs a formatting or insert action on the open file, and gives the editor focus; false if it didn't apply. */
   export function edit(id: EditId): boolean {
     if (!current) return false
@@ -347,17 +346,18 @@
     return done
   }
 
+  /** Flips live mode for the open file. */
   export function toggleLiveMode(): void {
     toggleLive(view)
     view.focus()
   }
 
-  /** Gives the editor keyboard focus (e.g. after a dialog closes). */
   /** Checks the spelling of the open file again (switched on or off, word list changed). */
   export function refreshSpellcheck(): void {
     view.dispatch({ effects: refreshSpelling.of(null) })
   }
 
+  /** Gives the editor keyboard focus (e.g. after a dialog closes). */
   export function focus(): void {
     view.focus()
   }

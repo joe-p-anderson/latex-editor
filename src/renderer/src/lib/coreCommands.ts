@@ -1,6 +1,6 @@
 // endleaf's own commands, for the command registry (./commands.ts). Plugin
 // commands are added by plugins.svelte.ts. App.svelte supplies the actions.
-import type { Command } from './commands'
+import type { Command, Condition } from './commands'
 
 /** The editor's formatting and insert actions (run on its view; see EDITS in editing.ts). */
 export type EditId =
@@ -18,7 +18,10 @@ export type EditId =
   | 'table'
   | 'renameLabel'
 
-/** What the commands act through. Each may return false when it doesn't apply (a key then falls through). */
+/**
+ * What the commands act through. The boolean ones return false when they
+ * don't apply (a key then falls through); the void ones always apply.
+ */
 export interface CoreActions {
   newFile(): void
   switchVault(): void
@@ -26,7 +29,8 @@ export interface CoreActions {
   /** Saves the open file (and builds it, if it's .tex); false with none. */
   save(): boolean
   saveAll(): void
-  closeTab(): void
+  /** Closes the active tab; false with none (Ctrl+W then falls through). */
+  closeTab(): boolean
   find(): void
   replace(): void
   findInVault(): void
@@ -56,8 +60,21 @@ export interface CoreActions {
   syncForward(): void
 }
 
-const V = ['vault'] as Command['when']
-const TEX = ['vault', 'tex'] as Command['when']
+const V: Condition[] = ['vault']
+const FILE: Condition[] = ['vault', 'editor']
+const TEX: Condition[] = ['vault', 'tex']
+
+/**
+ * Runs an action that always applies. Whatever it returns is dropped (a
+ * toggle's new state can be false, which would let the key fall through),
+ * except a promise, so the registry still reports its failure.
+ */
+const always =
+  (f: () => unknown) =>
+  (): void | Promise<void> => {
+    const r = f()
+    if (r instanceof Promise) return r.then(() => undefined)
+  }
 
 export function coreCommands(a: CoreActions): Command[] {
   const insert = (id: string, title: string, edit: EditId, key?: string, submenu?: string): Command => ({
@@ -72,19 +89,19 @@ export function coreCommands(a: CoreActions): Command[] {
   })
   return [
     // File
-    { id: 'file.newFile', title: 'New File…', category: 'File', key: 'Mod-n', when: V, run: a.newFile },
-    { id: 'file.switchVault', title: 'Switch Vault…', category: 'File', key: 'Mod-o', keywords: ['open', 'folder'], run: a.switchVault },
-    { id: 'file.goToFile', title: 'Go to File…', category: 'File', key: 'Mod-p', keywords: ['open', 'quick open'], when: V, run: a.goToFile },
+    { id: 'file.newFile', title: 'New File…', category: 'File', key: 'Mod-n', when: V, run: always(a.newFile) },
+    { id: 'file.switchVault', title: 'Switch Vault…', category: 'File', key: 'Mod-o', keywords: ['open', 'folder'], run: always(a.switchVault) },
+    { id: 'file.goToFile', title: 'Go to File…', category: 'File', key: 'Mod-p', keywords: ['open', 'quick open'], when: V, run: always(a.goToFile) },
     { id: 'file.save', title: 'Save', category: 'File', key: 'Mod-s', menuTitle: (ctx) => (ctx.tex ? 'Save and Build' : 'Save'), when: V, run: a.save },
-    { id: 'file.saveAll', title: 'Save All', category: 'File', key: 'Mod-Alt-s', when: V, run: a.saveAll },
+    { id: 'file.saveAll', title: 'Save All', category: 'File', key: 'Mod-Alt-s', when: V, run: always(a.saveAll) },
     { id: 'file.closeTab', title: 'Close Tab', category: 'File', key: 'Mod-w', when: V, run: a.closeTab },
 
     // Edit
-    { id: 'edit.find', title: 'Find', category: 'Edit', key: 'Mod-f', keywords: ['search'], when: V, run: a.find },
-    { id: 'edit.replace', title: 'Replace', category: 'Edit', key: 'Mod-h', when: V, run: a.replace },
-    { id: 'edit.findInVault', title: 'Find in Vault', category: 'Edit', key: 'Mod-Shift-f', aliases: ['Mod-Shift-h'], keywords: ['search'], when: V, run: a.findInVault },
+    { id: 'edit.find', title: 'Find', category: 'Edit', key: 'Mod-f', keywords: ['search'], when: V, run: always(a.find) },
+    { id: 'edit.replace', title: 'Replace', category: 'Edit', key: 'Mod-h', when: V, run: always(a.replace) },
+    { id: 'edit.findInVault', title: 'Find in Vault', category: 'Edit', key: 'Mod-Shift-f', aliases: ['Mod-Shift-h'], keywords: ['search'], when: V, run: always(a.findInVault) },
     { id: 'edit.renameLabel', title: 'Rename Label', category: 'Edit', key: 'F2', editorKey: true, when: TEX, run: () => a.edit('renameLabel') },
-    { id: 'edit.mathShortcuts', title: 'Math Shortcuts…', category: 'Edit', keywords: ['snippets'], when: V, run: a.mathShortcuts },
+    { id: 'edit.mathShortcuts', title: 'Maths Shortcuts…', category: 'Edit', keywords: ['math', 'snippets'], when: V, run: always(a.mathShortcuts) },
 
     // Insert
     insert('bold', 'Bold', 'bold', 'Mod-b', 'Format'),
@@ -99,31 +116,31 @@ export function coreCommands(a: CoreActions): Command[] {
     insert('figure', 'Figure', 'figure', 'Mod-Alt-f'),
     insert('figureStar', 'Figure*', 'figure*'),
     insert('table', 'Table…', 'table', 'Mod-Alt-t'),
-    { id: 'insert.image', title: 'Image…', category: 'Insert', keywords: ['picture', 'graphics'], when: TEX, run: a.insertImage },
-    { id: 'insert.cite', title: 'Citation…', category: 'Insert', key: 'Mod-Shift-c', keywords: ['cite', 'reference', 'bibliography'], when: TEX, run: a.cite },
+    { id: 'insert.image', title: 'Image…', category: 'Insert', keywords: ['picture', 'graphics'], when: TEX, run: always(a.insertImage) },
+    { id: 'insert.cite', title: 'Citation…', category: 'Insert', key: 'Mod-Shift-c', keywords: ['cite', 'reference', 'bibliography'], when: TEX, hint: 'Open a .tex file to cite', run: always(a.cite) },
 
     // View
-    { id: 'view.toggleLive', title: 'Live View', category: 'View', key: 'Mod-Shift-l', editorKey: true, keywords: ['source'], when: V, run: a.toggleLive },
-    { id: 'view.togglePdf', title: 'Toggle PDF', category: 'View', key: 'Mod-Alt-v', keywords: ['preview', 'build', 'compile'], when: V, run: a.togglePdf },
-    { id: 'view.toggleSidebar', title: 'Toggle Sidebar', category: 'View', key: 'Mod-Alt-b', when: V, run: a.toggleSidebar },
-    { id: 'view.togglePanel', title: 'Toggle Problems and Log', category: 'View', key: 'Mod-j', keywords: ['errors'], when: V, run: a.togglePanel },
-    { id: 'view.toggleSpelling', title: 'Toggle Spelling', category: 'View', keywords: ['spellcheck'], menu: false, run: a.toggleSpelling },
-    { id: 'view.appearance', title: 'Appearance', category: 'View', key: 'Mod-,', keywords: ['theme', 'palette', 'colour', 'color', 'font'], when: V, run: a.appearance },
-    { id: 'view.nextTab', title: 'Next Tab', category: 'View', key: 'Mod-PageDown', when: V, run: a.nextTab },
-    { id: 'view.previousTab', title: 'Previous Tab', category: 'View', key: 'Mod-PageUp', when: V, run: a.previousTab },
-    { id: 'view.recentTab', title: 'Recently Used Tab', category: 'View', key: 'Mod-Tab', menu: false, when: V, run: () => a.cycleTabs(1) },
-    { id: 'view.recentTabBack', title: 'Recently Used Tab (Back)', category: 'View', key: 'Mod-Shift-Tab', menu: false, when: V, run: () => a.cycleTabs(-1) },
-    { id: 'view.back', title: 'Go Back', category: 'View', key: 'Alt-ArrowLeft', when: V, run: a.goBack },
-    { id: 'view.forward', title: 'Go Forward', category: 'View', key: 'Alt-ArrowRight', when: V, run: a.goForward },
+    { id: 'view.toggleLive', title: 'Live View', category: 'View', key: 'Mod-Shift-l', editorKey: true, keywords: ['source'], when: FILE, run: always(a.toggleLive) },
+    { id: 'view.togglePdf', title: 'Toggle PDF', category: 'View', key: 'Mod-Alt-v', keywords: ['preview', 'build', 'compile'], when: V, run: always(a.togglePdf) },
+    { id: 'view.toggleSidebar', title: 'Toggle Sidebar', category: 'View', key: 'Mod-Alt-b', when: V, run: always(a.toggleSidebar) },
+    { id: 'view.togglePanel', title: 'Toggle Problems and Log', category: 'View', key: 'Mod-j', keywords: ['errors'], when: V, run: always(a.togglePanel) },
+    { id: 'view.toggleSpelling', title: 'Toggle Spelling', category: 'View', keywords: ['spellcheck'], menu: false, run: always(a.toggleSpelling) },
+    { id: 'view.appearance', title: 'Appearance', category: 'View', key: 'Mod-,', keywords: ['theme', 'palette', 'colour', 'color', 'font'], when: V, run: always(a.appearance) },
+    { id: 'view.nextTab', title: 'Next Tab', category: 'View', key: 'Mod-PageDown', when: V, run: always(a.nextTab) },
+    { id: 'view.previousTab', title: 'Previous Tab', category: 'View', key: 'Mod-PageUp', when: V, run: always(a.previousTab) },
+    { id: 'view.recentTab', title: 'Recently Used Tab', category: 'View', key: 'Mod-Tab', menu: false, when: V, run: always(() => a.cycleTabs(1)) },
+    { id: 'view.recentTabBack', title: 'Recently Used Tab (Back)', category: 'View', key: 'Mod-Shift-Tab', menu: false, when: V, run: always(() => a.cycleTabs(-1)) },
+    { id: 'view.back', title: 'Go Back', category: 'View', key: 'Alt-ArrowLeft', when: V, run: always(a.goBack) },
+    { id: 'view.forward', title: 'Go Forward', category: 'View', key: 'Alt-ArrowRight', when: V, run: always(a.goForward) },
     { id: 'view.previousPaperFile', title: "Paper's Previous File", category: 'View', key: 'Alt-PageUp', when: V, run: () => a.paperFile(-1) },
     { id: 'view.nextPaperFile', title: "Paper's Next File", category: 'View', key: 'Alt-PageDown', when: V, run: () => a.paperFile(1) },
 
     // Build
     { id: 'build.recompile', title: 'Recompile', category: 'Build', key: 'Mod-Shift-b', keywords: ['compile', 'build', 'pdf', 'typeset'], when: V, run: a.recompile },
-    { id: 'build.syncForward', title: 'Show Cursor in PDF', category: 'Build', key: 'Mod-Alt-j', keywords: ['sync', 'synctex', 'pdf'], when: V, run: a.syncForward },
+    { id: 'build.syncForward', title: 'Show Cursor in PDF', category: 'Build', key: 'Mod-Alt-j', keywords: ['sync', 'synctex', 'pdf'], when: V, run: always(a.syncForward) },
 
     // Tools
-    { id: 'tools.commandPalette', title: 'Run Command…', category: 'Tools', key: 'Mod-Shift-p', keywords: ['command palette'], run: a.commandPalette },
-    { id: 'tools.plugins', title: 'Plugins…', category: 'Tools', when: V, run: a.plugins },
+    { id: 'tools.commandPalette', title: 'Run Command…', category: 'Tools', key: 'Mod-Shift-p', keywords: ['command palette'], run: always(a.commandPalette) },
+    { id: 'tools.plugins', title: 'Plugins…', category: 'Tools', when: V, run: always(a.plugins) },
   ]
 }

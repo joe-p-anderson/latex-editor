@@ -92,6 +92,24 @@ export class Vault {
     return join(this.root, '.vault.json')
   }
 
+  private settingsQueue: Promise<unknown> = Promise.resolve()
+
+  /**
+   * Reads .vault.json, lets `change` edit it, and writes it back, one change
+   * at a time: two at once would both read the file before either wrote, and
+   * the second write would drop the first one's change.
+   */
+  private updateSettings<T>(change: (settings: VaultSettings) => T): Promise<T> {
+    const next = this.settingsQueue.then(async () => {
+      const settings = await this.readSettings()
+      const result = change(settings)
+      await writeFile(this.settingsPath, JSON.stringify(settings, null, 2) + '\n')
+      return result
+    })
+    this.settingsQueue = next.catch(() => {})
+    return next
+  }
+
   private async readSettings(): Promise<VaultSettings> {
     try {
       return JSON.parse(await readFile(this.settingsPath, 'utf8'))
@@ -124,21 +142,21 @@ export class Vault {
    * Sets a plugin on or off here (`enabled`; null follows the default) and/or
    * merges `settings` into its vault settings, in .vault.json.
    */
-  async savePlugin(id: string, change: { enabled?: boolean | null; settings?: SettingValues }): Promise<void> {
-    const settings = await this.readSettings()
-    const old = this.plugins[id]
-    const entry: { enabled?: boolean; settings?: SettingValues } = typeof old === 'object' && old ? { ...old } : typeof old === 'boolean' ? { enabled: old } : {}
-    if (change.enabled === null) delete entry.enabled
-    else if (change.enabled !== undefined) entry.enabled = change.enabled
-    if (change.settings) entry.settings = { ...entry.settings, ...change.settings }
-    const plugins = { ...this.plugins }
-    // A bare on/off reads best as true/false in the file.
-    if (entry.settings && Object.keys(entry.settings).length) plugins[id] = entry
-    else if (entry.enabled !== undefined) plugins[id] = entry.enabled
-    else delete plugins[id]
-    this.plugins = plugins
-    settings.plugins = plugins
-    await writeFile(this.settingsPath, JSON.stringify(settings, null, 2) + '\n')
+  savePlugin(id: string, change: { enabled?: boolean | null; settings?: SettingValues }): Promise<void> {
+    return this.updateSettings((settings) => {
+      const old = this.plugins[id]
+      const entry: { enabled?: boolean; settings?: SettingValues } = typeof old === 'object' && old ? { ...old } : typeof old === 'boolean' ? { enabled: old } : {}
+      if (change.enabled === null) delete entry.enabled
+      else if (change.enabled !== undefined) entry.enabled = change.enabled
+      if (change.settings) entry.settings = { ...entry.settings, ...change.settings }
+      const plugins = { ...this.plugins }
+      // A bare on/off reads best as true/false in the file.
+      if (entry.settings && Object.keys(entry.settings).length) plugins[id] = entry
+      else if (entry.enabled !== undefined) plugins[id] = entry.enabled
+      else delete plugins[id]
+      this.plugins = plugins
+      settings.plugins = plugins
+    })
   }
 
   /** Calls `f` with each file added, changed or removed in the vault (not in hidden folders). */
@@ -151,33 +169,33 @@ export class Vault {
    * Merges `changes` into the vault's endpaper and writes it to .vault.json,
    * keeping the file's other settings. Returns the result.
    */
-  async saveAppearance(changes: Partial<VaultAppearance>): Promise<VaultAppearance> {
-    const settings = await this.readSettings()
-    this.appearance = normalizeVaultAppearance({ ...this.appearance, ...changes }, this.folderName)
-    settings.appearance = this.appearance
-    await writeFile(this.settingsPath, JSON.stringify(settings, null, 2) + '\n')
-    return this.appearance
+  saveAppearance(changes: Partial<VaultAppearance>): Promise<VaultAppearance> {
+    return this.updateSettings((settings) => {
+      this.appearance = normalizeVaultAppearance({ ...this.appearance, ...changes }, this.folderName)
+      settings.appearance = this.appearance
+      return this.appearance
+    })
   }
 
   /** Names the vault in .vault.json (blank goes back to the folder's name), keeping its other settings. Returns the name. */
-  async saveName(name: string): Promise<string> {
-    const settings = await this.readSettings()
-    const trimmed = name.trim()
-    if (trimmed && trimmed !== this.folderName) settings.name = trimmed
-    else delete settings.name
-    this.name = trimmed || this.folderName
-    await writeFile(this.settingsPath, JSON.stringify(settings, null, 2) + '\n')
-    return this.name
+  saveName(name: string): Promise<string> {
+    return this.updateSettings((settings) => {
+      const trimmed = name.trim()
+      if (trimmed && trimmed !== this.folderName) settings.name = trimmed
+      else delete settings.name
+      this.name = trimmed || this.folderName
+      return this.name
+    })
   }
 
   /** Marks `root` as a multi-part paper (or not) in .vault.json, keeping its other settings. */
-  async savePaper(root: string, on: boolean): Promise<void> {
-    const settings = await this.readSettings()
-    const papers = this.papers.filter((p) => p !== root)
-    if (on) papers.push(root)
-    this.papers = papers
-    settings.papers = papers
-    await writeFile(this.settingsPath, JSON.stringify(settings, null, 2) + '\n')
+  savePaper(root: string, on: boolean): Promise<void> {
+    return this.updateSettings((settings) => {
+      const papers = this.papers.filter((p) => p !== root)
+      if (on) papers.push(root)
+      this.papers = papers
+      settings.papers = papers
+    })
   }
 
   private async firstExistingDir(names: string[]): Promise<string | null> {

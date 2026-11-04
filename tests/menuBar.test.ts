@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { CommandRegistry, type Command, type Context } from '../src/renderer/src/lib/commands'
+import { CommandRegistry, pluginCommand, type Command, type Context } from '../src/renderer/src/lib/commands'
 import { coreCommands, type CoreActions } from '../src/renderer/src/lib/coreCommands'
 import { menuBar } from '../src/renderer/src/lib/menuBar'
 import type { MenuNode } from '../src/shared/menu'
 
 const actions = new Proxy({} as CoreActions, { get: () => () => true })
-const TEX: Context = { vault: true, tex: true }
-const BIB: Context = { vault: true, tex: false }
+const TEX: Context = { vault: true, editor: true, tex: true }
+const BIB: Context = { vault: true, editor: true, tex: false }
 
 function bar(ctx: Context, extra: Command[] = []) {
   const reg = new CommandRegistry()
@@ -48,7 +48,14 @@ describe('the menu bar', () => {
   it("disables what can't run now rather than hiding it", () => {
     expect(item(BIB, 'Insert', 'insert.figure')?.enabled).toBe(false)
     expect(item(TEX, 'Insert', 'insert.figure')?.enabled).toBe(true)
-    expect(item({ vault: false, tex: false }, 'Build', 'build.recompile')?.enabled).toBe(false)
+    expect(item({ vault: false, editor: false, tex: false }, 'Build', 'build.recompile')?.enabled).toBe(false)
+  })
+
+  it("disables a plugin's command with no file open", () => {
+    const sync = pluginCommand({ id: 'zotero:sync', title: 'Sync Library', plugin: 'Zotero' }, () => {})
+    const enabled = (ctx: Context) => flat(menu(ctx, 'Tools', [sync])).find((n) => n.id === 'zotero:sync')?.enabled
+    expect(enabled({ vault: true, editor: false, tex: false })).toBe(false)
+    expect(enabled(BIB)).toBe(true)
   })
 
   it("lists a plugin's commands under its name in Tools", () => {

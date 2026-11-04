@@ -1,7 +1,7 @@
 // The application menu: the renderer's menu bar (generated from its command
 // registry; see src/renderer/src/lib/menuBar.ts) with the native items added.
 import type { MenuItemConstructorOptions } from 'electron'
-import { MENU_BAR, type MenuBarMenu, type MenuNode } from '../shared/menu'
+import { MENU_BAR, type MenuBarMenu, type MenuLabel, type MenuNode } from '../shared/menu'
 
 export interface NativeItems {
   /** What clicking a command's item does: send its id to the renderer. */
@@ -30,10 +30,10 @@ function item(n: MenuNode, native: NativeItems): MenuItemConstructorOptions {
 
 /** The menu template for `bar` (null before the renderer has sent one). */
 export function menuTemplate(bar: MenuBarMenu[] | null, native: NativeItems): MenuItemConstructorOptions[] {
-  const items = (label: string) => (bar?.find((m) => m.label === label)?.items ?? []).map((n) => item(n, native))
+  const items = (label: MenuLabel) => (bar?.find((m) => m.label === label)?.items ?? []).map((n) => item(n, native))
   /** `a`, `b`, … joined by separators, leaving out the empty ones. */
   const sections = (...parts: MenuItemConstructorOptions[][]) => parts.filter((p) => p.length).flatMap((p, i) => (i ? [SEP, ...p] : p))
-  const withNative: Partial<Record<string, MenuItemConstructorOptions[]>> = {
+  const withNative: Partial<Record<MenuLabel, MenuItemConstructorOptions[]>> = {
     File: sections(items('File'), [native.templateFolder], [{ role: 'quit' }]),
     Edit: sections([{ role: 'undo' }, { role: 'redo' }], [{ role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }], items('Edit')),
     View: sections([native.spelling], items('View'), [{ role: 'reload' }, { role: 'toggleDevTools' }], [{ role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }]),

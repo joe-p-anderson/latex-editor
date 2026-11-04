@@ -302,7 +302,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font: 14px var(--f-page);
+    font: 13px var(--f-ui);
     color: var(--ink);
     cursor: pointer;
   }

@@ -256,9 +256,12 @@
     },
   }
   // Every command (docs/adr/0001-one-command-registry.md): the palette and the keys come from it.
-  const commands = new CommandRegistry((c, e) => flash(`${c.title}: ${(e as Error)?.message ?? e}`))
+  const commands = new CommandRegistry(
+    (c, e) => flash(`${c.title}: ${(e as Error)?.message ?? e}`),
+    (hint) => flash(hint),
+  )
   /** What the commands' `when` conditions are checked against. */
-  const commandContext = (): Context => ({ vault: !!vault, tex: !!active?.toLowerCase().endsWith('.tex') })
+  const commandContext = (): Context => ({ vault: !!vault, editor: !!active, tex: !!active?.toLowerCase().endsWith('.tex') })
   commands.register(
     ...coreCommands({
       newFile: () => newFile(newFileDir()),
@@ -267,7 +270,7 @@
       goToFile: () => (quickOpen = true),
       save: () => !!active && !!editor && (editor.saveCurrent(), true),
       saveAll: () => saveAll(),
-      closeTab: () => active && closeTab(active),
+      closeTab: () => !!active && (closeTab(active), true),
       find: () => openSearch('file'),
       replace: () => openSearch('file', true),
       findInVault: () => openSearch('vault'),

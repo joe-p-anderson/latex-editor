@@ -21,9 +21,9 @@ const registry = () => {
   return { reg, ran: r.ran }
 }
 
-const NONE: Context = { vault: false, tex: false }
-const BIB: Context = { vault: true, tex: false }
-const TEX: Context = { vault: true, tex: true }
+const NONE: Context = { vault: false, editor: false, tex: false }
+const BIB: Context = { vault: true, editor: true, tex: false }
+const TEX: Context = { vault: true, editor: true, tex: true }
 const labels = (ctx: Context) => registry().reg.available(ctx).map(paletteLabel)
 
 describe('core commands', () => {
@@ -103,5 +103,38 @@ describe('core commands', () => {
         seen.add(k)
       }
     }
+  })
+
+  /** A registry whose actions all return `value`, as App's one-liners can (`sideOpen = !sideOpen` is false when closing). */
+  const returning = (value: unknown) => {
+    const actions = new Proxy({} as CoreActions, { get: () => () => value })
+    const reg = new CommandRegistry()
+    reg.register(...coreCommands(actions))
+    return reg
+  }
+  const key = (k: string, m: { shift?: boolean; alt?: boolean } = {}) => ({ key: k, ctrlKey: true, altKey: !!m.alt, shiftKey: !!m.shift, metaKey: false })
+
+  it.each([false, '', null, 0])('count an always-applies action as applied whatever it returns (%j)', (value) => {
+    const reg = returning(value)
+    expect(reg.handleKey(key('b', { alt: true }), TEX, 'app')).toBe(true)
+    expect(reg.run('view.togglePanel', TEX)).toBe(true)
+  })
+
+  it('let Ctrl+W fall through when there is no tab to close', () => {
+    expect(returning(false).handleKey(key('w'), TEX, 'app')).toBe(false)
+    expect(returning(true).handleKey(key('w'), TEX, 'app')).toBe(true)
+  })
+
+  it('say "Open a .tex file to cite" for Ctrl+Shift+C outside a .tex file', () => {
+    const hints: string[] = []
+    const reg = new CommandRegistry(undefined, (h) => hints.push(h))
+    reg.register(...coreCommands(recorder().actions))
+    expect(reg.handleKey(key('C', { shift: true }), BIB, 'app')).toBe(true)
+    expect(hints).toEqual(['Open a .tex file to cite'])
+  })
+
+  it('hide Live View with no file open', () => {
+    expect(labels({ vault: true, editor: false, tex: false })).not.toContain('View: Live View')
+    expect(labels(BIB)).toContain('View: Live View')
   })
 })

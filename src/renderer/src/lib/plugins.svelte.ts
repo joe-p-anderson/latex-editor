@@ -13,7 +13,7 @@ import { whenHolds, type PluginManifest, type PluginState, type SettingValues } 
 import { RENDERER } from '../../../plugins/renderer'
 import { isLive, liveFile, setLive } from './live/live'
 import { refreshMath, type RenderFn } from './mathPreview'
-import type { CommandRegistry } from './commands'
+import { pluginCommand, type CommandRegistry } from './commands'
 
 /** What the open editor can do for a plugin. Offsets count a line break as one character. */
 export interface EditorActions {
@@ -102,17 +102,6 @@ export interface PluginView {
   ctx: RendererContext
 }
 
-export interface PluginCommand {
-  /** `<plugin>:<id>`. */
-  id: string
-  title: string
-  /** The plugin's name, for grouping in the Tools menu. */
-  plugin: string
-  /** A CodeMirror key, e.g. "Mod-Alt-q" (works while the editor has focus). */
-  key?: string
-  run(): void | Promise<void>
-}
-
 export interface StatusItem {
   id: number
   plugin: string
@@ -177,9 +166,12 @@ export interface RendererContext {
   on(event: string, cb: (data: unknown) => void): void
   views: {
     add(v: { id: string; tip: string; component: Component<PluginViewProps>; icon?: string; contextual?: boolean }): void
+    /** Opens one of its views in the sidebar (by the id it was added with). */
+    show(id: string): void
   }
   commands: {
-    add(c: { id: string; title: string; run: () => void | Promise<void>; key?: string }): void
+    /** In Tools under the plugin's name, or with `category: 'Insert'` an item of the Insert menu. */
+    add(c: { id: string; title: string; run: () => void | Promise<void>; key?: string; category?: 'Insert' }): void
     /** Runs a command by its id (its own, or another plugin's `<plugin>:<id>`). */
     run(id: string): void
   }
@@ -221,7 +213,6 @@ export class PluginRuntime {
   // (a deep proxy would wrap each one, so removing an entry by identity would fail).
   states = $state.raw<PluginState[]>([])
   views = $state.raw<PluginView[]>([])
-  commands = $state.raw<PluginCommand[]>([])
   status = $state.raw<StatusItem[]>([])
   citeSources = $state.raw<CiteSource[]>([])
   /** Plugins' own content for the Plugins panel, by plugin id. */
@@ -283,10 +274,11 @@ export class PluginRuntime {
     }))
   }
 
-  runCommand(id: string): void {
-    const c = this.commands.find((x) => x.id === id)
-    if (!c) return this.host.notify(`No command ${id} (is its plugin switched on?)`)
-    Promise.resolve(c.run()).catch((e) => this.host.notify(`${c.title}: ${e?.message ?? e}`))
+  /** Runs a plugin's command (`<plugin>:<id>`), from the registry. */
+  private runCommand(id: string): void {
+    const c = this.registry.get(id)
+    if (!c?.group) return this.host.notify(`No command ${id} (is its plugin switched on?)`)
+    void c.run()
   }
 
   private async start(state: PluginState): Promise<void> {
@@ -300,7 +292,7 @@ export class PluginRuntime {
     const current = () => this.states.find((s) => s.manifest.id === id) ?? state
     const addExtension = (ext: Extension) => {
       this.editorExts.set(id, [...(this.editorExts.get(id) ?? []), ext])
-      this.refreshExtensions()
+      this.extensions = [...this.editorExts.values()].flat()
     }
     const ctx: RendererContext = {
       id,
@@ -333,26 +325,13 @@ export class PluginRuntime {
           this.views = [...this.views, view]
           own(() => (this.views = this.views.filter((x) => x !== view)))
         },
+        show: (vid) => this.host.showView(`${id}:${vid}`),
       },
       commands: {
         add: (c) => {
-          const cmd: PluginCommand = { ...c, id: c.id.includes(':') ? c.id : `${id}:${c.id}`, plugin: manifest.name }
-          this.commands = [...this.commands, cmd]
-          // Its key works while the editor has focus, as before the registry.
-          const unregister = this.registry.register({
-            id: cmd.id,
-            title: cmd.title,
-            category: 'Tools',
-            group: cmd.plugin,
-            key: cmd.key,
-            editorKey: true,
-            when: ['vault'],
-            run: () => this.runCommand(cmd.id),
-          })
-          own(() => {
-            this.commands = this.commands.filter((x) => x !== cmd)
-            unregister()
-          })
+          const cmd = { ...c, id: c.id.includes(':') ? c.id : `${id}:${c.id}`, plugin: manifest.name }
+          const run = () => void Promise.resolve(c.run()).catch((e) => this.host.notify(`${c.title}: ${e?.message ?? e}`))
+          own(this.registry.register(pluginCommand(cmd, run)))
         },
         run: (cid) => this.runCommand(cid.includes(':') ? cid : `${id}:${cid}`),
       },
@@ -408,11 +387,7 @@ export class PluginRuntime {
         console.error(`Stopping plugin ${id}:`, e)
       }
     }
-    if (this.editorExts.delete(id)) this.refreshExtensions()
-  }
-
-  private refreshExtensions(): void {
-    this.extensions = [...this.editorExts.values()].flat()
+    if (this.editorExts.delete(id)) this.extensions = [...this.editorExts.values()].flat()
   }
 }
 

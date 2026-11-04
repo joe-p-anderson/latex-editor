@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { CommandRegistry, keyLabel, paletteLabel, searchCommands, type Command, type Context } from '../src/renderer/src/lib/commands'
+import { CommandRegistry, keyLabel, paletteLabel, pluginCommand, searchCommands, type Command, type Context } from '../src/renderer/src/lib/commands'
 
-const NONE: Context = { vault: false, tex: false }
-const TEX: Context = { vault: true, tex: true }
+const NONE: Context = { vault: false, editor: false, tex: false }
+const TEX: Context = { vault: true, editor: true, tex: true }
 
 const cmd = (c: Partial<Command> & { id: string }): Command => ({ title: c.id, category: 'Edit', run: () => {}, ...c })
 
@@ -25,7 +25,7 @@ describe('command registry', () => {
     const r = new CommandRegistry()
     r.register(cmd({ id: 'always' }), cmd({ id: 'vault', when: ['vault'] }), cmd({ id: 'tex', when: ['vault', 'tex'] }))
     expect(r.available(NONE).map((c) => c.id)).toEqual(['always'])
-    expect(r.available({ vault: true, tex: false }).map((c) => c.id)).toEqual(['always', 'vault'])
+    expect(r.available({ vault: true, editor: true, tex: false }).map((c) => c.id)).toEqual(['always', 'vault'])
     expect(r.available(TEX).map((c) => c.id)).toEqual(['always', 'vault', 'tex'])
   })
 })
@@ -65,10 +65,55 @@ describe('keys', () => {
     expect(r.handleKey(press('F2'), TEX, 'editor')).toBe(false)
   })
 
+  it("says why a key did nothing, when its command can't run and has a hint", () => {
+    const hints: string[] = []
+    const r = new CommandRegistry(undefined, (h) => hints.push(h))
+    r.register(cmd({ id: 'cite', key: 'Mod-Shift-c', when: ['vault', 'tex'], hint: 'Open a .tex file to cite' }), cmd({ id: 'plain', key: 'Mod-Shift-x', when: ['tex'] }))
+    expect(r.handleKey(press('C', { ctrl: true, shift: true }), { vault: true, editor: true, tex: false }, 'app')).toBe(true)
+    expect(r.handleKey(press('X', { ctrl: true, shift: true }), { vault: true, editor: true, tex: false }, 'app')).toBe(false)
+    expect(hints).toEqual(['Open a .tex file to cite'])
+  })
+
+  it("prefers a command that runs over another one's hint on the same key", () => {
+    const hints: string[] = []
+    const r = new CommandRegistry(undefined, (h) => hints.push(h))
+    r.register(cmd({ id: 'tex', key: 'F5', when: ['tex'], hint: 'no' }), cmd({ id: 'any', key: 'F5' }))
+    expect(r.handleKey(press('F5'), NONE, 'app')).toBe(true)
+    expect(hints).toEqual([])
+  })
+
   it('matches Alt keys by the physical key when Alt changes the character', () => {
     const r = new CommandRegistry()
     r.register(cmd({ id: 'eq', key: 'Mod-Alt-e', editorKey: true }))
     expect(r.handleKey(press('é', { ctrl: true, alt: true }, 'KeyE'), TEX, 'editor')).toBe(true)
+  })
+})
+
+describe("a plugin's command", () => {
+  const sync = pluginCommand({ id: 'zotero:sync', title: 'Sync Library', plugin: 'Zotero', key: 'Mod-Alt-z' }, () => {})
+
+  it('goes under Tools with its plugin name, its key bound in the editor', () => {
+    expect(paletteLabel(sync)).toBe('Tools: Zotero: Sync Library')
+    const r = new CommandRegistry()
+    r.register(sync)
+    expect(r.handleKey(press('z', { ctrl: true, alt: true }), TEX, 'app')).toBe(false)
+    expect(r.handleKey(press('z', { ctrl: true, alt: true }), TEX, 'editor')).toBe(true)
+  })
+
+  it('can go in Insert instead, as one of its items, for a .tex file', () => {
+    const symbols = pluginCommand({ id: 'symbols:open', title: 'Symbols…', plugin: 'Symbols', category: 'Insert' }, () => {})
+    expect(paletteLabel(symbols)).toBe('Insert: Symbols…')
+    const r = new CommandRegistry()
+    r.register(symbols)
+    expect(r.available({ vault: true, editor: true, tex: false })).toEqual([])
+    expect(r.available(TEX)).toEqual([symbols])
+  })
+
+  it('needs an open file, as it acts on the editor', () => {
+    const r = new CommandRegistry()
+    r.register(sync)
+    expect(r.available({ vault: true, editor: false, tex: false })).toEqual([])
+    expect(r.available({ vault: true, editor: true, tex: false })).toEqual([sync])
   })
 })
 

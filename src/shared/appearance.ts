@@ -2,6 +2,8 @@
 // the colour tokens derived from them. Global choices live in settings.json,
 // the vault's endpaper in .vault.json; both are read through `normalize…`,
 // so a missing or hand-edited value falls back to its default.
+import { AIM, atLeast, mix } from './contrast'
+import { MUTED_STEP, secondaryInks, syntaxInks } from './inks'
 
 export type Look = 'plain' | 'bench'
 /** The palette's own paper stock, or the black page (which is the dark mode). */
@@ -149,58 +151,6 @@ export interface PaletteTheme {
   modes: { dark: PaletteMode; light: PaletteMode }
 }
 
-const rgb = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16))
-const hex = (a: number[]) => '#' + a.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('').toUpperCase()
-/** `a` moved `t` of the way towards `b`. */
-export function mix(a: string, b: string, t: number): string {
-  const A = rgb(a)
-  const B = rgb(b)
-  return hex(A.map((v, i) => v + (B[i] - v) * t))
-}
-
-const luminance = (h: string) => {
-  const f = (v: number) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
-  const [r, g, b] = rgb(h)
-  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
-}
-/** The WCAG contrast ratio of two opaque colours. */
-export function contrast(a: string, b: string): number {
-  const x = luminance(a)
-  const y = luminance(b)
-  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)
-}
-
-/**
- * Contrast targets (.scratch/ux-fixes/spec.md, "Contrast"): text 4.5:1,
- * line numbers and icons 3:1. Text on a paper page keeps a margin for the
- * grain, which isn't in the tokens.
- */
-export const CONTRAST = { text: 4.5, graphic: 3, paperText: 4.8 }
-/**
- * What the derivations aim for: a little over the targets, because the
- * browser's color-mix() rounds differently from `mix` (the cursor line
- * measured 4.49:1 when aimed at exactly 4.5).
- */
-const AIM = { text: CONTRAST.text + 0.1, paperText: CONTRAST.paperText + 0.1 }
-
-/**
- * `c` moved towards `toward` just far enough to reach `min`:1 against each of
- * `on`. A colour that already passes is returned as it is, so a derivation's
- * usual mix stands wherever it's readable and is pulled in only where not.
- */
-export function atLeast(c: string, toward: string, min: number, on: string[]): string {
-  const ok = (x: string) => on.every((b) => contrast(x, b) >= min)
-  if (ok(c)) return c
-  let lo = 0
-  let hi = 1
-  for (let i = 0; i < 20; i++) {
-    const t = (lo + hi) / 2
-    if (ok(mix(c, toward, t))) hi = t
-    else lo = t
-  }
-  return mix(c, toward, hi)
-}
-
 /**
  * The colour of each thing source mode draws (editorTheme.ts), as a CSS
  * variable. tests/contrast.test.ts holds each to its target on the page:
@@ -288,23 +238,6 @@ export function plainTokens(theme: PaletteTheme, mode: 'light' | 'dark'): PlainT
   }
 }
 
-/**
- * The two lighter inks, faded from the text towards the page: `muted` for
- * secondary text (labels, the inactive tabs, panel text), `faint` for
- * comments and line numbers. Each fades as far as its usual mix unless that
- * would drop it below its target on a ground it's drawn on: faint must stay
- * readable as text (comments), and muted keeps a step above it, so comments
- * still read as the quieter of the two.
- */
-function secondaryInks(text: string, page: string, usual: { muted: number; faint: number }, mutedOn: string[], faintOn: string[], min: number) {
-  return {
-    muted: atLeast(mix(text, page, usual.muted), text, min + MUTED_STEP, [page, ...mutedOn]),
-    faint: atLeast(mix(text, page, usual.faint), text, min, [page, ...faintOn]),
-  }
-}
-/** How far muted text stays above faint, in contrast ratio. */
-const MUTED_STEP = 1
-
 /** The gilt: the dark foil's stop nearest offset 0.34. */
 export function gilt(theme: PaletteTheme): string {
   return theme.modes.dark.leafFoil.reduce((a, s) => (Math.abs(s.offset - 0.34) < Math.abs(a.offset - 0.34) ? s : a)).color
@@ -319,54 +252,6 @@ export function foil(theme: PaletteTheme): string {
 export function marblePlaceholder(theme: PaletteTheme, tone: Tone): string {
   const m = theme.modes[tone === 'rich' ? 'dark' : 'light'].marbling
   return `linear-gradient(115deg, ${m.map((c, i) => `${c} ${Math.round((i / (m.length - 1)) * 100)}%`).join(', ')})`
-}
-
-/** A colour's hue (degrees), saturation and lightness (0–1). */
-function hsl(c: string): [number, number, number] {
-  const [r, g, b] = rgb(c).map((v) => v / 255)
-  const max = Math.max(r, g, b)
-  const min = Math.min(r, g, b)
-  const l = (max + min) / 2
-  const d = max - min
-  if (d === 0) return [0, 0, l]
-  const s = d / (1 - Math.abs(2 * l - 1))
-  const h = max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4
-  return [h * 60, s, l]
-}
-function fromHsl(h: number, s: number, l: number): string {
-  const k = (n: number) => (n + h / 30) % 12
-  const a = s * Math.min(l, 1 - l)
-  return hex([0, 8, 4].map((n) => 255 * (l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1)))))
-}
-const hueGap = (a: number, b: number) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b))
-/** The hue nearest `want` that sits at least `gap` degrees from every one of `away`. */
-function hueAway(want: number, away: number[], gap: number): number {
-  for (let d = 0; d <= 180; d += 5)
-    for (const h of [want + d, want - d]) {
-      const x = (h + 360) % 360
-      if (away.every((a) => hueGap(x, a) >= gap)) return x
-    }
-  return want
-}
-/** How far apart, in hue, the three syntax roles sit. */
-const ROLE_GAP = 75
-/**
- * The structure and maths inks for Source view (.scratch/ux-fixes/spec.md,
- * "Syntax roles"). Commands are in the detail; maths prefers a blue and
- * structure a green, each turned as far as it must to keep clear of the
- * detail's hue and of each other. Each is then darkened (paper) or lightened
- * (black) towards the ink as far as it needs to read on `on`.
- */
-function syntaxInks(detail: string, ink: string, black: boolean, on: string[]) {
-  const accent = hsl(detail)[0]
-  const mathHue = hueAway(220, [accent], ROLE_GAP)
-  const structureHue = hueAway(140, [accent, mathHue], ROLE_GAP)
-  const [s, l] = black ? [0.5, 0.74] : [0.55, 0.32]
-  const min = black ? AIM.text : AIM.paperText
-  return {
-    math: atLeast(fromHsl(mathHue, s, l), ink, min, on),
-    structure: atLeast(fromHsl(structureHue, s, l), ink, min, on),
-  }
 }
 
 /**
