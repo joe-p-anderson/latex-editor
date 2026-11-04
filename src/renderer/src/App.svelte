@@ -1103,7 +1103,7 @@
     await go(made.main)
     editor?.setLiveMode(true)
     pdfOpen = true
-    await compile(made.main)
+    if (canBuild()) await compile(made.main) // without TeX, the PDF pane shows what to install
     return null
   }
 
