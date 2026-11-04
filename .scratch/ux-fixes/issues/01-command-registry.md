@@ -1,6 +1,6 @@
 # Command registry and palette
 
-Status: ready-for-agent
+Status: resolved
 
 Spec: [../spec.md](../spec.md#command-registry). Decision: [ADR-0001](../../../docs/adr/0001-one-command-registry.md).
 

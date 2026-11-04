@@ -1,6 +1,6 @@
 # Keymap and menus from the registry
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 01
 
 Spec: [../spec.md](../spec.md#keymap) (Keymap and Menus sections).

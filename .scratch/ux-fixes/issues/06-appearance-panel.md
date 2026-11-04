@@ -1,6 +1,6 @@
 # One Appearance panel
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 02
 
 Spec: [../spec.md](../spec.md#one-appearance-panel).

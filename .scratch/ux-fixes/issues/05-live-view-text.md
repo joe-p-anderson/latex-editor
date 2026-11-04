@@ -1,6 +1,6 @@
 # Live view text: ragged-right, space dots off
 
-Status: ready-for-agent
+Status: resolved
 
 Spec: [../spec.md](../spec.md#live-view-text).
 

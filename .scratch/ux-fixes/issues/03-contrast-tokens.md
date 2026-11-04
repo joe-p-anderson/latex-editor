@@ -1,6 +1,6 @@
 # Contrast targets and test
 
-Status: ready-for-agent
+Status: resolved
 
 Spec: [../spec.md](../spec.md#contrast).
 

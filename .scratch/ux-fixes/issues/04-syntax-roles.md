@@ -1,6 +1,6 @@
 # Three syntax roles
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 03
 
 Spec: [../spec.md](../spec.md#syntax-roles).
