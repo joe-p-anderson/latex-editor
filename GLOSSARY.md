@@ -34,6 +34,12 @@ The editor mode that shows plain LaTeX source with syntax colouring.
 Running LaTeX on a document's root to produce its PDF. Saving a `.tex` file builds it. Build → Recompile and Ctrl+Shift+B build without saving.
 _Avoid:_ compile in UI text (fine in code).
 
+**Layout problem**
+A build message about how the text sits on the page rather than an error: a line sticking out into the margin (overfull), one stretched too loosely (underfull), or a figure that couldn't go exactly "here". The PDF still builds. The Problems panel lists them under Layout.
+
+**Section build**
+Building just one section file (§III) of a multi-part paper, numbered as in the whole paper. The § in the title bar's build note names the section built, or the one the error is in.
+
 **Command**
 A named action the user can run, with an id, title, category, optional default key and a condition for when it applies. Every command is in the command registry, which generates the command palette, the menus, the keymap and the keyboard shortcuts panel. See [ADR-0001](docs/adr/0001-one-command-registry.md).
 

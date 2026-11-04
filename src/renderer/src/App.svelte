@@ -737,8 +737,12 @@
       ? `Just ${result.section} of ${result.root}, numbered as in the whole paper, with its labels and citations from the last full build. The whole paper builds when another of its files changes, or with Build → Recompile`
       : `${result.root}: ${result.passes} pass${result.passes === 1 ? '' : 'es'}${result.preloaded ? ', preamble preloaded' : ''}${result.fullReason ? `. Built in full: ${result.fullReason}` : ''}`
     const what = result.section ? result.section : result.draft ? 'Preview' : 'Built'
-    if (errors) return { kind: 'err', note: `${errors} error${errors === 1 ? '' : 's'}${result.section ? ` in ${result.section}` : result.draft ? ' in preview' : ' · pdf/ unchanged'}`, detail: how }
-    return { kind: 'ok', note: `${what} · ${(result.durationMs / 1000).toFixed(1)} s`, detail: how }
+    if (errors) {
+      const section = result.section ? { text: result.section, tip: 'The section of the document the error is in' } : undefined
+      return { kind: 'err', note: `${errors} error${errors === 1 ? '' : 's'}${result.section ? ` in ${result.section}` : result.draft ? ' in preview' : ' · pdf/ unchanged'}`, detail: how, section }
+    }
+    const section = result.section ? { text: result.section, tip: 'The section of the document that was built' } : undefined
+    return { kind: 'ok', note: `${what} · ${(result.durationMs / 1000).toFixed(1)} s`, detail: how, section }
   })
   const problemCounts = $derived({
     errors: result?.problems.filter((p) => p.severity === 'error' && !p.hidden && !p.followOn).length ?? 0,

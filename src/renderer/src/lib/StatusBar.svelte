@@ -44,7 +44,7 @@
 </script>
 
 <footer class="statusbar">
-  <button class="sb" onclick={onendpaper} title="Change this vault’s endpaper and paper">
+  <button class="sb" onclick={onendpaper} title="This vault’s marbled endpaper and colours">
     <span class="chip" style:background-image={swatch}></span>{vaultName}
   </button>
   {#if branch}<span class="sb static" title="Git branch"><Icon name="branch" size={13} />{branch}</span>{/if}
