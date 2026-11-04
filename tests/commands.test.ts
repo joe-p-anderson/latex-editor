@@ -100,6 +100,15 @@ describe("a plugin's command", () => {
     expect(r.handleKey(press('z', { ctrl: true, alt: true }), TEX, 'editor')).toBe(true)
   })
 
+  it('can go in Insert instead, as one of its items, for a .tex file', () => {
+    const symbols = pluginCommand({ id: 'symbols:open', title: 'Symbols…', plugin: 'Symbols', category: 'Insert' }, () => {})
+    expect(paletteLabel(symbols)).toBe('Insert: Symbols…')
+    const r = new CommandRegistry()
+    r.register(symbols)
+    expect(r.available({ vault: true, editor: true, tex: false })).toEqual([])
+    expect(r.available(TEX)).toEqual([symbols])
+  })
+
   it('needs an open file, as it acts on the editor', () => {
     const r = new CommandRegistry()
     r.register(sync)

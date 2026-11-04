@@ -52,16 +52,15 @@ export const holds = (c: Command, ctx: Context): boolean => (c.when ?? []).every
 /**
  * A plugin's command (`id` is `<plugin>:<id>`), for the registry: under
  * Tools with its plugin's name. It acts on the editor, so its key is bound
- * there and it needs a file open.
+ * there and it needs a file open. One in Insert is one of that menu's items
+ * instead, needing a .tex file like the others.
  */
-export const pluginCommand = (c: { id: string; title: string; plugin: string; key?: string }, run: Command['run']): Command => ({
+export const pluginCommand = (c: { id: string; title: string; plugin: string; key?: string; category?: 'Insert' }, run: Command['run']): Command => ({
   id: c.id,
   title: c.title,
-  category: 'Tools',
-  group: c.plugin,
+  ...(c.category ? { category: c.category, when: ['vault', 'tex'] } : { category: 'Tools', group: c.plugin, when: ['vault', 'editor'] }),
   key: c.key,
   editorKey: true,
-  when: ['vault', 'editor'],
   run,
 })
 

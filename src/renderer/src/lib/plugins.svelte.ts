@@ -166,9 +166,12 @@ export interface RendererContext {
   on(event: string, cb: (data: unknown) => void): void
   views: {
     add(v: { id: string; tip: string; component: Component<PluginViewProps>; icon?: string; contextual?: boolean }): void
+    /** Opens one of its views in the sidebar (by the id it was added with). */
+    show(id: string): void
   }
   commands: {
-    add(c: { id: string; title: string; run: () => void | Promise<void>; key?: string }): void
+    /** In Tools under the plugin's name, or with `category: 'Insert'` an item of the Insert menu. */
+    add(c: { id: string; title: string; run: () => void | Promise<void>; key?: string; category?: 'Insert' }): void
     /** Runs a command by its id (its own, or another plugin's `<plugin>:<id>`). */
     run(id: string): void
   }
@@ -322,6 +325,7 @@ export class PluginRuntime {
           this.views = [...this.views, view]
           own(() => (this.views = this.views.filter((x) => x !== view)))
         },
+        show: (vid) => this.host.showView(`${id}:${vid}`),
       },
       commands: {
         add: (c) => {
