@@ -17,11 +17,19 @@ This ticket doesn't change any keys or menus. It only moves them into the regist
 
 ## Acceptance
 
-- [ ] Ctrl+Shift+P lists the core commands, including Build: Recompile, View: Toggle PDF, View: Live View, File: New File, Edit: Find in Vault, View: Appearance, and every Insert command.
-- [ ] Searching "compile", "build" or "pdf" finds Build: Recompile and View: Toggle PDF.
-- [ ] With no vault open, vault-only commands are hidden. With a non-`.tex` file active, Insert commands are hidden.
-- [ ] Every existing shortcut still does what it did before, with the same key.
-- [ ] Plugin commands still appear and run.
-- [ ] Unit tests cover registration, `when` filtering and the palette's search.
+- [x] Ctrl+Shift+P lists the core commands, including Build: Recompile, View: Toggle PDF, View: Live View, File: New File, Edit: Find in Vault, View: Appearance, and every Insert command.
+- [x] Searching "compile", "build" or "pdf" finds Build: Recompile and View: Toggle PDF.
+- [x] With no vault open, vault-only commands are hidden. With a non-`.tex` file active, Insert commands are hidden.
+- [x] Every existing shortcut still does what it did before, with the same key.
+- [x] Plugin commands still appear and run.
+- [x] Unit tests cover registration, `when` filtering and the palette's search.
 
 ## Comments
+
+- Registry in `src/renderer/src/lib/commands.ts` (`CommandRegistry`, `keyMatches`, `keyLabel`, `paletteLabel`, `searchCommands`); core commands in `src/renderer/src/lib/coreCommands.ts`; palette is `CommandPalette.svelte`. App.svelte's keydown and the editor's formatting/insert keys (and Ctrl+Shift+L) now dispatch through the registry; editing.ts exports `EDITS` instead of a keymap. Menus send command ids (`build.recompile` etc.); menu contents unchanged. Plugin commands register under Tools with the plugin name as group.
+- Checked in the running app over CDP: palette lists, search for compile/build/pdf, Insert hidden for `words.txt`, editor keys (Ctrl+B, Ctrl+Shift+E, Ctrl+Alt+F, Ctrl+Shift+F, Ctrl+M, Ctrl+Shift+L), Ctrl+Shift+B, a Zotero command from the palette.
+- Small behaviour changes: Ctrl+Shift+P now works with no vault open (it lists only non-vault commands). Ctrl+Shift+C in a non-`.tex` file no longer flashes "Open a .tex file to cite", because Insert commands need a `.tex` file. File → Switch Vault's Ctrl+O is now handled by the renderer, so the menu only shows it.
+- "Symbols" has no core command: the symbol panel is the `symbols` plugin.
+- Not checked by eye: native menu clicks (can't click OS menus over CDP). They now send command ids, which are covered by `commands.run`.
+- `tests/project.test.ts` has 3 failures on `main` too, unrelated.
+
