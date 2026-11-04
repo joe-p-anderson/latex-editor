@@ -209,6 +209,7 @@ export function atLeast(c: string, toward: string, min: number, on: string[]): s
 export const editorColours = {
   text: 'var(--ink)',
   command: 'var(--detail)',
+  structure: 'var(--structure)',
   math: 'var(--math)',
   comment: 'var(--pencil)',
   bracket: 'var(--ink-soft)',
@@ -235,7 +236,6 @@ export interface PlainTokens {
   line: string
   sel: string
   srcbg: string
-  math: string
 }
 
 /** The Plain look's flat palette, from the palette mode matching the page (the mockup's plainTokens). */
@@ -264,7 +264,6 @@ export function plainTokens(theme: PaletteTheme, mode: 'light' | 'dark'): PlainT
       line: mix(side, text, 0.12),
       sel: mix(side, v, 0.2),
       srcbg,
-      math: atLeast(mix(text, m[3], 0.38), text, AIM.text, [page, srcbg, lit]),
     }
   }
   const page = L
@@ -286,7 +285,6 @@ export function plainTokens(theme: PaletteTheme, mode: 'light' | 'dark'): PlainT
     line: mix(side, text, 0.14),
     sel: mix(side, m[3], 0.22),
     srcbg,
-    math: atLeast(mix(m[3], text, 0.35), text, AIM.paperText, [page, srcbg, lit]),
   }
 }
 
@@ -323,6 +321,54 @@ export function marblePlaceholder(theme: PaletteTheme, tone: Tone): string {
   return `linear-gradient(115deg, ${m.map((c, i) => `${c} ${Math.round((i / (m.length - 1)) * 100)}%`).join(', ')})`
 }
 
+/** A colour's hue (degrees), saturation and lightness (0–1). */
+function hsl(c: string): [number, number, number] {
+  const [r, g, b] = rgb(c).map((v) => v / 255)
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  const l = (max + min) / 2
+  const d = max - min
+  if (d === 0) return [0, 0, l]
+  const s = d / (1 - Math.abs(2 * l - 1))
+  const h = max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4
+  return [h * 60, s, l]
+}
+function fromHsl(h: number, s: number, l: number): string {
+  const k = (n: number) => (n + h / 30) % 12
+  const a = s * Math.min(l, 1 - l)
+  return hex([0, 8, 4].map((n) => 255 * (l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1)))))
+}
+const hueGap = (a: number, b: number) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b))
+/** The hue nearest `want` that sits at least `gap` degrees from every one of `away`. */
+function hueAway(want: number, away: number[], gap: number): number {
+  for (let d = 0; d <= 180; d += 5)
+    for (const h of [want + d, want - d]) {
+      const x = (h + 360) % 360
+      if (away.every((a) => hueGap(x, a) >= gap)) return x
+    }
+  return want
+}
+/** How far apart, in hue, the three syntax roles sit. */
+const ROLE_GAP = 75
+/**
+ * The structure and maths inks for Source view (.scratch/ux-fixes/spec.md,
+ * "Syntax roles"). Commands are in the detail; maths prefers a blue and
+ * structure a green, each turned as far as it must to keep clear of the
+ * detail's hue and of each other. Each is then darkened (paper) or lightened
+ * (black) towards the ink as far as it needs to read on `on`.
+ */
+function syntaxInks(detail: string, ink: string, black: boolean, on: string[]) {
+  const accent = hsl(detail)[0]
+  const mathHue = hueAway(220, [accent], ROLE_GAP)
+  const structureHue = hueAway(140, [accent, mathHue], ROLE_GAP)
+  const [s, l] = black ? [0.5, 0.74] : [0.55, 0.32]
+  const min = black ? AIM.text : AIM.paperText
+  return {
+    math: atLeast(fromHsl(mathHue, s, l), ink, min, on),
+    structure: atLeast(fromHsl(structureHue, s, l), ink, min, on),
+  }
+}
+
 /**
  * Every CSS custom property the UI reads, without the leading `--`. The
  * shared tokens (paper, ink, detail, side, line, sel…) are what components
@@ -348,7 +394,6 @@ export function appearanceTokens(app: AppAppearance, endpaper: VaultAppearance, 
       pencil: mix(ink, st.black, 0.55),
       detail: g,
       srcbg: mix(st.black, '#FFFFFF', 0.05),
-      math: '#A9C1E0',
       side: mix(st.black, '#FFFFFF', 0.05),
       tabpaper: mix(st.black, '#FFFFFF', 0.1),
     })
@@ -360,7 +405,6 @@ export function appearanceTokens(app: AppAppearance, endpaper: VaultAppearance, 
       pencil: mix(st.ink, st.paper, 0.55),
       detail: st.detail,
       srcbg: mix(st.paper, st.detail, 0.05),
-      math: mix(st.ink, '#3D5A8A', 0.55),
       side: mix(st.paper, '#C9BFAE', 0.22),
       tabpaper: mix(st.paper, '#9C8F7A', 0.2),
     })
@@ -371,7 +415,6 @@ export function appearanceTokens(app: AppAppearance, endpaper: VaultAppearance, 
   t['ink-soft'] = atLeast(t['ink-soft'], t.ink, min + MUTED_STEP, [t.paper, t.srcbg, lit, t.side, t.tabpaper])
   t.pencil = atLeast(t.pencil, t.ink, min, [t.paper, t.srcbg, lit])
   t.detail = atLeast(t.detail, t.ink, min, [t.paper, t.srcbg, lit, t.side, t.tabpaper])
-  t.math = atLeast(t.math, t.ink, min, [t.paper, t.srcbg, lit])
   t.line = mix(t.side, t.ink, 0.14)
   t.sel = mix(t.side, t.detail, 0.2)
   t.bar = t.side
@@ -386,7 +429,6 @@ export function appearanceTokens(app: AppAppearance, endpaper: VaultAppearance, 
       pencil: p.faint,
       detail: p.accent,
       srcbg: p.srcbg,
-      math: p.math,
       side: p.side,
       tabpaper: p.chrome,
       line: p.line,
@@ -395,6 +437,9 @@ export function appearanceTokens(app: AppAppearance, endpaper: VaultAppearance, 
       desk: p.desk,
     })
   }
+  // Source view's syntax roles (editorTheme.ts): commands in the detail,
+  // structure and maths in hues of their own.
+  Object.assign(t, syntaxInks(t.detail, t.ink, black, [t.paper, t.srcbg, activeLine(t.paper, t.ink)]))
   // The chrome (title bar, activity bar, status bar). Plain is flat in the
   // bar tone; Bench binds it in a material (its tile comes from the renderer).
   // `chl` is the light deboss under chrome text.

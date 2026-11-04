@@ -4,6 +4,7 @@ import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { EditorView } from '@codemirror/view'
 import { tags as t } from '@lezer/highlight'
 import { ACTIVE_LINE_INK, editorColours as c } from '@shared/appearance'
+import { roles } from './latexLanguage'
 
 // The page column (docs/design/ENDLEAF.md, "The page column"). The scroller
 // is the desk; the gutters are the page's inner margin (line numbers sit
@@ -82,11 +83,13 @@ const theme = EditorView.theme({
   '.cm-lintRange-warning': { backgroundImage: 'none', textDecoration: 'wavy underline var(--warn)', textUnderlineOffset: '3px' },
 })
 
-// LaTeX source: commands in the accent, math in the math ink, comments faint.
+// LaTeX source, in its three roles (latexLanguage.ts): commands in the
+// accent, structure (environment names, keys) and maths in their own inks;
+// braces dimmed, comments faint.
 const highlight = HighlightStyle.define([
-  { tag: [t.tagName, t.keyword, t.macroName], color: c.command },
-  { tag: [t.atom, t.bool, t.special(t.variableName)], color: c.command },
-  { tag: [t.string, t.number, t.literal], color: c.math },
+  { tag: roles.command, color: c.command },
+  { tag: roles.structure, color: c.structure },
+  { tag: roles.math, color: c.math },
   { tag: [t.comment, t.lineComment, t.blockComment], color: c.comment, fontStyle: 'italic' },
   { tag: [t.bracket, t.paren, t.squareBracket, t.brace, t.punctuation], color: c.bracket },
   { tag: t.invalid, color: 'var(--err)' },

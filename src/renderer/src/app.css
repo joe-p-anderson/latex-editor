@@ -13,7 +13,8 @@
   --pencil: #9D9A98;
   --detail: #D8CBA8;
   --srcbg: #2C3141;
-  --math: #A9ADB3;
+  --structure: #9CDEB2;
+  --math: #9CB2DE;
   /* surfaces around it */
   --side: #12182B;
   --tabpaper: #111628;
@@ -47,7 +48,6 @@
   --p-line: #2C303F;
   --p-sel: #3A3C44;
   --p-srcbg: #2C3141;
-  --p-math: #A9ADB3;
   /* status */
   --ok: #7DBE84;
   --err: #F08A7E;
