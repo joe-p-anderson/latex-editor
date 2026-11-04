@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  /** A core view ('files', 'contents', 'search', 'cite', 'appearance', 'endpaper', 'plugins') or a plugin's ('<plugin>:<id>'). */
+  /** A core view ('files', 'contents', 'search', 'cite', 'appearance', 'plugins') or a plugin's ('<plugin>:<id>'). */
   export type View = string
   export interface ViewButton {
     id: View
@@ -25,6 +25,7 @@
     swatch,
     logo,
     onselect,
+    onswatch,
   }: {
     views: ViewButton[]
     /** Contextual tools; the "tools" rule shows only when there are some. */
@@ -36,6 +37,8 @@
     swatch: string
     logo?: string
     onselect: (view: View) => void
+    /** Opens the Appearance panel at this vault's palette. */
+    onswatch: () => void
   } = $props()
 </script>
 
@@ -56,7 +59,7 @@
   <button class="act" class:on={open && current === 'plugins'} onclick={() => onselect('plugins')} title="Plugins" aria-label="Plugins">
     <Icon name="plugin" size={23} />
   </button>
-  <button class="act" class:on={open && current === 'endpaper'} onclick={() => onselect('endpaper')} title="This vault’s endpaper and paper" aria-label="Endpaper">
+  <button class="act" onclick={onswatch} title="This vault’s palette and endpaper" aria-label="Palette and endpaper">
     <span class="swatch" style:background-image={swatch}>{#if logo}<img src={logo} alt="" />{/if}</span>
   </button>
   <button class="act" class:on={open && current === 'appearance'} onclick={() => onselect('appearance')} title="Appearance" aria-label="Appearance">
