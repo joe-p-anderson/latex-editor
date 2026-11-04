@@ -200,7 +200,6 @@
         Prec.highest(EditorView.domEventHandlers({ keydown: (e) => onkey(e) })),
         Prec.highest(
           keymap.of([
-            { key: 'Mod-s', preventDefault: true, run: () => (save(), true) },
             // Find lives in the search sidebar (Ctrl+F, in App.svelte), in place of CodeMirror's own panel.
             { key: 'F3', preventDefault: true, run: () => (onfindstep(1), true), shift: () => (onfindstep(-1), true) },
             { key: 'Mod-g', preventDefault: true, run: () => (onfindstep(1), true), shift: () => (onfindstep(-1), true) },

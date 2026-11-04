@@ -22,6 +22,8 @@ export interface Command {
   group?: string
   /** Default key, in CodeMirror notation (`Mod-Shift-b`). */
   key?: string
+  /** Other keys that run it too (Ctrl+Shift+H for Find in Vault); menus and the palette show only `key`. */
+  aliases?: string[]
   /**
    * The key works only while the editor has focus (it's bound in the
    * editor, ahead of its own keymaps), not app-wide.
@@ -29,6 +31,12 @@ export interface Command {
   editorKey?: boolean
   /** Conditions that must all hold for the command to show or run. */
   when?: Condition[]
+  /** The submenu of its menu it goes in ("Format" in Insert). */
+  submenu?: string
+  /** Its menu label when that depends on the context ("Save and Build" for a .tex file); otherwise `title`. */
+  menuTitle?: (ctx: Context) => string
+  /** False keeps it out of the menu bar (it's in the palette all the same). */
+  menu?: false
   /** Other words the palette finds it by ("compile" for Recompile). */
   keywords?: string[]
   /** Returning false means it didn't apply, and a key falls through to whatever else binds it. */
@@ -83,7 +91,8 @@ export class CommandRegistry {
    */
   handleKey(e: KeyLike, ctx: Context, scope: 'app' | 'editor'): boolean {
     for (const c of this.list) {
-      if (!c.key || !!c.editorKey !== (scope === 'editor') || !keyMatches(c.key, e) || !holds(c, ctx)) continue
+      if (!!c.editorKey !== (scope === 'editor') || !holds(c, ctx)) continue
+      if (![c.key, ...(c.aliases ?? [])].some((k) => k && keyMatches(k, e))) continue
       if (this.call(c)) return true
     }
     return false

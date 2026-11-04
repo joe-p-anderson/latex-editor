@@ -21,6 +21,7 @@
   import CommandPalette from './lib/CommandPalette.svelte'
   import { CommandRegistry, type Command, type Context } from './lib/commands'
   import { coreCommands } from './lib/coreCommands'
+  import { menuBar } from './lib/menuBar'
   import type { EditingHooks } from './lib/editing'
   import { blankComments, mergeTextSnippets, parseSnippets, type OutlineItem, type Snippet } from '@shared/latexedit'
   import { includegraphics, type ImageHooks } from './lib/imageSupport'
@@ -157,7 +158,7 @@
     document.title = vault ? `${vault.name} · endleaf` : 'endleaf'
   })
 
-  // The sidebar's view. Clicking the lit view's icon (or Ctrl+Shift+B) folds the sidebar away.
+  // The sidebar's view. Clicking the lit view's icon (or Ctrl+Alt+B) folds the sidebar away.
   let view = $state<View>('files')
   function showView(v: View): void {
     if (sideOpen && view === v) sideOpen = false
@@ -170,7 +171,7 @@
   const VIEWS: ViewButton[] = [
     { id: 'files', icon: 'files', tip: 'Files' },
     { id: 'contents', icon: 'contents', tip: "Contents: the file's sections, or the whole paper's" },
-    { id: 'search', icon: 'search', tip: 'Search the vault (Ctrl+Shift+H)' },
+    { id: 'search', icon: 'search', tip: 'Search the vault (Ctrl+Shift+F)' },
   ]
 
   // Contextual tools: Citations when the vault has a .bib file.
@@ -254,6 +255,7 @@
       // Switching goes by the welcome screen, which lists the recent vaults; from there it opens a folder.
       switchVault: () => (vault ? closeVault() : openVault()),
       goToFile: () => (quickOpen = true),
+      save: () => !!active && !!editor && (editor.saveCurrent(), true),
       saveAll: () => saveAll(),
       closeTab: () => active && closeTab(active),
       find: () => openSearch('file'),
@@ -286,6 +288,14 @@
     }),
   )
   const plugins = new PluginRuntime(host, commands)
+  // The menu bar comes from the registry too: sent again when a command comes or goes
+  // (a plugin switched on) and when what's enabled may change (a vault, the active file).
+  let commandsChanged = $state(0)
+  commands.subscribe(() => commandsChanged++)
+  $effect(() => {
+    void [commandsChanged, vault, active]
+    untrack(() => window.api.setMenuBar(menuBar(commands.all(), commandContext())))
+  })
   // Each vault has its own plugins on; the main process has switched them already.
   $effect(() => {
     const root = vault?.root
@@ -990,10 +1000,9 @@
     })
     const offVault = window.api.onVaultChanged((v) => (vault = v))
     const offPlugins = window.api.onPluginsChanged((states) => plugins.apply(states))
-    // Menu items send a command id (plus the spelling checkbox and plugin commands).
+    // Menu items send a command id (or the spelling checkbox's state).
     const offAppMenu = window.api.onMenu((name, arg) => {
-      if (name === 'plugin-command' && vault) plugins.runCommand(String(arg))
-      else if (name === 'spellcheck') setSpelling(arg === true)
+      if (name === 'spellcheck') setSpelling(arg === true)
       else commands.run(name, commandContext())
     })
     window.api.setSpellcheckMenu(spellOn)
@@ -1592,7 +1601,7 @@
   /** Unsaved buffers, which search reads instead of the disk copies. */
   const overrides = () => Object.fromEntries(editor?.dirtyTexts() ?? [])
 
-  /** Ctrl+F (the open file), Ctrl+H (the same, with replace), Ctrl+Shift+H (the vault). */
+  /** Ctrl+F (the open file), Ctrl+H (the same, with replace), Ctrl+Shift+F or Ctrl+Shift+H (the vault). */
   async function openSearch(scope: Scope, replace = false): Promise<void> {
     view = 'search'
     sideOpen = true

@@ -2,8 +2,8 @@
 //  - Ctrl+B / Ctrl+I / Ctrl+E toggle \textbf, \textit, \emph (\mathbf and
 //    \mathit inside math); Ctrl+M toggles $...$, Ctrl+Shift+M makes \[...\];
 //  - Ctrl+Shift+A / E put the selection in align / equation (Ctrl+Alt+A / E
-//    for align* / equation*); Ctrl+Shift+F / Ctrl+Alt+F insert a figure /
-//    figure* with its \includegraphics ready for an image path;
+//    for align* / equation*); Ctrl+Alt+F inserts a figure (figure*, from the
+//    Insert menu or the palette) with its \includegraphics ready for an image path;
 //  - Enter in a list starts the next item (\item, or the vault's own markers
 //    such as \question); Enter on an empty last item leaves the list;
 //    Shift+Enter is a plain new line;

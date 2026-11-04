@@ -61,7 +61,7 @@ Making the app usable by students learning LaTeX, who need to produce *Physics i
   - `width=1\linewidth` on a detailed plot: explain that this is one column of a two-column page, and offer `figure*`.
   - No comma or full stop after a display equation: a gentle hint only, since this is less certain.
 - **A units helper for students.** Typing `9.81 m/s^2` or `6.5(2)e-34 J s` in prose offers the `\qty` form. This is the same helper as under "Faster math typing", made a priority. `\SI` or `\qty` with no siunitx loaded gets a direct fix: the class leaves siunitx out on purpose, and the undefined-command error doesn't make that clear.
-- **Drag in a figure.** Dropping an image on the editor copies it into the manuscript's folder and inserts the figure that Ctrl+Shift+F makes. It warns about spaces in filenames (`Graph of Indicies.png`, `Sv vs Dist.png`, `Lab 4 Schematic.pdf`).
+- **Drag in a figure.** Dropping an image on the editor copies it into the manuscript's folder and inserts the figure that Ctrl+Alt+F makes. It warns about spaces in filenames (`Graph of Indicies.png`, `Sv vs Dist.png`, `Lab 4 Schematic.pdf`).
 - **A citation from a DOI.** Paste a DOI and get a `.bib` entry, for students who don't have Zotero set up.
 - **A pre-submission check.** Before the PDF goes to the editor, check for:
   - undefined refs and cites;

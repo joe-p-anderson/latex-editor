@@ -112,7 +112,7 @@ While you type math, its preview keeps the last version that rendered, faded, in
 | Ctrl+Shift+M | Put the selection in display math, `\[ … \]` |
 | Ctrl+Shift+A / Ctrl+Alt+A | Put the selection in `align` / `align*` |
 | Ctrl+Shift+E / Ctrl+Alt+E | Put the selection in `equation` / `equation*` |
-| Ctrl+Shift+F / Ctrl+Alt+F | Insert a `figure` / `figure*` with `\centering`, `\includegraphics`, `\caption` and `\label`. The image list opens for the path, and Tab moves on to the width, caption and label. |
+| Ctrl+Alt+F | Insert a `figure` (`figure*` is in the Insert menu and the command palette) with `\centering`, `\includegraphics`, `\caption` and `\label`. The image list opens for the path, and Tab moves on to the width, caption and label. |
 | Enter | In a list, starts the next `\item` (or `\question`, `\part`, …). On an empty last item, it leaves the list, and a nested list continues in its parent. After an unclosed `\begin{…}`, it adds the `\end{…}`. |
 | Shift+Enter | A plain new line, with no item marker |
 | Ctrl+P | Open a file by name (fuzzy; sources are listed before images) |
@@ -122,7 +122,10 @@ While you type math, its preview keeps the last version that rendered, faded, in
 | Alt+Left / Alt+Right | Back / forward through the places you jumped between (also the mouse's back and forward buttons, and ‹ › in the title bar) |
 | Alt+PageDown / Alt+PageUp | In a multi-part paper: the next / previous file in reading order |
 | Ctrl+Alt+S | Save every unsaved file, then compile once |
-| Ctrl+Shift+H | Search the vault, starting from the selected text |
+| Ctrl+Shift+F (or Ctrl+Shift+H) | Search the vault, starting from the selected text |
+| Ctrl+Shift+B | Build → Recompile: build the open file's document as it is on disk, without saving |
+| Ctrl+Alt+B | Show or hide the sidebar |
+| Ctrl+, | Appearance |
 | Ctrl+Shift+C | Cite: open the cite picker (so does typing `\cite{`) |
 | F2 | On a `\label` or `\ref` key, rename the label and every reference to it across the vault |
 | Ctrl+Alt+T | Edit the table the cursor is in, or insert a new one |
@@ -229,7 +232,7 @@ Recognition runs offline in a background worker, in about 10 ms a drawing. The s
 
 ### Search
 
-**Search** in the sidebar (Ctrl+Shift+H) looks through every text file in the vault, using your unsaved changes where there are some. Its toggles are match case (`Aa`), whole word (`ab`), regular expression (`.*`) and include `%` comments. Comments are skipped by default. Results are grouped by file; click one to open the file with the match selected.
+**Search** in the sidebar (Ctrl+Shift+F) looks through every text file in the vault, using your unsaved changes where there are some. Its toggles are match case (`Aa`), whole word (`ab`), regular expression (`.*`) and include `%` comments. Comments are skipped by default. Results are grouped by file; click one to open the file with the match selected.
 
 Open the replace field with ▸. You can replace one match, one file (↺), or **All** (Ctrl+Alt+Enter). A regex replacement can use `$1` and so on. Changed files open as unsaved tabs, so each file's change can be undone with Ctrl+Z. Ctrl+Alt+S saves them all.
 
