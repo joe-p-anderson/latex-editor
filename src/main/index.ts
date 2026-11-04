@@ -20,6 +20,8 @@ import { Vault } from './vault'
 import * as fileops from './fileops'
 import { listStarters, startersFolder } from './starters'
 import { PluginHost } from './plugins'
+import { menuTemplate } from './menu'
+import type { MenuBarMenu } from '../shared/menu'
 import type { SettingValues } from '../shared/plugin'
 import { isImage } from '../shared/images'
 import type { SearchOptions } from '../shared/search'
@@ -411,9 +413,9 @@ ipcMain.handle(
 )
 ipcMain.handle('plugins:open-link', (_e, id: string, url: string) => plugins.openLink(id, url))
 ipcMain.handle('plugins:invoke', (_e, id: string, name: string, args: unknown[]) => plugins.invoke(id, name, args))
-// The renderer's plugin commands, for the Tools menu.
-ipcMain.handle('plugins:menu', (_e, commands: PluginMenuItem[]) => {
-  pluginCommands = commands
+// The menu bar, generated from the renderer's command registry; sent again when its commands or their state change.
+ipcMain.handle('menu:set', (_e, bar: MenuBarMenu[]) => {
+  menuBar = bar
   buildMenu()
 })
 ipcMain.handle('paper:declare', (_e, root: string, on: boolean) => requireVault().savePaper(root, on))
@@ -432,115 +434,32 @@ const TITLE_BAR_HEIGHT = 36
 /** A menu item that asks the renderer to run the command `name` (an id in its command registry). */
 const send = (name: string, arg?: unknown) => () => win?.webContents.send('menu', name, arg)
 
-// Shortcuts the renderer handles itself are shown in the menus but not
-// registered here (registerAccelerator: false), so the editor keeps them
-// where it wants to (e.g. Ctrl+B is bold in the editor).
-const shown = (accelerator: string) => ({ accelerator, registerAccelerator: false })
-
-/** A plugin command in the Tools menu; clicking it sends 'plugin-command' with its id. */
-interface PluginMenuItem {
-  id: string
-  title: string
-  /** The plugin's name, which groups its commands. */
-  plugin: string
-  /** Shown only; the renderer handles the key. */
-  key?: string
-}
-let pluginCommands: PluginMenuItem[] = []
-
-/** The Tools menu: the Plugins panel, then each plugin's commands under its name. */
-function toolsMenu(): Electron.MenuItemConstructorOptions[] {
-  const items: Electron.MenuItemConstructorOptions[] = [
-    { label: 'Run Command…', ...shown('CmdOrCtrl+Shift+P'), click: send('tools.commandPalette') },
-    { label: 'Plugins…', click: send('tools.plugins') },
-  ]
-  const byPlugin = new Map<string, PluginMenuItem[]>()
-  for (const c of pluginCommands) byPlugin.set(c.plugin, [...(byPlugin.get(c.plugin) ?? []), c])
-  for (const [plugin, commands] of byPlugin) {
-    items.push({ type: 'separator' }, { label: plugin, enabled: false })
-    for (const c of commands) items.push({ label: c.title, ...(c.key ? shown(c.key) : {}), click: send('plugin-command', c.id) })
-  }
-  return items
-}
+let menuBar: MenuBarMenu[] | null = null
 
 function buildMenu(): void {
   Menu.setApplicationMenu(
-    Menu.buildFromTemplate([
-      {
-        label: 'File',
-        submenu: [
-          { label: 'New File…', ...shown('CmdOrCtrl+N'), click: send('file.newFile') },
-          { label: 'Switch Vault…', ...shown('CmdOrCtrl+O'), click: send('file.switchVault') },
-          { label: 'Go to File…', ...shown('CmdOrCtrl+P'), click: send('file.goToFile') },
-          { label: 'Save All', ...shown('CmdOrCtrl+Alt+S'), click: send('file.saveAll') },
-          {
-            label: 'Template Folder',
-            submenu: [
-              { label: 'Show in Explorer', click: async () => shell.openPath(await globalTemplatesDir()) },
-              { label: 'Change…', click: () => changeGlobalTemplates() },
-            ],
+    Menu.buildFromTemplate(
+      menuTemplate(menuBar, {
+        send,
+        templateFolder: {
+          label: 'Template Folder',
+          submenu: [
+            { label: 'Show in Explorer', click: async () => shell.openPath(await globalTemplatesDir()) },
+            { label: 'Change…', click: () => changeGlobalTemplates() },
+          ],
+        },
+        spelling: {
+          label: 'Check Spelling',
+          type: 'checkbox',
+          id: 'spellcheck',
+          checked: spellChecked,
+          click: (item) => {
+            spellChecked = item.checked
+            win?.webContents.send('menu', 'spellcheck', item.checked)
           },
-          { type: 'separator' },
-          { role: 'quit' },
-        ],
-      },
-      {
-        label: 'Edit',
-        submenu: [
-          { role: 'undo' },
-          { role: 'redo' },
-          { type: 'separator' },
-          { role: 'cut' },
-          { role: 'copy' },
-          { role: 'paste' },
-          { role: 'selectAll' },
-          { type: 'separator' },
-          { label: 'Find', ...shown('CmdOrCtrl+F'), click: send('edit.find') },
-          { label: 'Replace', ...shown('CmdOrCtrl+H'), click: send('edit.replace') },
-          { label: 'Find in Vault', ...shown('CmdOrCtrl+Shift+H'), click: send('edit.findInVault') },
-          { type: 'separator' },
-          { label: 'Insert Image…', click: send('insert.image') },
-          { label: 'Cite…', ...shown('CmdOrCtrl+Shift+C'), click: send('insert.cite') },
-          { label: 'Math Shortcuts…', click: send('edit.mathShortcuts') },
-        ],
-      },
-      {
-        label: 'View',
-        submenu: [
-          {
-            label: 'Check Spelling',
-            type: 'checkbox',
-            id: 'spellcheck',
-            checked: spellChecked,
-            click: (item) => {
-              spellChecked = item.checked
-              win?.webContents.send('menu', 'spellcheck', item.checked)
-            },
-          },
-          { type: 'separator' },
-          { label: 'Live View', ...shown('CmdOrCtrl+Shift+L'), click: send('view.toggleLive') },
-          { label: 'PDF', ...shown('CmdOrCtrl+Alt+V'), click: send('view.togglePdf') },
-          { label: 'Sidebar', ...shown('CmdOrCtrl+Shift+B'), click: send('view.toggleSidebar') },
-          { label: 'Problems and Log', ...shown('CmdOrCtrl+J'), click: send('view.togglePanel') },
-          { label: 'Appearance', click: send('view.appearance') },
-          { type: 'separator' },
-          { role: 'reload' },
-          { role: 'toggleDevTools' },
-          { type: 'separator' },
-          { role: 'resetZoom' },
-          { role: 'zoomIn' },
-          { role: 'zoomOut' },
-        ],
-      },
-      {
-        label: 'Build',
-        submenu: [
-          { label: 'Recompile', click: send('build.recompile') },
-          { label: 'Show Cursor in PDF', ...shown('CmdOrCtrl+Alt+J'), click: send('build.syncForward') },
-        ],
-      },
-      { label: 'Tools', submenu: toolsMenu() },
-    ]),
+        },
+      }),
+    ),
   )
 }
 

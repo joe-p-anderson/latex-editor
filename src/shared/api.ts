@@ -7,6 +7,7 @@ import type { Counters } from './livemodel'
 import type { SearchOptions, SearchResult } from './search'
 import type { PluginState, SettingValues } from './plugin'
 import type { Starter } from './starters'
+import type { MenuBarMenu } from './menu'
 
 // Types shared by the main process, the preload bridge and the renderer.
 // Paths called `rel` are vault-relative with forward slashes; paths called
@@ -293,6 +294,8 @@ export interface Api {
   setWindowChrome(color: string, symbolColor: string): Promise<void>
   /** Opens one of the app's menus (File, Edit, View, Build) at a point in the window. */
   popupMenu(label: string, x: number, y: number): Promise<void>
+  /** The menu bar, generated from the command registry (the main process adds its native items). */
+  setMenuBar(bar: MenuBarMenu[]): Promise<void>
   /** Shows a right-click menu at the pointer; the id of the item chosen, or null if it was dismissed. */
   contextMenu(items: { id: string; label: string; enabled?: boolean; separator?: boolean }[]): Promise<string | null>
   /** A cached marbled sheet (JPEG), or null if it hasn't been rendered yet. */
@@ -316,8 +319,6 @@ export interface Api {
   pluginInvoke(id: string, name: string, args: unknown[]): Promise<unknown>
   /** Opens one of the plugin's manifest `links` in the browser. */
   pluginOpenLink(id: string, url: string): Promise<void>
-  /** The plugin commands to list in the Tools menu. */
-  setPluginMenu(commands: { id: string; title: string; plugin: string; key?: string }[]): Promise<void>
   /** Plugins were switched or their settings changed. */
   onPluginsChanged(cb: (states: PluginState[]) => void): () => void
   /** A plugin's main half sent its renderer half an event (ctx.emit). */

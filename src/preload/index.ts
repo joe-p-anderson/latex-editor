@@ -84,6 +84,7 @@ const api: Api = {
   setVaultAppearance: (changes) => ipcRenderer.invoke('appearance:set-vault', changes),
   setWindowChrome: (color, symbolColor) => ipcRenderer.invoke('window:chrome', color, symbolColor),
   popupMenu: (label, x, y) => ipcRenderer.invoke('menu:popup', label, x, y),
+  setMenuBar: (bar) => ipcRenderer.invoke('menu:set', bar),
   contextMenu: (items) => ipcRenderer.invoke('menu:context', items),
   gitBranch: () => ipcRenderer.invoke('vault:branch'),
   marbleGet: (key) => ipcRenderer.invoke('marble:get', key),
@@ -97,7 +98,6 @@ const api: Api = {
   changePlugin: (id, change) => ipcRenderer.invoke('plugins:change', id, change),
   pluginInvoke: (id, name, args) => ipcRenderer.invoke('plugins:invoke', id, name, args),
   pluginOpenLink: (id, url) => ipcRenderer.invoke('plugins:open-link', id, url),
-  setPluginMenu: (commands) => ipcRenderer.invoke('plugins:menu', commands),
   onPluginsChanged: (cb) => {
     const listener = (_e: unknown, states: PluginState[]) => cb(states)
     ipcRenderer.on('plugins:changed', listener)

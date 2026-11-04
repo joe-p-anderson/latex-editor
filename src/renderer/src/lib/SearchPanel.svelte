@@ -199,7 +199,7 @@
       <div class="scopes" role="radiogroup" aria-label="Search in">
         <button role="radio" aria-checked={scope === 'file'} class:on={scope === 'file'} disabled={!active} title="Just the open file (Ctrl+F)" onclick={() => (chosen = 'file')}>File</button>
         {#if paper}<button role="radio" aria-checked={scope === 'paper'} class:on={scope === 'paper'} title="{paper.name}'s files, in reading order" onclick={() => (chosen = 'paper')}>Paper</button>{/if}
-        <button role="radio" aria-checked={scope === 'vault'} class:on={scope === 'vault'} title="Every file in the vault (Ctrl+Shift+H)" onclick={() => (chosen = 'vault')}>Vault</button>
+        <button role="radio" aria-checked={scope === 'vault'} class:on={scope === 'vault'} title="Every file in the vault (Ctrl+Shift+F)" onclick={() => (chosen = 'vault')}>Vault</button>
       </div>
     </div>
   </div>

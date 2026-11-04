@@ -4,8 +4,8 @@
 
   const KEYS: [string, string][] = [
     ['Ctrl P', 'Go to a file'],
-    ['Ctrl Shift H', 'Search the vault'],
-    ['Ctrl Shift B', 'Show or hide the sidebar'],
+    ['Ctrl Shift F', 'Search the vault'],
+    ['Ctrl Alt B', 'Show or hide the sidebar'],
     ['Ctrl Alt V', 'Show or hide the PDF'],
     ['Ctrl J', 'Problems and log'],
   ]

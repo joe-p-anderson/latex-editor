@@ -31,6 +31,12 @@ export interface Command {
   editorKey?: boolean
   /** Conditions that must all hold for the command to show or run. */
   when?: Condition[]
+  /** The submenu of its menu it goes in ("Format" in Insert). */
+  submenu?: string
+  /** Its menu label when that depends on the context ("Save and Build" for a .tex file); otherwise `title`. */
+  menuTitle?: (ctx: Context) => string
+  /** False keeps it out of the menu bar (it's in the palette all the same). */
+  menu?: false
   /** Other words the palette finds it by ("compile" for Recompile). */
   keywords?: string[]
   /** Returning false means it didn't apply, and a key falls through to whatever else binds it. */

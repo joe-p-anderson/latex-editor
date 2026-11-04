@@ -60,7 +60,7 @@ const V = ['vault'] as Command['when']
 const TEX = ['vault', 'tex'] as Command['when']
 
 export function coreCommands(a: CoreActions): Command[] {
-  const insert = (id: string, title: string, edit: EditId, key?: string): Command => ({
+  const insert = (id: string, title: string, edit: EditId, key?: string, submenu?: string): Command => ({
     id: `insert.${id}`,
     title,
     category: 'Insert',
@@ -68,13 +68,14 @@ export function coreCommands(a: CoreActions): Command[] {
     editorKey: true,
     when: TEX,
     run: () => a.edit(edit),
+    ...(submenu ? { submenu } : {}),
   })
   return [
     // File
     { id: 'file.newFile', title: 'New File…', category: 'File', key: 'Mod-n', when: V, run: a.newFile },
     { id: 'file.switchVault', title: 'Switch Vault…', category: 'File', key: 'Mod-o', keywords: ['open', 'folder'], run: a.switchVault },
     { id: 'file.goToFile', title: 'Go to File…', category: 'File', key: 'Mod-p', keywords: ['open', 'quick open'], when: V, run: a.goToFile },
-    { id: 'file.save', title: 'Save', category: 'File', key: 'Mod-s', when: V, run: a.save },
+    { id: 'file.save', title: 'Save', category: 'File', key: 'Mod-s', menuTitle: (ctx) => (ctx.tex ? 'Save and Build' : 'Save'), when: V, run: a.save },
     { id: 'file.saveAll', title: 'Save All', category: 'File', key: 'Mod-Alt-s', when: V, run: a.saveAll },
     { id: 'file.closeTab', title: 'Close Tab', category: 'File', key: 'Mod-w', when: V, run: a.closeTab },
 
@@ -86,9 +87,9 @@ export function coreCommands(a: CoreActions): Command[] {
     { id: 'edit.mathShortcuts', title: 'Math Shortcuts…', category: 'Edit', keywords: ['snippets'], when: V, run: a.mathShortcuts },
 
     // Insert
-    insert('bold', 'Bold', 'bold', 'Mod-b'),
-    insert('italic', 'Italic', 'italic', 'Mod-i'),
-    insert('emphasis', 'Emphasis', 'emph', 'Mod-e'),
+    insert('bold', 'Bold', 'bold', 'Mod-b', 'Format'),
+    insert('italic', 'Italic', 'italic', 'Mod-i', 'Format'),
+    insert('emphasis', 'Emphasis', 'emph', 'Mod-e', 'Format'),
     insert('inlineMath', 'Inline Maths', 'inlineMath', 'Mod-m'),
     insert('displayMath', 'Display Maths', 'displayMath', 'Mod-Shift-m'),
     insert('equation', 'Equation Environment', 'equation', 'Mod-Shift-e'),
@@ -106,12 +107,12 @@ export function coreCommands(a: CoreActions): Command[] {
     { id: 'view.togglePdf', title: 'Toggle PDF', category: 'View', key: 'Mod-Alt-v', keywords: ['preview', 'build', 'compile'], when: V, run: a.togglePdf },
     { id: 'view.toggleSidebar', title: 'Toggle Sidebar', category: 'View', key: 'Mod-Alt-b', when: V, run: a.toggleSidebar },
     { id: 'view.togglePanel', title: 'Toggle Problems and Log', category: 'View', key: 'Mod-j', keywords: ['errors'], when: V, run: a.togglePanel },
-    { id: 'view.toggleSpelling', title: 'Toggle Spelling', category: 'View', keywords: ['spellcheck'], run: a.toggleSpelling },
+    { id: 'view.toggleSpelling', title: 'Toggle Spelling', category: 'View', keywords: ['spellcheck'], menu: false, run: a.toggleSpelling },
     { id: 'view.appearance', title: 'Appearance', category: 'View', key: 'Mod-,', keywords: ['theme', 'palette', 'colour', 'color', 'font'], when: V, run: a.appearance },
     { id: 'view.nextTab', title: 'Next Tab', category: 'View', key: 'Mod-PageDown', when: V, run: a.nextTab },
     { id: 'view.previousTab', title: 'Previous Tab', category: 'View', key: 'Mod-PageUp', when: V, run: a.previousTab },
-    { id: 'view.recentTab', title: 'Recently Used Tab', category: 'View', key: 'Mod-Tab', when: V, run: () => a.cycleTabs(1) },
-    { id: 'view.recentTabBack', title: 'Recently Used Tab (Back)', category: 'View', key: 'Mod-Shift-Tab', when: V, run: () => a.cycleTabs(-1) },
+    { id: 'view.recentTab', title: 'Recently Used Tab', category: 'View', key: 'Mod-Tab', menu: false, when: V, run: () => a.cycleTabs(1) },
+    { id: 'view.recentTabBack', title: 'Recently Used Tab (Back)', category: 'View', key: 'Mod-Shift-Tab', menu: false, when: V, run: () => a.cycleTabs(-1) },
     { id: 'view.back', title: 'Go Back', category: 'View', key: 'Alt-ArrowLeft', when: V, run: a.goBack },
     { id: 'view.forward', title: 'Go Forward', category: 'View', key: 'Alt-ArrowRight', when: V, run: a.goForward },
     { id: 'view.previousPaperFile', title: "Paper's Previous File", category: 'View', key: 'Alt-PageUp', when: V, run: () => a.paperFile(-1) },

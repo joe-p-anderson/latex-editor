@@ -259,13 +259,11 @@ export class PluginRuntime {
       if (on && !this.running.has(id)) await this.start(s)
       else if (!on && this.running.has(id)) this.stop(id)
     }
-    this.publishMenu()
   }
 
   /** Stops every plugin (the vault closed). */
   stopAll(): void {
     for (const id of [...this.running.keys()]) this.stop(id)
-    this.publishMenu()
   }
 
   /** The views to show in the activity bar now: always-on ones, and contextual ones whose `when` holds. */
@@ -289,10 +287,6 @@ export class PluginRuntime {
     const c = this.commands.find((x) => x.id === id)
     if (!c) return this.host.notify(`No command ${id} (is its plugin switched on?)`)
     Promise.resolve(c.run()).catch((e) => this.host.notify(`${c.title}: ${e?.message ?? e}`))
-  }
-
-  private publishMenu(): void {
-    window.api.setPluginMenu(this.commands.map(({ id, title, plugin, key }) => ({ id, title, plugin, key: key && toAccelerator(key) })))
   }
 
   private async start(state: PluginState): Promise<void> {
@@ -359,7 +353,6 @@ export class PluginRuntime {
             this.commands = this.commands.filter((x) => x !== cmd)
             unregister()
           })
-          this.publishMenu()
         },
         run: (cid) => this.runCommand(cid.includes(':') ? cid : `${id}:${cid}`),
       },
@@ -421,14 +414,6 @@ export class PluginRuntime {
   private refreshExtensions(): void {
     this.extensions = [...this.editorExts.values()].flat()
   }
-}
-
-/** A CodeMirror key ("Mod-Shift-k") as an Electron accelerator ("CmdOrCtrl+Shift+K"), for the menu. */
-export function toAccelerator(key: string): string {
-  return key
-    .split('-')
-    .map((p) => (p === 'Mod' ? 'CmdOrCtrl' : p.length === 1 ? p.toUpperCase() : p))
-    .join('+')
 }
 
 /** Asks plugin live decorations to recompute. */

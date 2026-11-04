@@ -80,7 +80,7 @@
   </div>
 
   {#if !result}
-    <p class="empty">Nothing built yet. Save a .tex file (Ctrl+S) to build it.</p>
+    <p class="empty">Nothing built yet. Save a .tex file (Ctrl+S), or press Ctrl+Shift+B, to build it.</p>
   {:else}
     <div class="body">
       {#if tab === 'log'}
