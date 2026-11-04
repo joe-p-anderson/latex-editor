@@ -273,7 +273,7 @@ export interface Api {
   touchpadStop(): Promise<void>
   /** A finger (x, y from 0 to 1 across the pad; tip: whether it touches), or the pad's physical button. */
   onTouchpad(cb: (e: TouchpadEvent) => void): () => void
-  /** A menu item for the renderer: a command id from its registry, 'plugin-command' with a plugin command's id, or 'spellcheck' with whether it's now on. */
+  /** A menu item for the renderer: a command id from its registry (a plugin's included), or 'spellcheck' with whether it's now on. */
   onMenu(cb: (name: string, arg?: unknown) => void): () => void
   /** Searches the vault's text files; `overrides` (unsaved buffers) are searched instead of the disk copies. */
   search(query: string, opts: SearchOptions, overrides: Record<string, string>): Promise<SearchResult>
