@@ -100,6 +100,9 @@
     height: 36px;
     display: grid;
     grid-template-columns: 1fr auto 1fr;
+    /* One row the bar's height: the ribbon hangs below it, and mustn't grow
+       the row (that pushed everything down about 7px after the first build). */
+    grid-template-rows: 100%;
     align-items: center;
     background: var(--chrome);
     color: var(--chrome-ink);
@@ -161,7 +164,7 @@
     border: 0;
     padding: 2px 16px;
     border-radius: 3px;
-    font: 600 16px var(--f-page);
+    font: 600 16px var(--f-ui);
     white-space: nowrap;
     max-width: 44vw;
     overflow: hidden;
