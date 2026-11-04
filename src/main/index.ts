@@ -3,6 +3,7 @@ import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { copyFile, mkdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises'
 import { basename, join, resolve, sep } from 'node:path'
+import { release } from 'node:os'
 import { pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
 import { bibInfo } from './bibliography'
@@ -15,20 +16,22 @@ import { appAppearance, appDefaultStarter, dismissHint, globalSnippets, globalTe
 import { searchVault } from './search'
 import { addWord, misspelled, reloadWords, suggestions } from './spell'
 import { startTouchpad, stopTouchpad } from './touchpad'
-import { ensureTeX } from './tex'
+import { findTeX, texName } from './tex'
 import { forward, inverse } from './synctex'
 import { Vault } from './vault'
+import { holdsTex, makeVault, newVaultChoices } from './newvault'
 import * as fileops from './fileops'
 import { listStarters, startersFolder } from './starters'
 import { PluginHost } from './plugins'
 import { menuTemplate } from './menu'
 import type { MenuBarMenu } from '../shared/menu'
+import { ISSUES, type AboutInfo } from '../shared/about'
 import type { SettingValues } from '../shared/plugin'
 import { isImage } from '../shared/images'
 import type { SearchOptions } from '../shared/search'
 import { defaultStarter, type Starter } from '../shared/starters'
-import { normalizeVaultAppearance, PALETTES, type AppAppearance, type PaletteId, type VaultAppearance } from '../shared/appearance'
-import type { RecentVault, SectionTarget } from '../shared/api'
+import { normalizeVaultAppearance, type AppAppearance, type PaletteId, type VaultAppearance } from '../shared/appearance'
+import type { NewVaultPick, RecentVault, SectionTarget } from '../shared/api'
 
 let win: BrowserWindow | null = null
 let vault: Vault | null = null
@@ -101,8 +104,12 @@ async function recentVaults(): Promise<RecentVault[]> {
   return out
 }
 
-/** A new vault: a folder (picked or made in the dialog) given its own endpaper. */
-async function newVault(): Promise<Vault | null> {
+/**
+ * New vault…'s folder picker. A folder that already holds .tex files opens as
+ * an existing vault; any other comes back for the renderer to ask its name
+ * and starter (then vault:make), with nothing written yet.
+ */
+async function newVault(): Promise<NewVaultPick | null> {
   const r = await dialog.showOpenDialog(win!, {
     title: 'Choose or make a folder for the new vault',
     buttonLabel: 'Make vault here',
@@ -110,13 +117,8 @@ async function newVault(): Promise<Vault | null> {
   })
   if (r.canceled || !r.filePaths[0]) return null
   const root = r.filePaths[0]
-  await mkdir(root, { recursive: true })
-  const v = await openVault(root)
-  // A fresh vault gets a palette of its own, so the welcome screen tells them apart.
-  if (!(await stat(join(root, '.vault.json')).then(() => true, () => false))) {
-    await v.saveAppearance({ palette: PALETTES[Math.floor(Math.random() * PALETTES.length)] })
-  }
-  return v
+  if (await holdsTex(root)) return { kind: 'opened', vault: await (await openVault(root)).info() }
+  return { kind: 'setup', root, ...(await newVaultChoices(root, await globalTemplatesDir(), await appDefaultStarter())) }
 }
 
 /** The bundled Getting-started vault, and where the student's copy of it goes. */
@@ -209,7 +211,11 @@ ipcMain.handle('vault:forget', async (_e, root: string) => {
 })
 ipcMain.handle('vault:set-name', (_e, name: string) => requireVault().saveName(name))
 ipcMain.handle('vault:open-path', async (_e, root: string) => (await openVault(root)).info())
-ipcMain.handle('vault:new', async () => (await newVault())?.info() ?? null)
+ipcMain.handle('vault:new', () => newVault())
+ipcMain.handle('vault:make', async (_e, root: string, name: string, starter: string) => {
+  const main = await makeVault(root, { name, starter }, await globalTemplatesDir())
+  return { vault: await (await openVault(root)).info(), main }
+})
 ipcMain.handle('vault:getting-started', async () => {
   const { bundled, target } = gettingStartedPaths()
   const { changed } = await openCopy(bundled, target)
@@ -350,10 +356,24 @@ ipcMain.handle('images:list', async () => (await requireVault().files()).filter(
 ipcMain.handle('images:import', (_e, source: string) => importImage(requireVault(), source))
 ipcMain.handle('images:save', (_e, name: string, bytes: Uint8Array) => saveImage(requireVault(), name, bytes))
 ipcMain.handle('templates:move', (_e, rel: string) => moveToGlobalTemplates(rel))
-// Credit links (e.g. Detexify's) open in the browser; only these sites.
+// Credit links (e.g. Detexify's) and Help → Report an Issue open in the browser; only these sites.
 ipcMain.handle('open-external', (_e, url: string) => {
-  if (/^https:\/\/(detexify\.kirelabs\.org|github\.com\/kirel\/detexify)/.test(url)) shell.openExternal(url)
+  if (/^https:\/\/(detexify\.kirelabs\.org|github\.com\/kirel\/detexify|miktex\.org\/download|tug\.org\/texlive)/.test(url) || url === ISSUES || url.startsWith(`${ISSUES}?`)) shell.openExternal(url)
 })
+// Which TeX builds use (null without one): the renderer asks at launch and on Check again.
+ipcMain.handle('tex:detect', () => findTeX())
+const OS_NAMES: Partial<Record<NodeJS.Platform, string>> = { win32: 'Windows', darwin: 'macOS', linux: 'Linux' }
+ipcMain.handle(
+  'app:about',
+  async (): Promise<AboutInfo> => ({
+    version: app.getVersion(),
+    electron: process.versions.electron,
+    chromium: process.versions.chrome,
+    os: `${OS_NAMES[process.platform] ?? process.platform} ${release()} (${process.arch})`,
+    // The distribution Help → About names ("MiKTeX 24.4"); null shows "none found".
+    tex: texName(await findTeX()),
+  }),
+)
 // Trackpad tracing: absolute finger positions while the symbol pad traces.
 ipcMain.handle('touchpad:start', async () => {
   try {
@@ -586,7 +606,6 @@ app.whenReady().then(async () => {
     updateIcon()
   })
   await createWindow()
-  if (win) await ensureTeX(win)
 })
 app.on('window-all-closed', () => app.quit())
 // Deletes nobody undid go to the OS trash on the way out.

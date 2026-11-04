@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import type { BibInfo, CompileResult, EditorContext, PaperInfo, Problem, QuickFix, SectionTarget, TextEdit, TreeNode, VaultInfo } from '@shared/api'
+  import type { BibInfo, CompileResult, EditorContext, PaperInfo, Problem, QuickFix, SectionTarget, TextEdit, TreeNode, VaultInfo, NewVaultPick } from '@shared/api'
   import { dirOf, isDocument, magicRoot, parseIncludes, rootComment, type Include } from '@shared/project'
   import { extractRange, extractSection, includeBlock, inlineInclude, moveInclude, placeNewFile, renameIncludes, renumberPlan, slugify, toggleInclude } from '@shared/paperedit'
   import PaperMap, { type PaperMapActions } from './lib/PaperMap.svelte'
@@ -21,9 +21,14 @@
   import TabBar from './lib/TabBar.svelte'
   import QuickOpen from './lib/QuickOpen.svelte'
   import CommandPalette from './lib/CommandPalette.svelte'
+  import ShortcutsPanel from './lib/ShortcutsPanel.svelte'
+  import AboutDialog from './lib/AboutDialog.svelte'
+  import { issueUrl, type AboutInfo } from '@shared/about'
   import { CommandRegistry, type Command, type Context } from './lib/commands'
   import { coreCommands } from './lib/coreCommands'
+  import { gettingStartedCommand } from './lib/gettingStarted'
   import { menuBar } from './lib/menuBar'
+  import { canBuild, checkTeX, tex } from './lib/tex.svelte'
   import type { EditingHooks } from './lib/editing'
   import { blankComments, mergeTextSnippets, parseSnippets, type OutlineItem, type Snippet } from '@shared/latexedit'
   import { includegraphics, type ImageHooks } from './lib/imageSupport'
@@ -34,6 +39,7 @@
   import ReplaceReport from './lib/ReplaceReport.svelte'
   import PromptDialog from './lib/PromptDialog.svelte'
   import NewFileDialog from './lib/NewFileDialog.svelte'
+  import NewVaultDialog from './lib/NewVaultDialog.svelte'
   import { findReferences, retarget, type RefChange } from '@shared/references'
   import { badName, basename as baseName, dirname as dirName, isInside, joinRel, movedPath, type Move } from '@shared/paths'
   import TableEditor from './lib/TableEditor.svelte'
@@ -76,6 +82,9 @@
   let tabs = $state<string[]>([])
   let mru: string[] = []
   let quickOpen = $state(false)
+  // Help → Keyboard Shortcuts (Ctrl+K Ctrl+S) and About endleaf.
+  let shortcuts = $state(false)
+  let about = $state<AboutInfo | null>(null)
   // Ctrl+Shift+P: the command palette.
   let palette = $state(false)
   // The commands the palette lists: those whose `when` held as it opened.
@@ -264,7 +273,7 @@
     (hint) => flash(hint),
   )
   /** What the commands' `when` conditions are checked against. */
-  const commandContext = (): Context => ({ vault: !!vault, editor: !!active, tex: !!active?.toLowerCase().endsWith('.tex') })
+  const commandContext = (): Context => ({ vault: !!vault, editor: !!active, tex: !!active?.toLowerCase().endsWith('.tex'), build: canBuild() })
   commands.register(
     ...coreCommands({
       newFile: () => newFile(newFileDir()),
@@ -301,20 +310,23 @@
       },
       recompile: () => !!active && (compile(active), true),
       syncForward: () => void syncForward(),
-      gettingStarted: () => openGettingStarted(),
+      keyboardShortcuts: () => (shortcuts = true),
+      reportIssue: async () => void window.api.openExternal(issueUrl(await window.api.about())),
+      about: async () => void (about = await window.api.about()),
     }),
     showHintsAgainCommand(),
+    gettingStartedCommand(() => openGettingStarted()),
   )
   const plugins = new PluginRuntime(host, commands)
   // The menu bar comes from the registry too: sent again when a command comes or goes
-  // (a plugin switched on) and when what's enabled may change (a vault, the active file).
+  // (a plugin switched on) and when what's enabled may change (a vault, the active file, TeX found).
   let commandsChanged = $state(0)
   commands.subscribe(() => commandsChanged++)
   // The empty editor's keys and Help links, from the registry; a link shows once its command is registered.
   const plateKeys = $derived((void commandsChanged, emptyPlateKeys(commands)))
   const plateLinks = $derived((void commandsChanged, EMPTY_PLATE_LINKS.filter((l) => commands.get(l.id))))
   $effect(() => {
-    void [commandsChanged, vault, active]
+    void [commandsChanged, vault, active, tex.checked, tex.info]
     untrack(() => window.api.setMenuBar(menuBar(commands.all(), commandContext())))
   })
   // Each vault has its own plugins on; the main process has switched them already.
@@ -1011,6 +1023,7 @@
 
   onMount(() => {
     window.api.getAppearance().then((a) => (appearance = a))
+    checkTeX()
     window.api.getVault().then((v) => {
       vault = v
       started = true
@@ -1048,14 +1061,20 @@
    */
   async function switchVault(get: () => Promise<VaultInfo | null>): Promise<boolean> {
     if (vault && !(await settleUnsaved('opening another vault'))) return false
-    const v = await get().catch((e: Error) => (flash(e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')), null))
-    if (!v) return false
+    const v = await get().catch((e: Error) => (flash(remoteMessage(e)), null))
+    if (v) adopt(v)
+    return !!v
+  }
+
+  const remoteMessage = (e: Error) => e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
+
+  /** Shows `v` in place of the open vault (if any). */
+  function adopt(v: VaultInfo): void {
     reset()
     vault = v
     loadImages()
     loadSnippets()
     refreshBranch()
-    return true
   }
 
   /**
@@ -1085,6 +1104,39 @@
     await go('main.tex')
     editor?.setLiveMode(true)
     pdfOpen = true
+  }
+
+  /** The new vault being set up, once its folder is picked: its name and starter are asked next. */
+  let vaultSetup = $state<Extract<NewVaultPick, { kind: 'setup' }> | null>(null)
+
+  /**
+   * New vault…: a folder already holding .tex files opens as it is; any other
+   * is named and given a starter (NewVaultDialog), then made by makeVault.
+   */
+  async function newVault(): Promise<void> {
+    if (vault && !(await settleUnsaved('opening another vault'))) return
+    const pick = await window.api.newVault().catch((e: Error) => (flash(remoteMessage(e)), null))
+    if (pick?.kind === 'opened') adopt(pick.vault)
+    else if (pick) vaultSetup = pick
+  }
+
+  /** Makes the vault being set up and opens its main.tex in Live view beside its PDF, building once. Resolves to an error to show, or null. */
+  async function makeVault(name: string, starter: string): Promise<string | null> {
+    if (!vaultSetup) return null
+    let made: { vault: VaultInfo; main: string }
+    try {
+      made = await window.api.makeVault(vaultSetup.root, name, starter)
+    } catch (e) {
+      return remoteMessage(e as Error)
+    }
+    vaultSetup = null
+    adopt(made.vault)
+    await tick() // the editor mounts with the vault
+    await go(made.main)
+    editor?.setLiveMode(true)
+    pdfOpen = true
+    if (canBuild()) await compile(made.main) // without TeX, the PDF pane shows what to install
+    return null
   }
 
   /** Back to the welcome screen. */
@@ -1864,6 +1916,7 @@
    * for a file of a marked paper when that's enough (the main process decides).
    */
   async function compile(rel: string, saving = false): Promise<void> {
+    if (!canBuild()) return // no TeX: saving just saves; the PDF pane says what to install
     clearTimeout(previewTimer) // this build includes whatever the preview would have
     const seq = ++compileSeq
     compiling = true
@@ -1874,7 +1927,7 @@
       if (!r) return
       if (seq !== compileSeq) return // a newer save superseded this compile
       show(r)
-      // No-TeX seam: when ticket 05's TeX check says none is installed, skip this hint.
+      // Without TeX nothing builds (see the top of compile), so this hint can't show then.
       if (r.pdf && !r.problems.some((p) => p.severity === 'error' && !p.hidden)) triggerHint('first-build')
     } finally {
       if (seq === compileSeq) compiling = false
@@ -1907,7 +1960,7 @@
   }
 
   async function preview(rel: string, force = false): Promise<void> {
-    if (!editor) return
+    if (!editor || !canBuild()) return
     // A saved build is running: try again after it, which may make this unnecessary.
     if (compiling) return schedulePreview(rel)
     const buffers = Object.fromEntries(editor.dirtyTexts())
@@ -2027,7 +2080,7 @@
     <Welcome
       onopen={openVault}
       onopenat={(root) => switchVault(() => window.api.openVaultAt(root))}
-      onnew={() => switchVault(() => window.api.newVault())}
+      onnew={newVault}
       ontry={openGettingStarted}
     />
     {#if note}<div class="note welcome-note">{note}</div>{/if}
@@ -2296,6 +2349,11 @@
   />
 {/if}
 
+{#if vaultSetup}
+  {@const vs = vaultSetup}
+  <NewVaultDialog folder={vs.root} name={vs.name} starters={vs.starters} preselect={vs.preselect} oncreate={makeVault} oncancel={() => (vaultSetup = null)} />
+{/if}
+
 {#if newFileIn !== null && vault}
   <NewFileDialog
     dir={newFileIn}
@@ -2357,6 +2415,26 @@
     }}
     onclose={() => {
       quickOpen = false
+      editor?.focus()
+    }}
+  />
+{/if}
+
+{#if shortcuts}
+  <ShortcutsPanel
+    commands={commands.all()}
+    onclose={() => {
+      shortcuts = false
+      editor?.focus()
+    }}
+  />
+{/if}
+
+{#if about}
+  <AboutDialog
+    info={about}
+    onclose={() => {
+      about = null
       editor?.focus()
     }}
   />

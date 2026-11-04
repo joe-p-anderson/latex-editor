@@ -26,7 +26,7 @@ export interface CoreActions {
   newFile(): void
   switchVault(): void
   goToFile(): void
-  /** Saves the open file (and builds it, if it's .tex); false with none. */
+  /** Saves the open file (and builds it, if it's .tex and TeX is installed); false with none. */
   save(): boolean
   saveAll(): void
   /** Closes the active tab; false with none (Ctrl+W then falls through). */
@@ -58,13 +58,22 @@ export interface CoreActions {
   /** Builds the active file without saving; false with none. */
   recompile(): boolean
   syncForward(): void
-  /** Opens the student's copy of the Getting-started vault, making it first if need be. */
-  gettingStarted(): void
+  keyboardShortcuts(): void
+  reportIssue(): void
+  about(): void
 }
+
+/**
+ * The Help menu's order. Getting Started (the Getting-started vault) and
+ * Show Hints Again (hints.svelte.ts) are registered by their own features,
+ * after the core commands, so the menu sorts by this.
+ */
+export const HELP_ORDER = ['help.keyboardShortcuts', 'help.gettingStarted', 'help.mathShortcuts', 'help.showHintsAgain', 'help.reportIssue', 'help.about']
 
 const V: Condition[] = ['vault']
 const FILE: Condition[] = ['vault', 'editor']
 const TEX: Condition[] = ['vault', 'tex']
+const BUILD: Condition[] = ['vault', 'build']
 
 /**
  * Runs an action that always applies. Whatever it returns is dropped (a
@@ -94,7 +103,7 @@ export function coreCommands(a: CoreActions): Command[] {
     { id: 'file.newFile', title: 'New File…', category: 'File', key: 'Mod-n', when: V, run: always(a.newFile) },
     { id: 'file.switchVault', title: 'Switch Vault…', category: 'File', key: 'Mod-o', keywords: ['open', 'folder'], run: always(a.switchVault) },
     { id: 'file.goToFile', title: 'Go to File…', category: 'File', key: 'Mod-p', keywords: ['open', 'quick open'], when: V, run: always(a.goToFile) },
-    { id: 'file.save', title: 'Save', category: 'File', key: 'Mod-s', menuTitle: (ctx) => (ctx.tex ? 'Save and Build' : 'Save'), when: V, run: a.save },
+    { id: 'file.save', title: 'Save', category: 'File', key: 'Mod-s', menuTitle: (ctx) => (ctx.tex && ctx.build ? 'Save and Build' : 'Save'), when: V, run: a.save },
     { id: 'file.saveAll', title: 'Save All', category: 'File', key: 'Mod-Alt-s', when: V, run: always(a.saveAll) },
     { id: 'file.closeTab', title: 'Close Tab', category: 'File', key: 'Mod-w', when: V, run: a.closeTab },
 
@@ -103,7 +112,6 @@ export function coreCommands(a: CoreActions): Command[] {
     { id: 'edit.replace', title: 'Replace', category: 'Edit', key: 'Mod-h', when: V, run: always(a.replace) },
     { id: 'edit.findInVault', title: 'Find in Vault', category: 'Edit', key: 'Mod-Shift-f', aliases: ['Mod-Shift-h'], keywords: ['search'], when: V, run: always(a.findInVault) },
     { id: 'edit.renameLabel', title: 'Rename Label', category: 'Edit', key: 'F2', editorKey: true, when: TEX, run: () => a.edit('renameLabel') },
-    { id: 'edit.mathShortcuts', title: 'Maths Shortcuts…', category: 'Edit', keywords: ['math', 'snippets'], when: V, run: always(a.mathShortcuts) },
 
     // Insert
     insert('bold', 'Bold', 'bold', 'Mod-b', 'Format'),
@@ -138,14 +146,17 @@ export function coreCommands(a: CoreActions): Command[] {
     { id: 'view.nextPaperFile', title: "Paper's Next File", category: 'View', key: 'Alt-PageDown', when: V, run: () => a.paperFile(1) },
 
     // Build
-    { id: 'build.recompile', title: 'Recompile', category: 'Build', key: 'Mod-Shift-b', keywords: ['compile', 'build', 'pdf', 'typeset'], when: V, run: a.recompile },
+    { id: 'build.recompile', title: 'Recompile', category: 'Build', key: 'Mod-Shift-b', keywords: ['compile', 'build', 'pdf', 'typeset'], when: BUILD, run: a.recompile },
     { id: 'build.syncForward', title: 'Show Cursor in PDF', category: 'Build', key: 'Mod-Alt-j', keywords: ['sync', 'synctex', 'pdf'], when: V, run: always(a.syncForward) },
 
     // Tools
     { id: 'tools.commandPalette', title: 'Run Command…', category: 'Tools', key: 'Mod-Shift-p', keywords: ['command palette'], run: always(a.commandPalette) },
     { id: 'tools.plugins', title: 'Plugins…', category: 'Tools', when: V, run: always(a.plugins) },
 
-    // Help
-    { id: 'help.gettingStarted', title: 'Getting Started', category: 'Help', keywords: ['tutorial', 'sample', 'example', 'learn'], run: always(a.gettingStarted) },
+    // Help (Getting Started and Show Hints Again are registered by their own features; HELP_ORDER places them)
+    { id: 'help.keyboardShortcuts', title: 'Keyboard Shortcuts', category: 'Help', key: 'Mod-k Mod-s', keywords: ['keys', 'keybindings', 'hotkeys'], run: always(a.keyboardShortcuts) },
+    { id: 'help.mathShortcuts', title: 'Maths Shortcuts…', category: 'Help', keywords: ['math', 'snippets'], when: V, run: always(a.mathShortcuts) },
+    { id: 'help.reportIssue', title: 'Report an Issue…', category: 'Help', keywords: ['bug', 'feedback', 'github'], run: always(a.reportIssue) },
+    { id: 'help.about', title: 'About endleaf', category: 'Help', keywords: ['version'], run: always(a.about) },
   ]
 }
