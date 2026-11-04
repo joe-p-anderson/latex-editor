@@ -1,7 +1,7 @@
 // The inks derived from a palette's text, page and detail colours, each held
 // to its contrast target (./contrast.ts): the lighter secondary inks, and
 // Source view's syntax inks steered apart in hue.
-import { AIM, atLeast, hex, mix, rgb } from './contrast'
+import { AIM, atLeast, deltaE, hex, mix, rgb } from './contrast'
 
 /**
  * The two lighter inks, faded from the text towards the page: `muted` for
@@ -37,33 +37,45 @@ function fromHsl(h: number, s: number, l: number): string {
   const a = s * Math.min(l, 1 - l)
   return hex([0, 8, 4].map((n) => 255 * (l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1)))))
 }
-const hueGap = (a: number, b: number) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b))
-/** The hue nearest `want` that sits at least `gap` degrees from every one of `away`. */
-function hueAway(want: number, away: number[], gap: number): number {
-  for (let d = 0; d <= 180; d += 5)
-    for (const h of [want + d, want - d]) {
-      const x = (h + 360) % 360
-      if (away.every((a) => hueGap(x, a) >= gap)) return x
-    }
-  return want
+/**
+ * A palette's body hue: the average hue of its marbling, weighted by how
+ * saturated each colour is (a near-grey says little about the hue).
+ */
+export function bodyHue(colours: string[]): number {
+  let x = 0
+  let y = 0
+  for (const c of colours) {
+    const [h, s] = hsl(c)
+    x += s * Math.cos((h * Math.PI) / 180)
+    y += s * Math.sin((h * Math.PI) / 180)
+  }
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360
 }
-/** How far apart, in hue, the three syntax roles sit. */
-const ROLE_GAP = 75
+/**
+ * How different (ΔE) each syntax role stays from the others: a margin over
+ * the 20 that tests/contrast.test.ts holds them to.
+ */
+const ROLE_DISTINCT = 24
 /**
  * The structure and maths inks for Source view (.scratch/ux-fixes/spec.md,
- * "Syntax roles"). Commands are in the detail; maths prefers a blue and
- * structure a green, each turned as far as it must to keep clear of the
- * detail's hue and of each other. Each is then darkened (paper) or lightened
- * (black) towards the ink as far as it needs to read on `on`.
+ * "Syntax roles"). Commands are in the detail. Maths takes the palette's body
+ * hue (`body`), so it changes with the palette; structure prefers a green.
+ * Each is darkened (paper) or lightened (black) towards the ink as far as it
+ * needs to read on `on`, and turned in hue only as far as it must to look
+ * clearly different from the roles before it.
  */
-export function syntaxInks(detail: string, ink: string, black: boolean, on: string[]) {
-  const accent = hsl(detail)[0]
-  const mathHue = hueAway(220, [accent], ROLE_GAP)
-  const structureHue = hueAway(140, [accent, mathHue], ROLE_GAP)
+export function syntaxInks(detail: string, ink: string, black: boolean, on: string[], body: number) {
   const [s, l] = black ? [0.5, 0.74] : [0.55, 0.32]
   const min = black ? AIM.text : AIM.paperText
-  return {
-    math: atLeast(fromHsl(mathHue, s, l), ink, min, on),
-    structure: atLeast(fromHsl(structureHue, s, l), ink, min, on),
+  const inkAt = (h: number) => atLeast(fromHsl(((h % 360) + 360) % 360, s, l), ink, min, on)
+  const nearest = (want: number, clearOf: string[]) => {
+    for (let d = 0; d <= 180; d += 5)
+      for (const h of [want + d, want - d]) {
+        const c = inkAt(h)
+        if (clearOf.every((o) => deltaE(c, o) >= ROLE_DISTINCT)) return c
+      }
+    return inkAt(want)
   }
+  const math = nearest(body, [detail])
+  return { math, structure: nearest(140, [detail, math]) }
 }

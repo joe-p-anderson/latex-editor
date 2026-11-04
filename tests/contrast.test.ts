@@ -181,3 +181,39 @@ describe('syntax roles', () => {
     expect(close).toEqual([])
   })
 })
+
+/** A colour's hue in degrees. */
+function hue(c: string): number {
+  const [r, g, b] = parse(c).slice(0, 3).map((v) => v / 255)
+  const max = Math.max(r, g, b)
+  const d = max - Math.min(r, g, b)
+  if (d === 0) return 0
+  const h = max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4
+  return h * 60
+}
+
+describe('maths follows the palette', () => {
+  const PAGES_LOOKS = (['paper', 'black'] as Page[]).flatMap((page) => (['plain', 'bench'] as Look[]).map((look) => ({ page, look })))
+  const tokensFor = (palette: (typeof PALETTES)[number], page: Page, look: Look) => {
+    const theme = THEMES.find((t) => t.id === palette)!
+    return appearanceTokens({ ...DEFAULT_APP_APPEARANCE, look, page }, { ...defaultVaultAppearance('x'), palette }, theme)
+  }
+  const mathFor = (palette: (typeof PALETTES)[number], page: Page, look: Look) => tokensFor(palette, page, look)[token(editorColours.math)]
+
+  it.each(PAGES_LOOKS)('on $page, $look: every palette has its own maths colour', ({ page, look }) => {
+    const colours = PALETTES.map((p) => mathFor(p, page, look))
+    expect(new Set(colours).size).toBe(PALETTES.length)
+  })
+
+  it.each(PAGES_LOOKS)('on $page, $look: maths takes the hue of the palette where the commands leave room', ({ page, look }) => {
+    // A palette's maths is in its own hue range unless the commands are
+    // already in that range (Bench draws commands in the palette's colour).
+    const ranges = { 'plum-amber': [280, 345], 'forest-floor': [60, 160], 'oxblood-gilt': [330, 380] } as const
+    for (const [palette, [lo, hi]] of Object.entries(ranges) as [keyof typeof ranges, readonly [number, number]][]) {
+      const inRange = (h: number) => (h >= lo && h <= hi) || (h + 360 >= lo && h + 360 <= hi)
+      if (inRange(hue(tokensFor(palette, page, look).detail))) continue
+      const h = hue(mathFor(palette, page, look))
+      expect(inRange(h), `${palette} maths hue ${h.toFixed(0)}`).toBe(true)
+    }
+  })
+})

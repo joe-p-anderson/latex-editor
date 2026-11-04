@@ -23,6 +23,21 @@ export function contrast(a: string, b: string): number {
   return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)
 }
 
+/** CIE L*a*b* of a #RRGGBB colour (D65). */
+function lab(c: string): number[] {
+  const [r, g, b] = rgb(c).map((v) => ((v /= 255) <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+  const xyz = [(0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047, 0.2126 * r + 0.7152 * g + 0.0722 * b, (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883].map((v) =>
+    v > 0.008856 ? Math.cbrt(v) : 7.787 * v + 16 / 116,
+  )
+  return [116 * xyz[1] - 16, 500 * (xyz[0] - xyz[1]), 200 * (xyz[1] - xyz[2])]
+}
+/** How different two colours look (ΔE*ab): about 2 is just noticeable, 20 tells apart at a glance. */
+export function deltaE(a: string, b: string): number {
+  const A = lab(a)
+  const B = lab(b)
+  return Math.hypot(...A.map((v, i) => v - B[i]))
+}
+
 /**
  * Contrast targets (.scratch/ux-fixes/spec.md, "Contrast"): text 4.5:1,
  * line numbers and icons 3:1. Text on a paper page keeps a margin for the

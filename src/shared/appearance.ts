@@ -3,7 +3,7 @@
 // the vault's endpaper in .vault.json; both are read through `normalize…`,
 // so a missing or hand-edited value falls back to its default.
 import { AIM, atLeast, mix } from './contrast'
-import { MUTED_STEP, secondaryInks, syntaxInks } from './inks'
+import { bodyHue, MUTED_STEP, secondaryInks, syntaxInks } from './inks'
 
 export type Look = 'plain' | 'bench'
 /** The palette's own paper stock, or the black page (which is the dark mode). */
@@ -323,8 +323,10 @@ export function appearanceTokens(app: AppAppearance, endpaper: VaultAppearance, 
     })
   }
   // Source view's syntax roles (editorTheme.ts): commands in the detail,
-  // structure and maths in hues of their own.
-  Object.assign(t, syntaxInks(t.detail, t.ink, black, [t.paper, t.srcbg, activeLine(t.paper, t.ink)]))
+  // maths in the palette's body hue, structure in a hue of its own. The body
+  // hue comes from the rich (dark) marbling, which carries the palette's colour.
+  const body = bodyHue(theme.modes.dark.marbling.filter((c) => c !== theme.modes.dark.vein))
+  Object.assign(t, syntaxInks(t.detail, t.ink, black, [t.paper, t.srcbg, activeLine(t.paper, t.ink)], body))
   // The chrome (title bar, activity bar, status bar). Plain is flat in the
   // bar tone; Bench binds it in a material (its tile comes from the renderer).
   // `chl` is the light deboss under chrome text.
