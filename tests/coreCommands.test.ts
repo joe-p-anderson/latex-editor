@@ -176,7 +176,7 @@ describe('Help → Getting Started', () => {
 describe('the empty editor', () => {
   it('lists the main keys from the registry, as a .tex file would run them', () => {
     const { reg } = registry()
-    expect(emptyPlateKeys(reg, false)).toEqual([
+    expect(emptyPlateKeys(reg, { build: true, mac: false })).toEqual([
       { id: 'tools.commandPalette', key: 'Ctrl+Shift+P', title: 'Run Command' },
       { id: 'file.goToFile', key: 'Ctrl+P', title: 'Go to File' },
       { id: 'file.newFile', key: 'Ctrl+N', title: 'New File' },
@@ -189,8 +189,14 @@ describe('the empty editor', () => {
     const { reg } = registry()
     reg.get('file.goToFile')!.key = 'Mod-e'
     delete reg.get('file.newFile')!.key
-    const keys = emptyPlateKeys(reg, false)
+    const keys = emptyPlateKeys(reg, { build: true, mac: false })
     expect(keys.find((k) => k.id === 'file.goToFile')?.key).toBe('Ctrl+E')
     expect(keys.map((k) => k.id)).not.toContain('file.newFile')
+  })
+
+  it('says Save, not Save and Build, when nothing can build', () => {
+    const { reg } = registry()
+    const keys = emptyPlateKeys(reg, { build: false, mac: false })
+    expect(keys.find((k) => k.id === 'file.save')?.title).toBe('Save')
   })
 })

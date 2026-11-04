@@ -21,10 +21,11 @@ export interface PlateKey {
 /**
  * The empty editor's key list: each of its commands that is registered and
  * has a key. Titles are as a .tex file would run them ("Save and Build"),
- * since that's what the keys do once a file is open.
+ * since that's what the keys do once a file is open; `build` is whether
+ * anything can build (without TeX, Ctrl+S just saves).
  */
-export function emptyPlateKeys(registry: CommandRegistry, mac?: boolean): PlateKey[] {
-  const tex: Context = { vault: true, editor: true, tex: true, build: true }
+export function emptyPlateKeys(registry: CommandRegistry, { build, mac }: { build: boolean; mac?: boolean }): PlateKey[] {
+  const tex: Context = { vault: true, editor: true, tex: true, build }
   return EMPTY_PLATE_COMMANDS.flatMap((id) => {
     const c = registry.get(id)
     if (!c?.key) return []

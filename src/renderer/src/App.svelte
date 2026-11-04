@@ -323,7 +323,7 @@
   let commandsChanged = $state(0)
   commands.subscribe(() => commandsChanged++)
   // The empty editor's keys and Help links, from the registry; a link shows once its command is registered.
-  const plateKeys = $derived((void commandsChanged, emptyPlateKeys(commands)))
+  const plateKeys = $derived((void commandsChanged, emptyPlateKeys(commands, { build: canBuild() })))
   const plateLinks = $derived((void commandsChanged, EMPTY_PLATE_LINKS.filter((l) => commands.get(l.id))))
   $effect(() => {
     void [commandsChanged, vault, active, tex.checked, tex.info]
