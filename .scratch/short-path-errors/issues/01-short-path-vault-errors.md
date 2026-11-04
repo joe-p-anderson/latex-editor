@@ -21,3 +21,7 @@ Matching TeX's log paths back to vault files in `src/main/diagnose.ts` / `src/ma
 - Add a regression test in `tests/diagnose.test.ts` or `tests/compile.test.ts` that builds through a short path.
 
 ## Comments
+
+**2026-11-03 (diagnosis, fixed in working tree):** Cause confirmed. Preview builds put the shadow folder (under the vault root) on `TEXINPUTS`. MiKTeX then writes the main file onto TeX's command line as the full path it found, e.g. `C:/Users/JANDER~1/.../.texcache/.shadow/<n>/main.tex`. TeX reads `~` as its tie and stops: `! Emergency stop` / `*** (job aborted, file error in nonstop mode)` / `Fatal error occurred`. Section builds (`-jobname`) write that to the log endleaf reads, which gives the three hidden-then-shown "LaTeX stopped" notices on `main.tex`. Plain previews write it to `texput.log`, so endleaf sees an empty log and reports nothing. Full builds of a root-level document are unaffected because no `TEXINPUTS` is set. Not the log-path matching in `diagnose.ts`.
+
+Fix: `Vault` expands its root to the long form (`longPath`, via `realpathSync.native`). Regression tests: `tests/shortpath.e2e.ts` (preview build through the short temp path, red before the fix) and `tests/vault.test.ts` ("the vault root"). Still open: a folder whose real name contains `~` (not an 8.3 name) would hit the same TeX failure, and realpath can't help there.
