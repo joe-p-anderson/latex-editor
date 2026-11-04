@@ -1,8 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { lineBreakOf, withLineBreaks } from '@shared/edits'
   import { badName, joinRel, splitExt } from '@shared/paths'
-  import { fields, fill, type Companion, type Starter } from '@shared/starters'
+  import { fill, starterFields, type Starter } from '@shared/starters'
   import Icon from './Icon.svelte'
 
   /** Pick a starter, name the file, fill in its fields, choose a folder. */
@@ -22,10 +21,11 @@
     /** What to start with: a starter by name (one of the user's before a built-in), the file name, and field values by field name (any case). */
     preset?: { starter?: string; name?: string; values?: Record<string, string> } | null
     /**
-     * Makes the file, and the starter's companion files beside it (each only
-     * if missing); resolves to an error message to show here, or null when it worked.
+     * Makes the file from the starter, and a folder starter's other files
+     * relative to it (each only if missing); resolves to an error message to
+     * show here, or null when it worked.
      */
-    oncreate: (rel: string, text: string, companions: Companion[]) => Promise<string | null>
+    oncreate: (rel: string, starter: Starter, values: Record<string, string>) => Promise<string | null>
     oncancel: () => void
   } = $props()
 
@@ -65,12 +65,12 @@
     if (!s) return
     chosen = s
     const given = new Map(Object.entries(preset?.values ?? {}).map(([k, v]) => [k.toLowerCase(), v]))
-    values = Object.fromEntries(fields(s.text).map((f) => [f.name, given.get(f.name.toLowerCase()) ?? f.default]))
-    tall = new Set(fields(s.text).flatMap((f) => (/\btext$/i.test(f.name) || values[f.name].includes('\n') ? [f.name] : [])))
+    values = Object.fromEntries(starterFields(s).map((f) => [f.name, given.get(f.name.toLowerCase()) ?? f.default]))
+    tall = new Set(starterFields(s).flatMap((f) => (/\btext$/i.test(f.name) || values[f.name].includes('\n') ? [f.name] : [])))
     error = null
   }
 
-  const fieldList = $derived(chosen ? fields(chosen.text) : [])
+  const fieldList = $derived(chosen ? starterFields(chosen) : [])
   /** The file name, with the starter's extension added when none was typed. */
   const fileName = $derived.by(() => {
     const n = name.trim()
@@ -111,10 +111,7 @@
   async function create() {
     if (!chosen || problem || busy) return
     busy = true
-    const base = splitExt(fileName)[0]
-    // Values typed or pasted in have \n breaks; the file takes the starter's.
-    const text = withLineBreaks(fill(chosen.text, values, { date: today(), filename: fileName, basename: base }), lineBreakOf(chosen.text))
-    error = await oncreate(rel, text, chosen.companions ?? [])
+    error = await oncreate(rel, chosen, values)
     busy = false
   }
 
@@ -156,7 +153,7 @@
                 onclick={() => pick(s)}
                 oncontextmenu={(e) => starterMenu(e, s)}
               >
-                <span class="name">{s.name}</span>{#if s.id === preselect}<span class="dflt" aria-label="default">•</span>{/if}<span class="ext">{s.ext}</span>
+                <span class="name">{s.name}</span>{#if s.files?.length}<span class="several" title="Makes several files"><Icon name="folder" size={12} /></span>{/if}{#if s.id === preselect}<span class="dflt" aria-label="default">•</span>{/if}<span class="ext">{s.ext}</span>
               </button>
             {/each}
           {/if}
@@ -164,6 +161,9 @@
       </div>
       <div class="form">
         {#if chosen?.description}<span class="hint">{chosen.description}</span>{/if}
+        {#if chosen?.files?.length}
+          <span class="hint">Also makes, beside it unless already there: {chosen.files.map((f) => (f.kind === 'folder' ? `${f.path}/` : f.path)).join(', ')}</span>
+        {/if}
         <label>
           Name
           <input bind:this={nameInput} bind:value={name} placeholder={`untitled${chosen?.ext ?? ''}`} spellcheck="false" />
@@ -298,6 +298,12 @@
     flex: none;
     margin-left: 5px;
     color: var(--detail);
+  }
+  .several {
+    flex: none;
+    align-self: center;
+    margin-left: 5px;
+    color: var(--ink-soft);
   }
   .ext {
     flex: none;

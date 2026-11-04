@@ -19,9 +19,10 @@ import { startTouchpad, stopTouchpad } from './touchpad'
 import { findTeX, texName } from './tex'
 import { forward, inverse } from './synctex'
 import { Vault } from './vault'
+import { splitExt } from '../shared/paths'
 import { holdsTex, makeVault, newVaultChoices } from './newvault'
 import * as fileops from './fileops'
-import { listStarters, startersFolder } from './starters'
+import { listStarters, startersFolder, useBuiltInStarters, writeStarter } from './starters'
 import { PluginHost } from './plugins'
 import { menuTemplate } from './menu'
 import type { MenuBarMenu } from '../shared/menu'
@@ -120,6 +121,9 @@ async function newVault(): Promise<NewVaultPick | null> {
   if (await holdsTex(root)) return { kind: 'opened', vault: await (await openVault(root)).info() }
   return { kind: 'setup', root, ...(await newVaultChoices(root, await globalTemplatesDir(), await appDefaultStarter())) }
 }
+
+// The built-in starters: resources/starters/, from the repo in development and from the app when packaged.
+useBuiltInStarters(join(app.getAppPath(), 'resources', 'starters'))
 
 /** The bundled Getting-started vault, and where the student's copy of it goes. */
 function gettingStartedPaths(): { bundled: string; target: string } {
@@ -272,11 +276,23 @@ ipcMain.handle('file:copyIn', (_e, paths: string[], dirRel: string) => fileops.c
 ipcMain.handle('file:delete', (_e, rels: string[]) => fileops.hold(requireVault(), rels))
 ipcMain.handle('file:undelete', async (_e, token: string) => void (await fileops.restore(requireVault(), token)))
 ipcMain.handle('file:release', (_e, token: string) => fileops.release(requireVault(), token, trash))
+/** The New file dialog's starters: built in, the enabled plugins', and the template folders'. */
+async function vaultStarters(vault: Vault): Promise<Starter[]> {
+  const on = (await plugins.states()).filter((s) => s.enabled).map((s) => s.manifest)
+  return listStarters(vault, on)
+}
 ipcMain.handle('starters:list', async () => {
   const vault = requireVault()
-  const on = (await plugins.states()).filter((s) => s.enabled).map((s) => s.manifest)
-  const starters = await listStarters(vault, on)
+  const starters = await vaultStarters(vault)
   return { starters, preselect: defaultStarter(starters, vault.defaultStarter, await appDefaultStarter())?.id ?? null }
+})
+ipcMain.handle('starters:create', async (_e, id: string, rel: string, values: Record<string, string>) => {
+  const vault = requireVault()
+  const starter = (await vaultStarters(vault)).find((s) => s.id === id)
+  if (!starter) throw new Error('That starter is no longer there')
+  const filename = basename(rel)
+  const auto = { date: new Date().toISOString().slice(0, 10), filename, basename: splitExt(filename)[0] }
+  await writeStarter(vault, rel, starter, values, auto)
 })
 ipcMain.handle('starters:setVaultDefault', (_e, name: string | null) => requireVault().saveDefaultStarter(name))
 ipcMain.handle('starters:openFolder', async (_e, source: Starter['source']) => {

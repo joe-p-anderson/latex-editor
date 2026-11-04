@@ -12,7 +12,7 @@ describe('default starter', () => {
 
   const vaultIn = (d: string) => new Vault(join(d, 'vault'), join(d, 'global'))
 
-  it('ships as Lab report (revtex), which also makes references.bib', async () => {
+  it('ships as Lab report (revtex), a folder with references.bib and figures/', async () => {
     dir = mkdtempSync(join(tmpdir(), 'starters-'))
     const starters = await listStarters(vaultIn(dir))
     const s = defaultStarter(starters, null, DEFAULT_STARTER)
@@ -20,8 +20,12 @@ describe('default starter', () => {
     expect(s?.ext).toBe('.tex')
     expect(s?.text).toContain('\\documentclass[reprint,aps]{revtex4-2}')
     expect(s?.text).toContain('\\bibliography{references}')
-    expect(s?.companions?.map((c) => c.name)).toEqual(['references.bib'])
-    expect(s?.companions?.[0].text).toMatch(/@\w+\{/)
+    expect(s?.files?.map((f) => [f.path, f.kind])).toEqual([
+      ['figures', 'folder'],
+      ['references.bib', 'text'],
+    ])
+    const bib = s?.files?.find((f) => f.path === 'references.bib')
+    expect(bib?.kind === 'text' && bib.text).toMatch(/@\w+\{/)
   })
 
   it("prefers the vault's default, then the app's, ignoring case", async () => {

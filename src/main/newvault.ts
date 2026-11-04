@@ -1,11 +1,11 @@
 // New vault…: what happens after the folder picker. A folder that already
 // holds .tex files opens as it is; any other is set up from a starter, with
 // main.tex to begin on (onboarding spec, "New vault flow").
-import { mkdir, readdir, writeFile } from 'node:fs/promises'
+import { mkdir, readdir } from 'node:fs/promises'
 import { basename, join, resolve } from 'node:path'
 import { PALETTES } from '../shared/appearance'
-import { defaultStarter, fill, type Starter } from '../shared/starters'
-import { listStarters } from './starters'
+import { defaultStarter, type Starter } from '../shared/starters'
+import { listStarters, writeStarter } from './starters'
 import { Vault } from './vault'
 
 // Folders whose .tex files don't make a folder a vault already.
@@ -42,9 +42,9 @@ export async function newVaultChoices(root: string, globalTemplates: string | nu
 /**
  * Sets up a vault at `root` (made if missing): .vault.json with its name, the
  * starter as its default and a random palette, then main.tex from the starter
- * (its fields left at their defaults, the Title being the vault's name) and
- * the starter's companion files, each only if missing. Returns main.tex's
- * vault-relative path.
+ * (a folder starter's entry file) and a folder starter's other files, each
+ * only if missing, their fields left at their defaults, the Title being the
+ * vault's name. Returns main.tex's vault-relative path.
  */
 export async function makeVault(root: string, choice: { name: string; starter: string }, globalTemplates: string | null): Promise<string> {
   const starter = (await texStarters(root, globalTemplates)).find((s) => s.id === choice.starter)
@@ -57,15 +57,6 @@ export async function makeVault(root: string, choice: { name: string; starter: s
   await vault.saveAppearance({ palette: PALETTES[Math.floor(Math.random() * PALETTES.length)] })
   const main = 'main.tex'
   const date = new Date().toISOString().slice(0, 10)
-  const text = fill(starter.text, { Title: vault.name }, { date, filename: main, basename: 'main' })
-  await writeNew(vault.abs(main), text)
-  for (const c of starter.companions ?? []) await writeNew(vault.abs(c.name), c.text)
+  await writeStarter(vault, main, starter, { Title: vault.name }, { date, filename: main, basename: 'main' })
   return main
-}
-
-/** Writes `text` to `abs` unless something is already there. */
-async function writeNew(abs: string, text: string): Promise<void> {
-  await writeFile(abs, text, { flag: 'wx' }).catch((e) => {
-    if (e?.code !== 'EEXIST') throw e
-  })
 }

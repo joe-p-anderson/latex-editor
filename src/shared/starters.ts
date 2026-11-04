@@ -1,14 +1,19 @@
-// Starter files for the New File dialog. A starter is any text file whose
-// `{{Name}}` or `{{Name|default}}` placeholders become fields to fill in.
-// {{date}}, {{filename}} and {{basename}} are filled in automatically, and
-// `\{{` writes a literal `{{`. An optional first line, `%% starter: <text>`,
-// describes the starter and is left out of the new file.
+// Starters for the New File dialog. A starter is a text file, or a folder of
+// files with an entry file, whose `{{Name}}` or `{{Name|default}}`
+// placeholders become fields to fill in. {{date}}, {{filename}} and
+// {{basename}} (the entry file's) are filled in automatically, and `\{{`
+// writes a literal `{{`. An optional first line of the entry file,
+// `%% starter: <text>`, describes the starter and is left out of the new file.
 
-/** A file a starter makes beside the new one, by name, unless one of that name is already there (e.g. references.bib). */
-export interface Companion {
-  name: string
-  text: string
-}
+/**
+ * One of a folder starter's files besides its entry file, by its path from
+ * the folder (forward slashes): a text file to fill in, a file to copy byte
+ * for byte, or a folder to make (one that holds only a `.keep`).
+ */
+export type StarterFile =
+  | { path: string; kind: 'text'; text: string }
+  | { path: string; kind: 'binary' }
+  | { path: string; kind: 'folder' }
 
 export interface Starter {
   id: string
@@ -16,9 +21,16 @@ export interface Starter {
   ext: string
   description: string
   source: 'built-in' | 'vault' | 'global'
+  /** The entry file's text. */
   text: string
-  companions?: Companion[]
+  /** A folder starter's folder, absolute (its binary files are copied from there). */
+  folder?: string
+  /** A folder starter's other files, made relative to the entry file. */
+  files?: StarterFile[]
 }
+
+/** The text files of a folder starter, besides the entry file, that take placeholders. */
+export const STARTER_TEXT = new Set(['.tex', '.bib', '.md', '.txt', '.cls', '.sty', '.bst'])
 
 /** The app-wide default starter, until the user picks another. */
 export const DEFAULT_STARTER = 'Lab report (revtex)'
@@ -61,6 +73,18 @@ export function fields(text: string): StarterField[] {
     const have = out.get(name)
     if (!have) out.set(name, { name, default: m[2] ?? '' })
     else if (!have.default && m[2]) have.default = m[2]
+  }
+  return [...out.values()]
+}
+
+/** The fields to ask for across all of a starter's text files, once each, entry file first. */
+export function starterFields(starter: Starter): StarterField[] {
+  const out = new Map<string, StarterField>()
+  const texts = [starter.text, ...(starter.files ?? []).flatMap((f) => (f.kind === 'text' ? [f.text] : []))]
+  for (const f of texts.flatMap((t) => fields(t))) {
+    const have = out.get(f.name)
+    if (!have) out.set(f.name, { ...f })
+    else if (!have.default && f.default) have.default = f.default
   }
   return [...out.values()]
 }

@@ -1,174 +1,136 @@
-import { mkdir, readdir, readFile } from 'node:fs/promises'
-import { join, extname, basename } from 'node:path'
-import { splitHeader, type Starter } from '../shared/starters'
+// Lists starters (single files and folders) from the built-in folder and the
+// template folders' starters/, and writes one out (New file, New vault).
+import { copyFile, mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises'
+import { join, extname, basename, dirname } from 'node:path'
+import { lineBreakOf, withLineBreaks } from '../shared/edits'
+import { fill, splitHeader, starterFields, STARTER_TEXT, type AutoValues, type Starter, type StarterFile } from '../shared/starters'
 import type { PluginManifest } from '../shared/plugin'
 import type { Vault } from './vault'
 
-const BUILT_IN: Omit<Starter, 'source' | 'id'>[] = [
-  { name: 'Blank LaTeX file', ext: '.tex', description: 'An empty .tex file', text: '' },
-  {
-    name: 'Section',
-    ext: '.tex',
-    description: 'A section to \\input into a larger document',
-    text: '\\section{{{Title}}}\n\\label{sec:{{basename}}}\n\n',
-  },
-  {
-    name: 'Article',
-    ext: '.tex',
-    description: 'A complete article',
-    text: `\\documentclass{article}
-
-\\title{{{Title}}}
-\\author{{{Author}}}
-\\date{{{date}}}
-
-\\begin{document}
-\\maketitle
-
-\\section{Introduction}
-
-\\end{document}
-`,
-  },
-  {
-    name: 'Lab report (revtex)',
-    ext: '.tex',
-    description: 'A lab report in APS style, with references.bib beside it',
-    text: `\\documentclass[reprint,aps]{revtex4-2}
-\\usepackage{amsmath}
-\\usepackage{graphicx}
-\\usepackage{siunitx}
-
-\\begin{document}
-
-\\title{{{Title}}}
-\\author{{{Author}}}
-\\affiliation{Department of Physics}
-\\date{\\today}
-
-\\begin{abstract}
-What you measured, how, and what you found, in a few sentences.
-\\end{abstract}
-
-\\maketitle
-
-\\section{Introduction}
-Why the experiment is worth doing, and what it sets out to measure~\\cite{example}.
-
-\\section{Theory}
-The period of a simple pendulum of length $L$ is
-\\begin{equation}
-  T = 2\\pi\\sqrt{\\frac{L}{g}},
-  \\label{eq:period}
-\\end{equation}
-so a plot of $T$ against $\\sqrt{L}$ is a straight line of slope $2\\pi/\\sqrt{g}$.
-
-\\section{Methods}
-The apparatus and procedure. The pendulum was \\qty{0.50}{m} long.
-
-\\section{Results}
-Fig.~\\ref{fig:data} shows the data, and fitting Eq.~\\eqref{eq:period} to it gives $g$.
-
-\\begin{figure}
-  % Put your plot in the vault and uncomment the next line, naming it.
-  % \\includegraphics[width=\\linewidth]{plot.pdf}
-  \\fbox{\\parbox[c][4cm][c]{0.9\\linewidth}{\\centering Your figure here}}
-  \\caption{The period $T$ against $\\sqrt{L}$, with a straight-line fit.}
-  \\label{fig:data}
-\\end{figure}
-
-\\section{Conclusion}
-What the results show, and how they compare with the accepted value.
-
-\\begin{acknowledgments}
-Thanks to your lab partner and demonstrator.
-\\end{acknowledgments}
-
-\\bibliography{references}
-
-\\end{document}
-`,
-    companions: [
-      {
-        name: 'references.bib',
-        text: `@book{example,
-  author    = {Hugh D. Young and Roger A. Freedman},
-  title     = {University Physics},
-  edition   = {15},
-  publisher = {Pearson},
-  year      = {2019},
-}
-`,
-      },
-    ],
-  },
-  {
-    name: 'Handout',
-    ext: '.tex',
-    description: 'A homework, lab or activity handout (needs handout.cls in your templates)',
-    text: `\\documentclass{handout}
-
-\\assignment{{{Assignment|Homework 1}}}
-\\title{{{Title}}}
-\\duedate{{{Due date}}}
-
-\\begin{document}
-\\maketitle
-
-\\hwinstructions
-
-\\begin{questions}
-    \\question 
-\\end{questions}
-
-\\end{document}
-`,
-  },
-  {
-    name: 'Standalone figure',
-    ext: '.tex',
-    description: 'A figure that compiles on its own, cropped to its contents',
-    text: `\\documentclass[border=4pt]{standalone}
-\\usepackage{graphicx}
-
-\\begin{document}
-\\includegraphics{{{Image|image.png}}}
-\\end{document}
-`,
-  },
-  { name: 'Bibliography', ext: '.bib', description: 'A BibTeX database', text: '% References for {{basename}}\n\n' },
-  { name: 'Markdown note', ext: '.md', description: 'A note', text: '# {{Title}}\n\n' },
-  { name: 'Plain text', ext: '.txt', description: 'A text file', text: '' },
-]
-
+/** The single-file starters' extensions. */
 const EXTS = new Set(['.tex', '.bib', '.md', '.txt'])
 
+let builtInFolder = join(process.cwd(), 'resources', 'starters')
+
 /**
- * The built-in starters, those the vault's plugins ship (`plugins`), and those
- * in `starters/` under each template folder. A starter of the user's with a
- * plugin starter's name is used in its place.
+ * Where the built-in starters are read from: resources/starters/ in the repo
+ * (development) or in the app (packaged). Set once at startup.
+ */
+export function useBuiltInStarters(folder: string): void {
+  builtInFolder = folder
+}
+
+/** A folder's files, relative and with forward slashes, sorted. */
+async function filesUnder(dir: string, prefix = ''): Promise<string[]> {
+  const out: string[] = []
+  const entries = await readdir(join(dir, prefix), { withFileTypes: true }).catch(() => [])
+  for (const e of entries) {
+    const rel = prefix ? `${prefix}/${e.name}` : e.name
+    if (e.isDirectory()) out.push(...(await filesUnder(dir, rel)))
+    else if (e.isFile()) out.push(rel)
+  }
+  return out.sort((a, b) => a.localeCompare(b))
+}
+
+/** A folder starter's entry file: its main.tex, else its only top-level .tex file, else none. */
+function entryOf(files: string[]): string | null {
+  const top = files.filter((f) => !f.includes('/') && extname(f).toLowerCase() === '.tex')
+  return top.find((f) => f.toLowerCase() === 'main.tex') ?? (top.length === 1 ? top[0] : null)
+}
+
+/** The folder starter at `dir`, or null when it has no entry file. */
+async function readFolder(dir: string): Promise<Omit<Starter, 'id' | 'source'> | null> {
+  const all = await filesUnder(dir)
+  const entry = entryOf(all)
+  if (!entry) return null
+  const text = await readFile(join(dir, entry), 'utf8')
+  const files: StarterFile[] = []
+  for (const path of all) {
+    if (path === entry) continue
+    if (basename(path) === '.keep') {
+      const folder = path.slice(0, path.lastIndexOf('/'))
+      if (folder &&!all.some((f) => f !== path && f.startsWith(folder + '/'))) files.push({ path: folder, kind: 'folder' })
+    } else if (STARTER_TEXT.has(extname(path).toLowerCase())) {
+      files.push({ path, kind: 'text', text: await readFile(join(dir, path), 'utf8') })
+    } else files.push({ path, kind: 'binary' })
+  }
+  return { name: basename(dir), ext: extname(entry).toLowerCase(), description: splitHeader(text).description, text, folder: dir, files }
+}
+
+/** The starters in `folder`, files and folders, with ids `${source}:${entry name}`. */
+async function readStarters(folder: string, source: Starter['source']): Promise<Starter[]> {
+  const out: Starter[] = []
+  const entries = await readdir(folder, { withFileTypes: true }).catch(() => [])
+  for (const e of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+    const id = `${source}:${e.name}`
+    if (e.isDirectory()) {
+      const s = await readFolder(join(folder, e.name)).catch(() => null)
+      if (s) out.push({ ...s, id, source })
+      continue
+    }
+    const ext = extname(e.name).toLowerCase()
+    if (!e.isFile() || !EXTS.has(ext)) continue
+    const raw = await readFile(join(folder, e.name), 'utf8').catch(() => null)
+    if (raw == null) continue
+    out.push({ id, name: basename(e.name, extname(e.name)), ext, description: splitHeader(raw).description, source, text: raw })
+  }
+  return out
+}
+
+/** Built-in starters in the order the dialog lists them: .tex first, then .bib, .md and .txt; the blank one first of its kind. */
+const ORDER = ['.tex', '.bib', '.md', '.txt']
+const builtInOrder = (a: Starter, b: Starter) =>
+  ORDER.indexOf(a.ext) - ORDER.indexOf(b.ext) || Number(!a.name.startsWith('Blank')) - Number(!b.name.startsWith('Blank')) || a.name.localeCompare(b.name)
+
+/**
+ * The built-in starters (resources/starters/), those the vault's plugins ship
+ * (`plugins`), and those in `starters/` under each template folder. A starter
+ * of the user's takes the place of a built-in or plugin one of the same name.
  */
 export async function listStarters(vault: Vault, plugins: PluginManifest[] = []): Promise<Starter[]> {
-  const builtIn: Starter[] = BUILT_IN.map((s, i) => ({ ...s, id: `built-in:${i}`, source: 'built-in' }))
+  const builtIn = (await readStarters(builtInFolder, 'built-in')).sort(builtInOrder)
   const shipped: Starter[] = plugins.flatMap((m) =>
     (m.starters ?? []).map((s, i) => ({ ext: '.tex', ...s, id: `plugin:${m.id}:${i}`, source: 'built-in' as const })),
   )
   const out: Starter[] = []
   for (const dir of vault.templateDirs) {
-    const source = dir === vault.globalTemplates ? 'global' : 'vault'
-    const folder = join(dir, 'starters')
-    const names = await readdir(folder).catch(() => [] as string[])
-    for (const file of names.sort((a, b) => a.localeCompare(b))) {
-      const ext = extname(file).toLowerCase()
-      if (!EXTS.has(ext)) continue
-      const raw = await readFile(join(folder, file), 'utf8').catch(() => null)
-      if (raw == null) continue
-      const { description } = splitHeader(raw)
-      out.push({ id: `${source}:${file}`, name: basename(file, extname(file)), ext, description, source, text: raw })
-    }
+    out.push(...(await readStarters(join(dir, 'starters'), dir === vault.globalTemplates ? 'global' : 'vault')))
   }
   const own = new Set(out.map((s) => s.name.toLowerCase()))
-  return [...builtIn, ...shipped.filter((s) => !own.has(s.name.toLowerCase())), ...out]
+  return [...[...builtIn, ...shipped].filter((s) => !own.has(s.name.toLowerCase())), ...out]
+}
+
+const exists = (abs: string) => stat(abs).then(() => true, () => false)
+
+/** The starter's text filled in, with its own line breaks kept (values typed in have 
+ breaks). */
+const filled = (text: string, values: Record<string, string>, auto: AutoValues) => withLineBreaks(fill(text, values, auto), lineBreakOf(text))
+
+/**
+ * Makes `entry` (vault-relative) from the starter, and a folder starter's
+ * other files relative to it, filled from `values` (a field not given takes
+ * its default). Fails, writing nothing, if `entry` exists; any other file
+ * that already exists is left as it is.
+ */
+export async function writeStarter(vault: Vault, entry: string, starter: Starter, values: Record<string, string>, auto: AutoValues): Promise<void> {
+  const all = { ...Object.fromEntries(starterFields(starter).map((f) => [f.name, f.default])), ...values }
+  const abs = vault.abs(entry)
+  await mkdir(dirname(abs), { recursive: true })
+  await writeFile(abs, filled(starter.text, all, auto), { encoding: 'utf8', flag: 'wx' }).catch((e) => {
+    throw e?.code === 'EEXIST' ? new Error(`${entry} already exists`) : e
+  })
+  const base = dirname(entry)
+  for (const f of starter.files ?? []) {
+    const to = vault.abs(join(base, f.path))
+    if (f.kind === 'folder') {
+      await mkdir(to, { recursive: true })
+      continue
+    }
+    if (await exists(to)) continue
+    await mkdir(dirname(to), { recursive: true })
+    if (f.kind === 'text') await writeFile(to, filled(f.text, all, auto), { encoding: 'utf8', flag: 'wx' })
+    else if (starter.folder) await copyFile(join(starter.folder, f.path), to)
+  }
 }
 
 /**
