@@ -18,6 +18,9 @@
   import Outline from './lib/Outline.svelte'
   import TabBar from './lib/TabBar.svelte'
   import QuickOpen from './lib/QuickOpen.svelte'
+  import CommandPalette from './lib/CommandPalette.svelte'
+  import { CommandRegistry, type Command, type Context } from './lib/commands'
+  import { coreCommands } from './lib/coreCommands'
   import type { EditingHooks } from './lib/editing'
   import { blankComments, mergeTextSnippets, parseSnippets, type OutlineItem, type Snippet } from '@shared/latexedit'
   import { includegraphics, type ImageHooks } from './lib/imageSupport'
@@ -69,8 +72,14 @@
   let tabs = $state<string[]>([])
   let mru: string[] = []
   let quickOpen = $state(false)
-  // Ctrl+Shift+P: the plugins' commands.
+  // Ctrl+Shift+P: the command palette.
   let palette = $state(false)
+  // The commands the palette lists: those whose `when` held as it opened.
+  let paletteCommands = $state.raw<Command[]>([])
+  function openPalette(): void {
+    paletteCommands = commands.available(commandContext())
+    palette = true
+  }
   let dirty = $state(new Set<string>())
   let editor = $state<Editor>()
   let viewer = $state<PdfViewer>()
@@ -235,7 +244,48 @@
       sideOpen = true
     },
   }
-  const plugins = new PluginRuntime(host)
+  // Every command (docs/adr/0001-one-command-registry.md): the palette and the keys come from it.
+  const commands = new CommandRegistry((c, e) => flash(`${c.title}: ${(e as Error)?.message ?? e}`))
+  /** What the commands' `when` conditions are checked against. */
+  const commandContext = (): Context => ({ vault: !!vault, tex: !!active?.toLowerCase().endsWith('.tex') })
+  commands.register(
+    ...coreCommands({
+      newFile: () => newFile(newFileDir()),
+      // Switching goes by the welcome screen, which lists the recent vaults; from there it opens a folder.
+      switchVault: () => (vault ? closeVault() : openVault()),
+      goToFile: () => (quickOpen = true),
+      saveAll: () => saveAll(),
+      closeTab: () => active && closeTab(active),
+      find: () => openSearch('file'),
+      replace: () => openSearch('file', true),
+      findInVault: () => openSearch('vault'),
+      mathShortcuts: () => editMathShortcuts(),
+      edit: (id) => !!editor?.edit(id),
+      insertImage: () => (picker = { mode: 'insert', initial: '' }),
+      cite: () => openCitePicker(),
+      toggleLive: () => editor?.toggleLiveMode(),
+      togglePdf: () => togglePdf(),
+      toggleSidebar: () => (sideOpen = !sideOpen),
+      togglePanel: () => togglePanel(),
+      toggleSpelling: () => setSpelling(!spellOn),
+      appearance: () => showView('appearance'),
+      plugins: () => showView('plugins'),
+      commandPalette: () => openPalette(),
+      nextTab: () => stepTab(1),
+      previousTab: () => stepTab(-1),
+      cycleTabs: (step) => cycle(step),
+      goBack: () => void goBack(),
+      goForward: () => void goForward(),
+      paperFile: (step) => {
+        const target = neighbour(step)
+        if (target) go(target)
+        return !!target
+      },
+      recompile: () => !!active && (compile(active), true),
+      syncForward: () => void syncForward(),
+    }),
+  )
+  const plugins = new PluginRuntime(host, commands)
   // Each vault has its own plugins on; the main process has switched them already.
   $effect(() => {
     const root = vault?.root
@@ -940,38 +990,15 @@
     })
     const offVault = window.api.onVaultChanged((v) => (vault = v))
     const offPlugins = window.api.onPluginsChanged((states) => plugins.apply(states))
+    // Menu items send a command id (plus the spelling checkbox and plugin commands).
     const offAppMenu = window.api.onMenu((name, arg) => {
-      if (name === 'math-shortcuts') editMathShortcuts()
-      else if (name === 'plugin-command' && vault) plugins.runCommand(String(arg))
+      if (name === 'plugin-command' && vault) plugins.runCommand(String(arg))
       else if (name === 'spellcheck') setSpelling(arg === true)
-      else if (vault) menuCommand(name)
+      else commands.run(name, commandContext())
     })
     window.api.setSpellcheckMenu(spellOn)
     return () => (offTree(), offVault(), offClose(), offAppMenu(), offPlugins())
   })
-
-  /** Menu items the renderer carries out (most also have a shortcut, handled in onkeydown). */
-  function menuCommand(name: string): void {
-    if (name === 'quick-open') quickOpen = true
-    else if (name === 'new-file') newFile(newFileDir())
-    else if (name === 'save-all') saveAll()
-    else if (name === 'find-in-vault') openSearch('vault')
-    else if (name === 'find-in-file') openSearch('file')
-    else if (name === 'replace-in-file') openSearch('file', true)
-    else if (name === 'insert-image' && active?.endsWith('.tex')) picker = { mode: 'insert', initial: '' }
-    else if (name === 'cite') openCitePicker()
-    else if (name === 'toggle-live') editor?.toggleLiveMode()
-    else if (name === 'toggle-pdf') togglePdf()
-    else if (name === 'toggle-sidebar') sideOpen = !sideOpen
-    else if (name === 'toggle-panel') togglePanel()
-    else if (name === 'appearance') showView('appearance')
-    else if (name === 'plugins') showView('plugins')
-    else if (name === 'command-palette') palette = true
-    else if (name === 'recompile' && active) compile(active)
-    else if (name === 'sync-forward') syncForward()
-    // Switching goes by the welcome screen, which lists the recent vaults; from there it opens a folder.
-    else if (name === 'switch-vault') vault ? closeVault() : openVault()
-  }
 
   /** The welcome screen's "Open a folder…". */
   const openVault = () => switchVault(() => window.api.openVault())
@@ -1194,50 +1221,22 @@
       runNoteAction()
       return
     }
-    if (vault && e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
-      e.preventDefault()
-      e.stopPropagation()
-      if (e.key === 'ArrowLeft') goBack()
-      else goForward()
-      return
-    }
-    // Alt+PageUp / Alt+PageDown: the paper's previous or next file.
-    if (vault && e.altKey && !e.ctrlKey && !e.shiftKey && (e.key === 'PageUp' || e.key === 'PageDown')) {
-      const target = neighbour(e.key === 'PageDown' ? 1 : -1)
-      if (target) {
-        e.preventDefault()
-        e.stopPropagation()
-        go(target)
-      }
-      return
-    }
-    if (!vault || !e.ctrlKey || e.metaKey) return
-    const key = e.key.toLowerCase()
-    const plain = !e.shiftKey && !e.altKey
-    let handled = true
-    if (key === 'tab') cycle(e.shiftKey ? -1 : 1)
-    else if ((key === 'pageup' || key === 'pagedown') && plain) {
-      const i = active ? tabs.indexOf(active) : -1
-      if (tabs.length) openFile(tabs[(i + (key === 'pagedown' ? 1 : -1) + tabs.length) % tabs.length])
-    } else if (key === 'w' && plain) {
-      if (active) closeTab(active)
-    } else if (key === 'n' && plain) newFile(newFileDir())
-    else if (key === 'p' && plain) quickOpen = true
-    else if (key === 'p' && e.shiftKey && !e.altKey) palette = true
-    else if (key === 's' && e.altKey && !e.shiftKey) saveAll()
-    else if (key === 'f' && plain) openSearch('file')
-    else if (key === 'h' && plain) openSearch('file', true)
-    else if (key === 'h' && e.shiftKey && !e.altKey) openSearch('vault')
-    else if (key === 'c' && e.shiftKey && !e.altKey) openCitePicker()
-    else if (key === 'j' && plain) togglePanel()
-    else if (key === 'j' && e.altKey && !e.shiftKey) syncForward()
-    else if (key === 'v' && e.altKey && !e.shiftKey) togglePdf()
-    else if (key === 'b' && e.shiftKey && !e.altKey) sideOpen = !sideOpen
-    else handled = false
-    if (handled) {
+    // The registry's app-wide keys; its editor keys are handled in the editor (onEditorKey).
+    if (commands.handleKey(e, commandContext(), 'app')) {
       e.preventDefault()
       e.stopPropagation()
     }
+  }
+  /** A key in the editor: the registry's editor keys (formatting, inserts, plugin commands). */
+  function onEditorKey(e: KeyboardEvent): boolean {
+    if (!commands.handleKey(e, commandContext(), 'editor')) return false
+    e.preventDefault()
+    return true
+  }
+  /** Ctrl+PageDown / Ctrl+PageUp: the next or previous tab, wrapping. */
+  function stepTab(step: 1 | -1): void {
+    const i = active ? tabs.indexOf(active) : -1
+    if (tabs.length) openFile(tabs[(i + step + tabs.length) % tabs.length])
   }
   function onkeyup(e: KeyboardEvent): void {
     if (e.key === 'Control') endCycle()
@@ -2137,6 +2136,7 @@
               {/if}
               <Editor
                 bind:this={editor}
+                onkey={onEditorKey}
                 onsave={save}
                 ondirtychange={setDirty}
                 onsyncforward={syncForward}
@@ -2288,13 +2288,11 @@
 {/if}
 
 {#if palette}
-  {@const titled = new Map(plugins.commands.map((c) => [`${c.plugin}: ${c.title}`, c.id]))}
-  <QuickOpen
-    commands
-    files={[...titled.keys()]}
-    onpick={(title) => {
+  <CommandPalette
+    commands={paletteCommands}
+    onpick={(c) => {
       palette = false
-      plugins.runCommand(titled.get(title)!)
+      commands.run(c.id, commandContext())
     }}
     onclose={() => {
       palette = false

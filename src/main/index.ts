@@ -429,7 +429,7 @@ async function gitBranch(dir: string): Promise<string | null> {
 
 const TITLE_BAR_HEIGHT = 36
 
-/** A menu item that asks the renderer to do `name`. */
+/** A menu item that asks the renderer to run the command `name` (an id in its command registry). */
 const send = (name: string, arg?: unknown) => () => win?.webContents.send('menu', name, arg)
 
 // Shortcuts the renderer handles itself are shown in the menus but not
@@ -451,8 +451,8 @@ let pluginCommands: PluginMenuItem[] = []
 /** The Tools menu: the Plugins panel, then each plugin's commands under its name. */
 function toolsMenu(): Electron.MenuItemConstructorOptions[] {
   const items: Electron.MenuItemConstructorOptions[] = [
-    { label: 'Run Command…', ...shown('CmdOrCtrl+Shift+P'), click: send('command-palette') },
-    { label: 'Plugins…', click: send('plugins') },
+    { label: 'Run Command…', ...shown('CmdOrCtrl+Shift+P'), click: send('tools.commandPalette') },
+    { label: 'Plugins…', click: send('tools.plugins') },
   ]
   const byPlugin = new Map<string, PluginMenuItem[]>()
   for (const c of pluginCommands) byPlugin.set(c.plugin, [...(byPlugin.get(c.plugin) ?? []), c])
@@ -469,10 +469,10 @@ function buildMenu(): void {
       {
         label: 'File',
         submenu: [
-          { label: 'New File…', ...shown('CmdOrCtrl+N'), click: send('new-file') },
-          { label: 'Switch Vault…', accelerator: 'CmdOrCtrl+O', click: send('switch-vault') },
-          { label: 'Go to File…', ...shown('CmdOrCtrl+P'), click: send('quick-open') },
-          { label: 'Save All', ...shown('CmdOrCtrl+Alt+S'), click: send('save-all') },
+          { label: 'New File…', ...shown('CmdOrCtrl+N'), click: send('file.newFile') },
+          { label: 'Switch Vault…', ...shown('CmdOrCtrl+O'), click: send('file.switchVault') },
+          { label: 'Go to File…', ...shown('CmdOrCtrl+P'), click: send('file.goToFile') },
+          { label: 'Save All', ...shown('CmdOrCtrl+Alt+S'), click: send('file.saveAll') },
           {
             label: 'Template Folder',
             submenu: [
@@ -495,13 +495,13 @@ function buildMenu(): void {
           { role: 'paste' },
           { role: 'selectAll' },
           { type: 'separator' },
-          { label: 'Find', ...shown('CmdOrCtrl+F'), click: send('find-in-file') },
-          { label: 'Replace', ...shown('CmdOrCtrl+H'), click: send('replace-in-file') },
-          { label: 'Find in Vault', ...shown('CmdOrCtrl+Shift+H'), click: send('find-in-vault') },
+          { label: 'Find', ...shown('CmdOrCtrl+F'), click: send('edit.find') },
+          { label: 'Replace', ...shown('CmdOrCtrl+H'), click: send('edit.replace') },
+          { label: 'Find in Vault', ...shown('CmdOrCtrl+Shift+H'), click: send('edit.findInVault') },
           { type: 'separator' },
-          { label: 'Insert Image…', click: send('insert-image') },
-          { label: 'Cite…', ...shown('CmdOrCtrl+Shift+C'), click: send('cite') },
-          { label: 'Math Shortcuts…', click: send('math-shortcuts') },
+          { label: 'Insert Image…', click: send('insert.image') },
+          { label: 'Cite…', ...shown('CmdOrCtrl+Shift+C'), click: send('insert.cite') },
+          { label: 'Math Shortcuts…', click: send('edit.mathShortcuts') },
         ],
       },
       {
@@ -518,11 +518,11 @@ function buildMenu(): void {
             },
           },
           { type: 'separator' },
-          { label: 'Live View', ...shown('CmdOrCtrl+Shift+L'), click: send('toggle-live') },
-          { label: 'PDF', ...shown('CmdOrCtrl+Alt+V'), click: send('toggle-pdf') },
-          { label: 'Sidebar', ...shown('CmdOrCtrl+Shift+B'), click: send('toggle-sidebar') },
-          { label: 'Problems and Log', ...shown('CmdOrCtrl+J'), click: send('toggle-panel') },
-          { label: 'Appearance', click: send('appearance') },
+          { label: 'Live View', ...shown('CmdOrCtrl+Shift+L'), click: send('view.toggleLive') },
+          { label: 'PDF', ...shown('CmdOrCtrl+Alt+V'), click: send('view.togglePdf') },
+          { label: 'Sidebar', ...shown('CmdOrCtrl+Shift+B'), click: send('view.toggleSidebar') },
+          { label: 'Problems and Log', ...shown('CmdOrCtrl+J'), click: send('view.togglePanel') },
+          { label: 'Appearance', click: send('view.appearance') },
           { type: 'separator' },
           { role: 'reload' },
           { role: 'toggleDevTools' },
@@ -535,8 +535,8 @@ function buildMenu(): void {
       {
         label: 'Build',
         submenu: [
-          { label: 'Recompile', click: send('recompile') },
-          { label: 'Show Cursor in PDF', ...shown('CmdOrCtrl+Alt+J'), click: send('sync-forward') },
+          { label: 'Recompile', click: send('build.recompile') },
+          { label: 'Show Cursor in PDF', ...shown('CmdOrCtrl+Alt+J'), click: send('build.syncForward') },
         ],
       },
       { label: 'Tools', submenu: toolsMenu() },

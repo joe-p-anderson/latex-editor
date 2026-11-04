@@ -5,7 +5,7 @@
 // those lists and supplies the HostServices plugins act through.
 import type { Component } from 'svelte'
 import { StateEffect, StateField, type Extension, type EditorState, type Range } from '@codemirror/state'
-import { Decoration, EditorView, ViewPlugin, keymap, type DecorationSet } from '@codemirror/view'
+import { Decoration, EditorView, ViewPlugin, type DecorationSet } from '@codemirror/view'
 import type { VaultInfo } from '@shared/api'
 import type { MacroDefs } from '@shared/mathrender'
 import type { PackageSpec } from '@shared/packages'
@@ -13,6 +13,7 @@ import { whenHolds, type PluginManifest, type PluginState, type SettingValues } 
 import { RENDERER } from '../../../plugins/renderer'
 import { isLive, liveFile, setLive } from './live/live'
 import { refreshMath, type RenderFn } from './mathPreview'
+import type { CommandRegistry } from './commands'
 
 /** What the open editor can do for a plugin. Offsets count a line break as one character. */
 export interface EditorActions {
@@ -225,7 +226,7 @@ export class PluginRuntime {
   citeSources = $state.raw<CiteSource[]>([])
   /** Plugins' own content for the Plugins panel, by plugin id. */
   panels = $state.raw<{ plugin: string; component: Component<{ ctx: RendererContext }>; ctx: RendererContext }[]>([])
-  /** Every plugin's editor extensions (and the command keys), for Editor.svelte. */
+  /** Every plugin's editor extensions, for Editor.svelte. (Command keys are bound from the command registry.) */
   extensions = $state.raw<Extension[]>([])
   private menu: (Parameters<RendererContext['editor']['contextMenu']>[0] & { plugin: string })[] = []
 
@@ -233,7 +234,11 @@ export class PluginRuntime {
   private editorExts = new Map<string, Extension[]>()
   private statusSeq = 0
 
-  constructor(private readonly host: HostServices) {
+  /** Plugin commands also go in the app's command registry (palette, keys), under Tools. */
+  constructor(
+    private readonly host: HostServices,
+    private readonly registry: CommandRegistry,
+  ) {
     window.api.onPluginEvent((id, event, data) => {
       for (const cb of this.running.get(id)?.events.get(event) ?? []) cb(data)
     })
@@ -339,10 +344,20 @@ export class PluginRuntime {
         add: (c) => {
           const cmd: PluginCommand = { ...c, id: c.id.includes(':') ? c.id : `${id}:${c.id}`, plugin: manifest.name }
           this.commands = [...this.commands, cmd]
-          if (c.key) this.refreshExtensions()
+          // Its key works while the editor has focus, as before the registry.
+          const unregister = this.registry.register({
+            id: cmd.id,
+            title: cmd.title,
+            category: 'Tools',
+            group: cmd.plugin,
+            key: cmd.key,
+            editorKey: true,
+            when: ['vault'],
+            run: () => this.runCommand(cmd.id),
+          })
           own(() => {
             this.commands = this.commands.filter((x) => x !== cmd)
-            if (c.key) this.refreshExtensions()
+            unregister()
           })
           this.publishMenu()
         },
@@ -404,11 +419,7 @@ export class PluginRuntime {
   }
 
   private refreshExtensions(): void {
-    const keyed = this.commands.filter((c) => c.key)
-    this.extensions = [
-      ...[...this.editorExts.values()].flat(),
-      ...(keyed.length ? [keymap.of(keyed.map((c) => ({ key: c.key!, preventDefault: true, run: () => (this.runCommand(c.id), true) })))] : []),
-    ]
+    this.extensions = [...this.editorExts.values()].flat()
   }
 }
 
