@@ -65,6 +65,23 @@ describe('keys', () => {
     expect(r.handleKey(press('F2'), TEX, 'editor')).toBe(false)
   })
 
+  it("says why a key did nothing, when its command can't run and has a hint", () => {
+    const hints: string[] = []
+    const r = new CommandRegistry(undefined, (h) => hints.push(h))
+    r.register(cmd({ id: 'cite', key: 'Mod-Shift-c', when: ['vault', 'tex'], hint: 'Open a .tex file to cite' }), cmd({ id: 'plain', key: 'Mod-Shift-x', when: ['tex'] }))
+    expect(r.handleKey(press('C', { ctrl: true, shift: true }), { vault: true, tex: false }, 'app')).toBe(true)
+    expect(r.handleKey(press('X', { ctrl: true, shift: true }), { vault: true, tex: false }, 'app')).toBe(false)
+    expect(hints).toEqual(['Open a .tex file to cite'])
+  })
+
+  it("prefers a command that runs over another one's hint on the same key", () => {
+    const hints: string[] = []
+    const r = new CommandRegistry(undefined, (h) => hints.push(h))
+    r.register(cmd({ id: 'tex', key: 'F5', when: ['tex'], hint: 'no' }), cmd({ id: 'any', key: 'F5' }))
+    expect(r.handleKey(press('F5'), NONE, 'app')).toBe(true)
+    expect(hints).toEqual([])
+  })
+
   it('matches Alt keys by the physical key when Alt changes the character', () => {
     const r = new CommandRegistry()
     r.register(cmd({ id: 'eq', key: 'Mod-Alt-e', editorKey: true }))

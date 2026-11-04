@@ -31,6 +31,8 @@ export interface Command {
   editorKey?: boolean
   /** Conditions that must all hold for the command to show or run. */
   when?: Condition[]
+  /** What pressing its key says when its conditions don't hold ("Open a .tex file to cite"); without one the key falls through. */
+  hint?: string
   /** The submenu of its menu it goes in ("Format" in Insert). */
   submenu?: string
   /** Its menu label when that depends on the context ("Save and Build" for a .tex file); otherwise `title`. */
@@ -49,8 +51,15 @@ export class CommandRegistry {
   private list: Command[] = []
   private listeners = new Set<() => void>()
 
-  /** Called with a failed command and its error (a rejected promise or a throw). */
-  constructor(private readonly onError: (c: Command, e: unknown) => void = (c, e) => console.error(`${c.id}:`, e)) {}
+  /**
+   * `onError` is called with a failed command and its error (a rejected
+   * promise or a throw); `onHint` with a command's hint, when its key is
+   * pressed but it can't run.
+   */
+  constructor(
+    private readonly onError: (c: Command, e: unknown) => void = (c, e) => console.error(`${c.id}:`, e),
+    private readonly onHint: (hint: string) => void = () => {},
+  ) {}
 
   /** Adds commands; the returned function removes them again. */
   register(...cmds: Command[]): () => void {
@@ -86,16 +95,21 @@ export class CommandRegistry {
 
   /**
    * Runs the command bound to the key `e` in `scope` (app-wide keys, or the
-   * editor's), if its condition holds. True if one ran and applied: the
+   * editor's), if its condition holds; failing that, shows the hint of one
+   * that can't run. True if one ran and applied, or a hint was shown: the
    * caller then stops the event.
    */
   handleKey(e: KeyLike, ctx: Context, scope: 'app' | 'editor'): boolean {
+    let hint: string | undefined
     for (const c of this.list) {
-      if (!!c.editorKey !== (scope === 'editor') || !holds(c, ctx)) continue
+      if (!!c.editorKey !== (scope === 'editor')) continue
       if (![c.key, ...(c.aliases ?? [])].some((k) => k && keyMatches(k, e))) continue
-      if (this.call(c)) return true
+      if (!holds(c, ctx)) hint ??= c.hint
+      else if (this.call(c)) return true
     }
-    return false
+    if (hint === undefined) return false
+    this.onHint(hint)
+    return true
   }
 
   /** Calls `f` after each change; returns the way to stop. */

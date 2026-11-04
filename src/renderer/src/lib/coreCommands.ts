@@ -116,7 +116,7 @@ export function coreCommands(a: CoreActions): Command[] {
     insert('figureStar', 'Figure*', 'figure*'),
     insert('table', 'Table…', 'table', 'Mod-Alt-t'),
     { id: 'insert.image', title: 'Image…', category: 'Insert', keywords: ['picture', 'graphics'], when: TEX, run: always(a.insertImage) },
-    { id: 'insert.cite', title: 'Citation…', category: 'Insert', key: 'Mod-Shift-c', keywords: ['cite', 'reference', 'bibliography'], when: TEX, run: always(a.cite) },
+    { id: 'insert.cite', title: 'Citation…', category: 'Insert', key: 'Mod-Shift-c', keywords: ['cite', 'reference', 'bibliography'], when: TEX, hint: 'Open a .tex file to cite', run: always(a.cite) },
 
     // View
     { id: 'view.toggleLive', title: 'Live View', category: 'View', key: 'Mod-Shift-l', editorKey: true, keywords: ['source'], when: V, run: always(a.toggleLive) },

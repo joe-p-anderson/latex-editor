@@ -256,7 +256,10 @@
     },
   }
   // Every command (docs/adr/0001-one-command-registry.md): the palette and the keys come from it.
-  const commands = new CommandRegistry((c, e) => flash(`${c.title}: ${(e as Error)?.message ?? e}`))
+  const commands = new CommandRegistry(
+    (c, e) => flash(`${c.title}: ${(e as Error)?.message ?? e}`),
+    (hint) => flash(hint),
+  )
   /** What the commands' `when` conditions are checked against. */
   const commandContext = (): Context => ({ vault: !!vault, tex: !!active?.toLowerCase().endsWith('.tex') })
   commands.register(

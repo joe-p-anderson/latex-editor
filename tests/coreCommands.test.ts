@@ -124,4 +124,12 @@ describe('core commands', () => {
     expect(returning(false).handleKey(key('w'), TEX, 'app')).toBe(false)
     expect(returning(true).handleKey(key('w'), TEX, 'app')).toBe(true)
   })
+
+  it('say "Open a .tex file to cite" for Ctrl+Shift+C outside a .tex file', () => {
+    const hints: string[] = []
+    const reg = new CommandRegistry(undefined, (h) => hints.push(h))
+    reg.register(...coreCommands(recorder().actions))
+    expect(reg.handleKey(key('C', { shift: true }), BIB, 'app')).toBe(true)
+    expect(hints).toEqual(['Open a .tex file to cite'])
+  })
 })
