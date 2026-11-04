@@ -171,7 +171,21 @@ export interface PaperInfo {
 
 export type TouchpadEvent = { type: 'contact'; id: number; tip: boolean; x: number; y: number } | { type: 'button'; down: boolean }
 
+/** The TeX distribution builds use, as found on this machine. */
+export interface TexInfo {
+  /** The folder pdflatex is in. */
+  bin: string
+  /** "MiKTeX", "TeX Live", or "TeX" when pdflatex doesn't say. */
+  distribution: string
+  /** The distribution's version ("24.4", "2024"); empty if unknown. */
+  version: string
+  /** Found on PATH (rather than in a usual install folder, then added to PATH). */
+  onPath: boolean
+}
+
 export interface Api {
+  /** Looks for TeX again; null if none is installed. */
+  detectTeX(): Promise<TexInfo | null>
   openVault(): Promise<VaultInfo | null>
   getVault(): Promise<VaultInfo | null>
   /** Vaults opened before that still exist, most recent first. */
