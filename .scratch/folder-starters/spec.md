@@ -46,8 +46,6 @@ Folders:
 
 - **Lab report (revtex)**: as onboarding ticket 01, plus `figures/`.
 - **Long lab report (revtex)**: the same front matter, with each section in `sections/` (`introduction.tex`, `theory.tex`, `methods.tex`, `results.tex`, `conclusion.tex`, `appendix.tex`) brought in by `\input`, plus `references.bib` and `figures/`. The comments in `main.tex` say how `\input` works.
-- **Problem set**: `article` with `amsmath`, `siunitx` and `graphicx`; a header with `{{Course}}`, `{{Title}}` and `{{Author}}`; three numbered problems, each with a Solution; `figures/`.
-- **Presentation (beamer)**: a `beamer` talk for a lab presentation: title slide, Motivation, Method, Results (with a figure), Conclusion; `figures/`.
 
 Each folder starter must build with a stock MiKTeX install, without image files (use a framed box in place of a figure, as the Lab report does).
 
@@ -55,3 +53,5 @@ Each folder starter must build with a stock MiKTeX install, without image files 
 
 1. [Folder starters, and built-ins as files](issues/01-folder-starters.md)
 2. [New built-in shapes](issues/02-starter-shapes.md)
+
+Problem set and Presentation (beamer) were built, then removed (2026-11-04): Live view doesn't support their classes well enough yet.

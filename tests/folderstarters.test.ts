@@ -80,8 +80,6 @@ describe('built-in starters', () => {
       'Handout',
       'Lab report (revtex)',
       'Long lab report (revtex)',
-      'Presentation (beamer)',
-      'Problem set',
       'Section',
       'Standalone figure',
       'Bibliography',

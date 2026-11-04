@@ -23,12 +23,10 @@ const { starters } = await newVaultChoices(join(dir, 'probe'), null, DEFAULT_STA
 const folders = starters.filter((s) => s.source === 'built-in' && s.files?.length)
 
 describe.skipIf(!tex)('every built-in folder starter', () => {
-  it('includes the four folder shapes', () => {
+  it('includes the two folder shapes', () => {
     expect(folders.map((s) => s.name).sort()).toEqual([
       'Lab report (revtex)',
       'Long lab report (revtex)',
-      'Presentation (beamer)',
-      'Problem set',
     ])
   })
 

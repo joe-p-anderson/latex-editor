@@ -18,3 +18,5 @@ Add the folder starters the spec lists under `resources/starters/`: Long lab rep
 ## Comments
 
 Resolved on branch `onboarding` (2026-11-04).
+
+Removed Problem set and Presentation (beamer) at the maintainer's request (2026-11-04): too incompatible with Live view for now. Only Long lab report (revtex) remains from this ticket.
