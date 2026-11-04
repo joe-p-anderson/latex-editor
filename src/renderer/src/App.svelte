@@ -42,7 +42,7 @@
   import PluginsPanel from './lib/PluginsPanel.svelte'
   import { usePackageLine, type PackageSpec } from '@shared/packages'
   import { BUILTIN_MATH_SNIPPETS, mathSnippetsFileTemplate, mergeSnippets, parseMathSnippets, type MathSnippet } from '@shared/mathsnippets'
-  import AppearancePanel from './lib/AppearancePanel.svelte'
+  import AppearancePanel, { type AppearanceSection } from './lib/AppearancePanel.svelte'
   import { applyAppearance, logoUrl, smallLogo } from './lib/appearance'
   import { marbleCss } from './lib/marbles.svelte'
   import TitleBar, { type BuildState } from './lib/TitleBar.svelte'
@@ -162,10 +162,20 @@
   let view = $state<View>('files')
   function showView(v: View): void {
     if (sideOpen && view === v) sideOpen = false
+    else if (v === 'appearance') openAppearance('top')
     else {
       view = v
       sideOpen = true
     }
+  }
+
+  // The Appearance panel opens at the top (gear, Ctrl+,, View → Appearance)
+  // or, from the vault's swatch, scrolled to this vault's palette.
+  let appearanceFocus = $state<{ section: AppearanceSection; at: number }>({ section: 'top', at: 0 })
+  function openAppearance(section: AppearanceSection): void {
+    view = 'appearance'
+    sideOpen = true
+    appearanceFocus = { section, at: Date.now() }
   }
 
   const VIEWS: ViewButton[] = [
@@ -270,7 +280,7 @@
       toggleSidebar: () => (sideOpen = !sideOpen),
       togglePanel: () => togglePanel(),
       toggleSpelling: () => setSpelling(!spellOn),
-      appearance: () => showView('appearance'),
+      appearance: () => openAppearance('top'),
       plugins: () => showView('plugins'),
       commandPalette: () => openPalette(),
       nextTab: () => stepTab(1),
@@ -314,7 +324,7 @@
     ...pluginViews.tools,
   ])
   // A view that's no longer offered (a tool out of context, a plugin switched off) falls back to Files.
-  const CORE_VIEWS = ['files', 'contents', 'search', 'appearance', 'endpaper', 'plugins']
+  const CORE_VIEWS = ['files', 'contents', 'search', 'appearance', 'plugins']
   $effect(() => {
     if (!CORE_VIEWS.includes(view) && !views.some((v) => v.id === view) && !tools.some((v) => v.id === view)) view = 'files'
   })
@@ -1967,7 +1977,7 @@
     {#if note}<div class="note welcome-note">{note}</div>{/if}
   {:else}
     <div class="work" bind:this={work} style:grid-template-columns="52px {sideOpen ? `${sideWidth}px 0` : '0 0'} minmax(0, 1fr)">
-      <ActivityBar {views} {tools} current={view} open={sideOpen} {swatch} {logo} onselect={showView} />
+      <ActivityBar {views} {tools} current={view} open={sideOpen} {swatch} {logo} onselect={showView} onswatch={() => openAppearance('palette')} />
 
       <aside class="sidebar" hidden={!sideOpen}>
         <!-- Each view stays mounted, so search keeps its query and results. -->
@@ -2105,10 +2115,10 @@
           <div class="side-body">
             <PluginsPanel states={plugins.states} panels={plugins.panels} vaultName={vault.name} focus={pluginFocus} />
           </div>
-        {:else if view === 'appearance' || view === 'endpaper'}
+        {:else if view === 'appearance'}
           <div class="side-body">
             <AppearancePanel
-              part={view === 'endpaper' ? 'endpaper' : 'look'}
+              focus={appearanceFocus}
               app={appearance}
               endpaper={vault.appearance}
               vaultName={vault.name}
@@ -2204,7 +2214,7 @@
       spelling={spellOn}
       problems={problemCounts}
       items={plugins.status}
-      onendpaper={() => showView('endpaper')}
+      onendpaper={() => openAppearance('palette')}
       onsection={() => {
         view = 'contents'
         sideOpen = true
