@@ -1,6 +1,6 @@
 # Folder starters, and built-ins as files
 
-Status: ready-for-agent
+Status: resolved
 
 Spec: [../spec.md](../spec.md) (The folder format; Using a folder starter; Built-in starters as files).
 
@@ -22,3 +22,7 @@ Spec: [../spec.md](../spec.md) (The folder format; Using a folder starter; Built
 - [ ] A field used in two files is asked for once and filled in both.
 - [ ] A folder starter in a template folder's `starters/` works the same as a built-in one.
 - [ ] Unit tests cover entry-file choice, field collection, `.keep`, binary copy and no-overwrite.
+
+## Comments
+
+Resolved on branch `onboarding` (2026-11-04).
