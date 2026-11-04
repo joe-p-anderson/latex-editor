@@ -35,5 +35,6 @@ export const showHintsAgainCommand = (): Command => ({
   title: 'Show Hints Again',
   category: 'Help',
   keywords: ['tips', 'first-time', 'reset'],
+  menuOrder: 40, // in Help, after Maths Shortcuts
   run: clearDismissedHints,
 })

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { CommandRegistry, pluginCommand, type Command, type Context } from '../src/renderer/src/lib/commands'
 import { coreCommands, type CoreActions } from '../src/renderer/src/lib/coreCommands'
+import { gettingStartedCommand } from '../src/renderer/src/lib/gettingStarted'
 import { menuBar } from '../src/renderer/src/lib/menuBar'
 import type { MenuNode } from '../src/shared/menu'
 
@@ -84,8 +85,8 @@ describe('the menu bar', () => {
 describe('the Help menu', () => {
   /** Getting Started and Show Hints Again, which their own features register after the core commands. */
   const own: Command[] = [
-    { id: 'help.showHintsAgain', title: 'Show Hints Again', category: 'Help', run: () => {} },
-    { id: 'help.gettingStarted', title: 'Getting Started', category: 'Help', run: () => {} },
+    { id: 'help.showHintsAgain', title: 'Show Hints Again', category: 'Help', menuOrder: 40, run: () => {} },
+    gettingStartedCommand(async () => {}),
   ]
   const help = (ctx = TEX, extra: Command[] = own) => {
     const reg = new CommandRegistry()

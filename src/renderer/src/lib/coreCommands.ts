@@ -63,13 +63,6 @@ export interface CoreActions {
   about(): void
 }
 
-/**
- * The Help menu's order. Getting Started (the Getting-started vault) and
- * Show Hints Again (hints.svelte.ts) are registered by their own features,
- * after the core commands, so the menu sorts by this.
- */
-export const HELP_ORDER = ['help.keyboardShortcuts', 'help.gettingStarted', 'help.mathShortcuts', 'help.showHintsAgain', 'help.reportIssue', 'help.about']
-
 const V: Condition[] = ['vault']
 const FILE: Condition[] = ['vault', 'editor']
 const TEX: Condition[] = ['vault', 'tex']
@@ -153,10 +146,10 @@ export function coreCommands(a: CoreActions): Command[] {
     { id: 'tools.commandPalette', title: 'Run Command…', category: 'Tools', key: 'Mod-Shift-p', keywords: ['command palette'], run: always(a.commandPalette) },
     { id: 'tools.plugins', title: 'Plugins…', category: 'Tools', when: V, run: always(a.plugins) },
 
-    // Help (Getting Started and Show Hints Again are registered by their own features; HELP_ORDER places them)
-    { id: 'help.keyboardShortcuts', title: 'Keyboard Shortcuts', category: 'Help', key: 'Mod-k Mod-s', keywords: ['keys', 'keybindings', 'hotkeys'], run: always(a.keyboardShortcuts) },
-    { id: 'help.mathShortcuts', title: 'Maths Shortcuts…', category: 'Help', keywords: ['math', 'snippets'], when: V, run: always(a.mathShortcuts) },
-    { id: 'help.reportIssue', title: 'Report an Issue…', category: 'Help', keywords: ['bug', 'feedback', 'github'], run: always(a.reportIssue) },
-    { id: 'help.about', title: 'About endleaf', category: 'Help', keywords: ['version'], run: always(a.about) },
+    // Help: Getting Started (20) and Show Hints Again (40) are registered by their own features; `menuOrder` places them
+    { id: 'help.keyboardShortcuts', title: 'Keyboard Shortcuts', category: 'Help', key: 'Mod-k Mod-s', keywords: ['keys', 'keybindings', 'hotkeys'], menuOrder: 10, run: always(a.keyboardShortcuts) },
+    { id: 'help.mathShortcuts', title: 'Maths Shortcuts…', category: 'Help', keywords: ['math', 'snippets'], menuOrder: 30, when: V, run: always(a.mathShortcuts) },
+    { id: 'help.reportIssue', title: 'Report an Issue…', category: 'Help', keywords: ['bug', 'feedback', 'github'], menuOrder: 50, run: always(a.reportIssue) },
+    { id: 'help.about', title: 'About endleaf', category: 'Help', keywords: ['version'], menuOrder: 60, run: always(a.about) },
   ]
 }

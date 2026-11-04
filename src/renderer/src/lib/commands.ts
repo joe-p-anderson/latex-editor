@@ -44,6 +44,11 @@ export interface Command {
   menuTitle?: (ctx: Context) => string
   /** False keeps it out of the menu bar (it's in the palette all the same). */
   menu?: false
+  /**
+   * Its place in its menu, lowest first, for a menu whose commands are
+   * registered apart (Help); those without one follow, in registration order.
+   */
+  menuOrder?: number
   /** Other words the palette finds it by ("compile" for Recompile). */
   keywords?: string[]
   /** Returning false means it didn't apply, and a key falls through to whatever else binds it. */

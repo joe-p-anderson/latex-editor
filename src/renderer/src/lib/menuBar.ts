@@ -1,15 +1,13 @@
 // The menu bar, generated from the command registry (./commands.ts). The
 // main process adds its native items (src/main/menu.ts).
-import { MENU_BAR, type MenuBarMenu, type MenuLabel, type MenuNode } from '@shared/menu'
+import { MENU_BAR, type MenuBarMenu, type MenuNode } from '@shared/menu'
 import { holds, isChord, keyLabel, type Command, type Context } from './commands'
-import { HELP_ORDER } from './coreCommands'
 
-/** Menus with a fixed order, for commands registered apart from the core ones (Getting Started, Show Hints Again); others follow. */
-const ORDER: Partial<Record<MenuLabel, string[]>> = { Help: HELP_ORDER }
+const rank = (c: Command): number => c.menuOrder ?? Number.MAX_SAFE_INTEGER
 
 /**
- * Each menu's items: its core commands in registration order, or Help's in
- * HELP_ORDER (those sharing a `submenu` gathered where the first one is),
+ * Each menu's items: its commands by `menuOrder`, then in registration
+ * order (those sharing a `submenu` gathered where the first one is),
  * then each plugin's under its name. A command whose `when` doesn't hold is
  * shown disabled.
  */
@@ -23,8 +21,6 @@ export function menuBar(cmds: Command[], ctx: Context, mac?: boolean): MenuBarMe
     enabled: holds(c, ctx),
   })
   return MENU_BAR.map((label) => {
-    const order = ORDER[label] ?? []
-    const rank = (c: Command) => (order.includes(c.id) ? order.indexOf(c.id) : order.length)
     const mine = cmds.filter((c) => c.category === label && c.menu !== false).sort((a, b) => rank(a) - rank(b))
     const items: MenuNode[] = []
     for (const c of mine.filter((c) => !c.group)) {
