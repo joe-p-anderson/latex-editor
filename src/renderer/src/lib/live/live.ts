@@ -7,8 +7,8 @@
 // The parsing lives in @shared/livemodel; this file turns it into
 // decorations. They come from a StateField rather than a ViewPlugin because
 // CodeMirror only takes block widgets and line-spanning replacements from state.
-import { Facet, Prec, StateEffect, StateField, type EditorState, type Extension, type Range } from '@codemirror/state'
-import { Decoration, EditorView, GutterMarker, MatchDecorator, ViewPlugin, gutterLineClass, keymap, type DecorationSet, type ViewUpdate } from '@codemirror/view'
+import { Facet, StateEffect, StateField, type EditorState, type Extension, type Range } from '@codemirror/state'
+import { Decoration, EditorView, GutterMarker, MatchDecorator, ViewPlugin, gutterLineClass, type DecorationSet, type ViewUpdate } from '@codemirror/view'
 import { RangeSet } from '@codemirror/state'
 import { isCite, liveModel, type LiveModel, type LiveOptions } from '@shared/livemodel'
 import { dirOf, parseIncludes } from '@shared/project'
@@ -144,7 +144,7 @@ export function liveMode(hooks: LiveHooks, on: () => boolean): Extension {
     }),
     spaces,
     EditorView.editorAttributes.compute([liveOn], (s) => (s.field(liveOn) ? { class: 'cm-live' } : ({} as Record<string, string>))),
-    Prec.high(keymap.of([{ key: 'Mod-Shift-l', preventDefault: true, run: toggleLive }])),
+    // Ctrl+Shift+L is the registry's View: Live View (coreCommands.ts).
     liveTheme,
   ]
 }
