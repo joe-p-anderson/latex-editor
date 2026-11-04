@@ -252,7 +252,7 @@
     padding: 2px 6px 4px 10px;
   }
   .name {
-    font: 600 14px var(--f-page);
+    font: 600 14px var(--f-ui);
     color: var(--ink);
   }
   .count {

@@ -222,7 +222,7 @@
     align-items: baseline;
     gap: 8px;
     margin-bottom: 6px;
-    font: 600 14px var(--f-page);
+    font: 600 14px var(--f-ui);
     letter-spacing: 0.1em;
     font-variant-caps: all-small-caps;
     color: var(--ink-soft);

@@ -138,7 +138,7 @@
   .pmark {
     margin-right: -3px;
     color: var(--detail);
-    font: 600 13px var(--f-page);
+    font: 600 13px var(--f-ui);
   }
   .tab.active {
     background: var(--desk);

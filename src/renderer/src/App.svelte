@@ -2402,7 +2402,7 @@
     border: 0;
     border-radius: 0;
     text-align: left;
-    font: 600 14px var(--f-page);
+    font: 600 14px var(--f-ui);
     letter-spacing: 0.12em;
     font-variant-caps: all-small-caps;
     color: var(--ink-soft);

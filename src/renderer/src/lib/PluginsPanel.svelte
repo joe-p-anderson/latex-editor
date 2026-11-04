@@ -219,7 +219,7 @@
   }
   .group-h {
     margin: 10px 0 4px;
-    font: 600 13px var(--f-page);
+    font: 600 13px var(--f-ui);
     letter-spacing: 0.1em;
     font-variant-caps: all-small-caps;
     color: var(--ink-soft);
