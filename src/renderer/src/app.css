@@ -9,8 +9,8 @@
   /* the page and its ink */
   --paper: #1F2539;
   --ink: #EBE2D3;
-  --ink-soft: #ADA9A4;
-  --pencil: #9B9896;
+  --ink-soft: #AEAAA5;
+  --pencil: #9D9A98;
   --detail: #D8CBA8;
   --srcbg: #2C3141;
   --math: #A9ADB3;
@@ -24,7 +24,7 @@
   /* the chrome: title bar, activity bar, status bar */
   --chrome: #0F1424;
   --chrome-ink: #EBE2D3;
-  --chrome-ink-soft: #ADA9A4;
+  --chrome-ink-soft: #AEAAA5;
   --chrome-active: #EBE2D3;
   --chrome-btn: #3A3C44;
   --chl: transparent;
@@ -41,8 +41,8 @@
   --p-desk: #141B30;
   --p-page: #1F2539;
   --p-text: #EBE2D3;
-  --p-muted: #ADA9A4;
-  --p-faint: #9B9896;
+  --p-muted: #AEAAA5;
+  --p-faint: #9D9A98;
   --p-accent: #D8CBA8;
   --p-line: #2C303F;
   --p-sel: #3A3C44;
