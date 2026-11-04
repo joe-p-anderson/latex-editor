@@ -22,6 +22,8 @@ export interface Command {
   group?: string
   /** Default key, in CodeMirror notation (`Mod-Shift-b`). */
   key?: string
+  /** Other keys that run it too (Ctrl+Shift+H for Find in Vault); menus and the palette show only `key`. */
+  aliases?: string[]
   /**
    * The key works only while the editor has focus (it's bound in the
    * editor, ahead of its own keymaps), not app-wide.
@@ -83,7 +85,8 @@ export class CommandRegistry {
    */
   handleKey(e: KeyLike, ctx: Context, scope: 'app' | 'editor'): boolean {
     for (const c of this.list) {
-      if (!c.key || !!c.editorKey !== (scope === 'editor') || !keyMatches(c.key, e) || !holds(c, ctx)) continue
+      if (!!c.editorKey !== (scope === 'editor') || !holds(c, ctx)) continue
+      if (![c.key, ...(c.aliases ?? [])].some((k) => k && keyMatches(k, e))) continue
       if (this.call(c)) return true
     }
     return false

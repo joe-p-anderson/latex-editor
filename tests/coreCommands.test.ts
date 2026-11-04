@@ -62,28 +62,46 @@ describe('core commands', () => {
     expect(found).toContain('View: Toggle PDF')
   })
 
-  it('keep the keys they had', () => {
+  const pressed = (k: string, m: { shift?: boolean; alt?: boolean; ctrl?: boolean } = {}, scope: 'app' | 'editor' = 'app', ctx = TEX) => {
     const { reg, ran } = registry()
-    const key = (key: string, m: { shift?: boolean; alt?: boolean; ctrl?: boolean } = {}, scope: 'app' | 'editor' = 'app') =>
-      reg.handleKey({ key, ctrlKey: m.ctrl ?? true, altKey: !!m.alt, shiftKey: !!m.shift, metaKey: false }, TEX, scope)
-    key('B', { shift: true })
-    key('P', { shift: true })
-    key('v', { alt: true })
-    key('Tab', { shift: true })
-    key('ArrowLeft', { alt: true, ctrl: false })
-    key('F', { shift: true }, 'editor')
-    key('f', { alt: true }, 'editor')
-    key('b', {}, 'editor')
-    expect(ran).toEqual(['toggleSidebar', 'commandPalette', 'togglePdf', 'cycleTabs(-1)', 'goBack', 'edit(figure)', 'edit(figure*)', 'edit(bold)'])
+    reg.handleKey({ key: k, ctrlKey: m.ctrl ?? true, altKey: !!m.alt, shiftKey: !!m.shift, metaKey: false }, ctx, scope)
+    return ran
+  }
+
+  it('keep the keys that the keymap leaves alone', () => {
+    expect(pressed('P', { shift: true })).toEqual(['commandPalette'])
+    expect(pressed('v', { alt: true })).toEqual(['togglePdf'])
+    expect(pressed('Tab', { shift: true })).toEqual(['cycleTabs(-1)'])
+    expect(pressed('ArrowLeft', { alt: true, ctrl: false })).toEqual(['goBack'])
+    expect(pressed('b', {}, 'editor')).toEqual(['edit(bold)'])
+  })
+
+  it('bind the VS Code keys: Ctrl+Shift+F finds in the vault (Ctrl+Shift+H too), Ctrl+Shift+B recompiles', () => {
+    expect(pressed('F', { shift: true })).toEqual(['findInVault'])
+    expect(pressed('H', { shift: true })).toEqual(['findInVault'])
+    expect(pressed('B', { shift: true })).toEqual(['recompile'])
+  })
+
+  it('move figure to Ctrl+Alt+F, the sidebar to Ctrl+Alt+B, and give figure* no key', () => {
+    expect(pressed('f', { alt: true }, 'editor')).toEqual(['edit(figure)'])
+    expect(pressed('b', { alt: true })).toEqual(['toggleSidebar'])
+    expect(registry().reg.get('insert.figureStar')?.key).toBeUndefined()
+  })
+
+  it('open Appearance on Ctrl+, and save on Ctrl+S', () => {
+    expect(pressed(',')).toEqual(['appearance'])
+    expect(pressed('s')).toEqual(['save'])
   })
 
   it('give no two commands the same key in the same place', () => {
     const seen = new Set<string>()
     for (const c of registry().reg.all()) {
-      if (!c.key) continue
-      const k = `${c.editorKey ? 'editor' : 'app'} ${c.key}`
-      expect(seen.has(k), k).toBe(false)
-      seen.add(k)
+      for (const key of [c.key, ...(c.aliases ?? [])]) {
+        if (!key) continue
+        const k = `${c.editorKey ? 'editor' : 'app'} ${key}`
+        expect(seen.has(k), k).toBe(false)
+        seen.add(k)
+      }
     }
   })
 })
