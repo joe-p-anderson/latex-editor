@@ -10,7 +10,7 @@ import { cacheDirFor, compile, compileDraft, compileSection, fullBuildReason, re
 import { discoverPaperOf, paperInfo } from './project'
 import { importImage, saveImage } from './images'
 import { editorContextFor, macrosFor } from './mathmacros'
-import { appAppearance, appDefaultStarter, globalSnippets, globalTemplatesDir, loadSettings, migrateSettings, saveAppAppearance, saveSettings } from './settings'
+import { appAppearance, appDefaultStarter, dismissHint, globalSnippets, globalTemplatesDir, loadSettings, migrateSettings, saveAppAppearance, saveSettings } from './settings'
 import { searchVault } from './search'
 import { addWord, misspelled, reloadWords, suggestions } from './spell'
 import { startTouchpad, stopTouchpad } from './touchpad'
@@ -348,6 +348,9 @@ ipcMain.handle('window:close', () => {
   win?.close()
 })
 ipcMain.handle('appearance:get', () => appAppearance())
+ipcMain.handle('hints:dismissed', async () => (await loadSettings()).dismissedHints ?? [])
+ipcMain.handle('hints:dismiss', (_e, id: string) => dismissHint(id))
+ipcMain.handle('hints:clear', () => saveSettings({ dismissedHints: [] }))
 ipcMain.handle('appearance:set', (_e, changes: Partial<AppAppearance>) => saveAppAppearance(changes))
 ipcMain.handle('appearance:set-vault', async (_e, changes: Partial<VaultAppearance>) => {
   const appearance = await requireVault().saveAppearance(changes)

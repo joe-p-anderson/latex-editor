@@ -14,6 +14,8 @@
   import Editor from './lib/Editor.svelte'
   import PdfViewer from './lib/PdfViewer.svelte'
   import ProblemsPanel from './lib/ProblemsPanel.svelte'
+  import HintStrip from './lib/HintStrip.svelte'
+  import { showHintsAgainCommand, triggerHint } from './lib/hints.svelte'
   import ImagePicker from './lib/ImagePicker.svelte'
   import Outline from './lib/Outline.svelte'
   import TabBar from './lib/TabBar.svelte'
@@ -300,6 +302,7 @@
       recompile: () => !!active && (compile(active), true),
       syncForward: () => void syncForward(),
     }),
+    showHintsAgainCommand(),
   )
   const plugins = new PluginRuntime(host, commands)
   // The menu bar comes from the registry too: sent again when a command comes or goes
@@ -749,6 +752,11 @@
     warnings: result?.problems.filter((p) => p.severity === 'warning' && !p.hidden).length ?? 0,
   })
 
+  // The first time the Problems panel shows an error, its hint explains it.
+  $effect(() => {
+    if (panelOpen && panelTab === 'problems' && problemCounts.errors) untrack(() => triggerHint('first-error'))
+  })
+
   function togglePdf(): void {
     pdfOpen = !pdfOpen
   }
@@ -1091,6 +1099,7 @@
     }
     if (!cycling) mru = [rel, ...mru.filter((r) => r !== rel)]
     loadMacros(rel)
+    if (rel.toLowerCase().endsWith('.tex')) triggerHint('live-source')
   }
 
   // --- Back and forward ---------------------------------------------------------
@@ -1834,6 +1843,8 @@
       if (!r) return
       if (seq !== compileSeq) return // a newer save superseded this compile
       show(r)
+      // No-TeX seam: when ticket 05's TeX check says none is installed, skip this hint.
+      if (r.pdf && !r.problems.some((p) => p.severity === 'error' && !p.hidden)) triggerHint('first-build')
     } finally {
       if (seq === compileSeq) compiling = false
     }
@@ -1977,6 +1988,7 @@
     ontogglepanel={() => togglePanel()}
     onribbon={() => togglePanel('problems')}
   />
+  <HintStrip />
 
   {#if !started}
     <div class="starting"></div>

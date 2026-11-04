@@ -20,6 +20,8 @@ export interface AppSettings {
   plugins?: Record<string, GlobalPluginEntry>
   /** The starter New file preselects in vaults that name none; read through appDefaultStarter(). */
   defaultStarter?: string
+  /** First-time hints closed with their ×, never shown again (src/shared/hints.ts). */
+  dismissedHints?: string[]
 }
 
 const settingsPath = () => join(app.getPath('userData'), 'settings.json')
@@ -36,6 +38,12 @@ export async function loadSettings(): Promise<AppSettings> {
 export async function saveSettings(changes: Partial<AppSettings>): Promise<void> {
   const s = { ...(await loadSettings()), ...changes }
   await writeFile(settingsPath(), JSON.stringify(s, null, 2))
+}
+
+/** Stores a first-time hint as dismissed. */
+export async function dismissHint(id: string): Promise<void> {
+  const ids = (await loadSettings()).dismissedHints ?? []
+  if (!ids.includes(id)) await saveSettings({ dismissedHints: [...ids, id] })
 }
 
 /** The global snippet files, null where missing. */
