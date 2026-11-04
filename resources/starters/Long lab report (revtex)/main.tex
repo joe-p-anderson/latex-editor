@@ -1,0 +1,41 @@
+%% starter: A longer lab report in APS style, each section its own file in sections/
+\documentclass[reprint,aps,pra]{revtex4-2}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{siunitx}
+
+\begin{document}
+
+\title{{{Title}}}
+\author{{{Author}}}
+\affiliation{Department of Physics}
+\date{\today}
+
+\begin{abstract}
+What you measured, how, and what you found, in a few sentences.
+\end{abstract}
+
+\maketitle
+
+% Each \input{sections/...} below pastes that file in, as if its text were
+% written here. Edit a section in its own file: building it builds just that
+% section, numbered as in the whole report. Alt+PageDown and Alt+PageUp step
+% through the report's files in order.
+% To drop a section, delete its line; to add one, make a file in sections/
+% and \input it where it belongs.
+\input{sections/introduction}
+\input{sections/theory}
+\input{sections/methods}
+\input{sections/results}
+\input{sections/conclusion}
+
+\begin{acknowledgments}
+Thanks to your lab partner and instructor.
+\end{acknowledgments}
+
+\appendix
+\input{sections/appendix}
+
+\bibliography{references}
+
+\end{document}

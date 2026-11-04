@@ -1,3 +1,4 @@
+import type { AboutInfo } from './about'
 import type { AppAppearance, VaultAppearance } from './appearance'
 import type { BibSummary } from './bibtex'
 import type { CommandSig } from './latexedit'
@@ -19,6 +20,11 @@ export interface TreeNode {
   kind: 'dir' | 'file'
   children?: TreeNode[]
 }
+
+/** What New vault…'s folder picker found (see Api.newVault). */
+export type NewVaultPick =
+  | { kind: 'opened'; vault: VaultInfo }
+  | { kind: 'setup'; root: string; name: string; starters: Starter[]; preselect: string | null }
 
 export interface VaultInfo {
   root: string
@@ -171,14 +177,41 @@ export interface PaperInfo {
 
 export type TouchpadEvent = { type: 'contact'; id: number; tip: boolean; x: number; y: number } | { type: 'button'; down: boolean }
 
+/** The TeX distribution builds use, as found on this machine. */
+export interface TexInfo {
+  /** The folder pdflatex is in. */
+  bin: string
+  /** "MiKTeX", "TeX Live", or "TeX" when pdflatex doesn't say. */
+  distribution: string
+  /** The distribution's version ("24.4", "2024"); empty if unknown. */
+  version: string
+  /** Found on PATH (rather than in a usual install folder, then added to PATH). */
+  onPath: boolean
+}
+
 export interface Api {
+  /** Looks for TeX again; null if none is installed. */
+  detectTeX(): Promise<TexInfo | null>
   openVault(): Promise<VaultInfo | null>
   getVault(): Promise<VaultInfo | null>
   /** Vaults opened before that still exist, most recent first. */
   recentVaults(): Promise<RecentVault[]>
   openVaultAt(root: string): Promise<VaultInfo>
-  /** Picks or makes a folder and opens it as a new vault; null if cancelled. */
-  newVault(): Promise<VaultInfo | null>
+  /**
+   * New vault…'s folder picker. A folder already holding .tex files opens
+   * as it is ('opened'); any other comes back to be set up with makeVault
+   * ('setup'), nothing written yet. Null if cancelled.
+   */
+  newVault(): Promise<NewVaultPick | null>
+  /** Sets up a vault at `root` from a starter (by id) and opens it; resolves to the vault and main.tex's path. */
+  makeVault(root: string, name: string, starter: string): Promise<{ vault: VaultInfo; main: string }>
+  /**
+   * Opens the student's copy of the Getting-started vault (Documents/endleaf/Getting started),
+   * copying the bundled one there first if it isn't there; `changed` says the copy differs from the bundle.
+   */
+  openGettingStarted(): Promise<{ vault: VaultInfo; changed: boolean }>
+  /** Asks, then trashes the Getting-started copy and opens a fresh one; null if the student said no. */
+  startGettingStartedOver(): Promise<VaultInfo | null>
   /** Closes the vault, back to the welcome screen. */
   closeVault(): Promise<void>
   /** Takes a vault off the welcome screen's recent list (the folder is left alone). */
@@ -210,8 +243,19 @@ export interface Api {
   revealFile(rel: string): Promise<void>
   /** Opens a vault file in its default app, after asking. */
   openInDefaultApp(rel: string): Promise<void>
-  /** Starters for the New File dialog: the built-in ones and those in the template folders. */
-  listStarters(): Promise<Starter[]>
+  /**
+   * Starters for the New File dialog: the built-in ones and those in the
+   * template folders, and the id of the default one to preselect.
+   */
+  listStarters(): Promise<{ starters: Starter[]; preselect: string | null }>
+  /**
+   * Makes `rel` from the starter with id `id`, its fields filled from `values`
+   * (a missing one takes its default), and a folder starter's other files
+   * relative to it, each only if missing. Fails, making nothing, if `rel` exists.
+   */
+  createFromStarter(id: string, rel: string, values: Record<string, string>): Promise<void>
+  /** Names the starter New file preselects in this vault (null: the app-wide default), in .vault.json. */
+  setVaultDefaultStarter(name: string | null): Promise<void>
   /** Opens the starters/ folder that starters from `source` live in (see startersFolder). */
   openStartersFolder(source: Starter['source']): Promise<void>
   /** Starts an OS drag of a compiled PDF, for dropping into other apps. */
@@ -266,8 +310,10 @@ export interface Api {
   reloadWords(): Promise<void>
   /** Keeps the View → Check Spelling tick in step. */
   setSpellcheckMenu(on: boolean): Promise<void>
-  /** Opens a credit link (Detexify's sites only) in the browser. */
+  /** Opens a credit link (Detexify's sites) or a new endleaf issue in the browser; no other sites. */
   openExternal(url: string): Promise<void>
+  /** The version, Electron/Chromium versions, OS and TeX distribution, for Help → About and Report an Issue. */
+  about(): Promise<AboutInfo>
   /** Starts reading finger positions from the trackpad (Windows Precision Touchpad), with its aspect ratio. */
   touchpadStart(): Promise<{ ok: true; aspect: number } | { ok: false; error: string }>
   touchpadStop(): Promise<void>
@@ -284,6 +330,12 @@ export interface Api {
   /** The user asked to close the window; the renderer decides, then calls closeWindow. */
   onCloseRequested(cb: () => void): () => void
   onTreeChanged(cb: (tree: TreeNode[]) => void): () => void
+  /** The first-time hints dismissed so far, from settings.json. */
+  dismissedHints(): Promise<string[]>
+  /** Stores a first-time hint as dismissed, so it never shows again. */
+  dismissHint(id: string): Promise<void>
+  /** Forgets every dismissed hint (Help → Show Hints Again). */
+  clearDismissedHints(): Promise<void>
   /** The global appearance (look, page, type), from settings.json. */
   getAppearance(): Promise<AppAppearance>
   /** Saves changes to the global appearance; returns the whole of it. */

@@ -3,31 +3,36 @@ import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { copyFile, mkdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises'
 import { basename, join, resolve, sep } from 'node:path'
+import { release } from 'node:os'
 import { pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
 import { bibInfo } from './bibliography'
 import { cacheDirFor, compile, compileDraft, compileSection, fullBuildReason, resolveRoot } from './compile'
 import { discoverPaperOf, paperInfo } from './project'
 import { importImage, saveImage } from './images'
+import { openCopy, replaceCopy } from './gettingStarted'
 import { editorContextFor, macrosFor } from './mathmacros'
-import { appAppearance, globalSnippets, globalTemplatesDir, loadSettings, migrateSettings, saveAppAppearance, saveSettings } from './settings'
+import { appAppearance, appDefaultStarter, dismissHint, globalSnippets, globalTemplatesDir, loadSettings, migrateSettings, saveAppAppearance, saveSettings } from './settings'
 import { searchVault } from './search'
 import { addWord, misspelled, reloadWords, suggestions } from './spell'
 import { startTouchpad, stopTouchpad } from './touchpad'
-import { ensureTeX } from './tex'
+import { findTeX, texName } from './tex'
 import { forward, inverse } from './synctex'
 import { Vault } from './vault'
+import { splitExt } from '../shared/paths'
+import { holdsTex, makeVault, newVaultChoices } from './newvault'
 import * as fileops from './fileops'
-import { listStarters, startersFolder } from './starters'
+import { listStarters, startersFolder, useBuiltInStarters, writeStarter } from './starters'
 import { PluginHost } from './plugins'
 import { menuTemplate } from './menu'
 import type { MenuBarMenu } from '../shared/menu'
+import { ISSUES, TEX_DOWNLOADS, type AboutInfo } from '../shared/about'
 import type { SettingValues } from '../shared/plugin'
 import { isImage } from '../shared/images'
 import type { SearchOptions } from '../shared/search'
-import type { Starter } from '../shared/starters'
-import { normalizeVaultAppearance, PALETTES, type AppAppearance, type PaletteId, type VaultAppearance } from '../shared/appearance'
-import type { RecentVault, SectionTarget } from '../shared/api'
+import { defaultStarter, type Starter } from '../shared/starters'
+import { normalizeVaultAppearance, type AppAppearance, type PaletteId, type VaultAppearance } from '../shared/appearance'
+import type { NewVaultPick, RecentVault, SectionTarget } from '../shared/api'
 
 let win: BrowserWindow | null = null
 let vault: Vault | null = null
@@ -100,8 +105,12 @@ async function recentVaults(): Promise<RecentVault[]> {
   return out
 }
 
-/** A new vault: a folder (picked or made in the dialog) given its own endpaper. */
-async function newVault(): Promise<Vault | null> {
+/**
+ * New vault…'s folder picker. A folder that already holds .tex files opens as
+ * an existing vault; any other comes back for the renderer to ask its name
+ * and starter (then vault:make), with nothing written yet.
+ */
+async function newVault(): Promise<NewVaultPick | null> {
   const r = await dialog.showOpenDialog(win!, {
     title: 'Choose or make a folder for the new vault',
     buttonLabel: 'Make vault here',
@@ -109,13 +118,19 @@ async function newVault(): Promise<Vault | null> {
   })
   if (r.canceled || !r.filePaths[0]) return null
   const root = r.filePaths[0]
-  await mkdir(root, { recursive: true })
-  const v = await openVault(root)
-  // A fresh vault gets a palette of its own, so the welcome screen tells them apart.
-  if (!(await stat(join(root, '.vault.json')).then(() => true, () => false))) {
-    await v.saveAppearance({ palette: PALETTES[Math.floor(Math.random() * PALETTES.length)] })
+  if (await holdsTex(root)) return { kind: 'opened', vault: await (await openVault(root)).info() }
+  return { kind: 'setup', root, ...(await newVaultChoices(root, await globalTemplatesDir(), await appDefaultStarter())) }
+}
+
+// The built-in starters: resources/starters/, from the repo in development and from the app when packaged.
+useBuiltInStarters(join(app.getAppPath(), 'resources', 'starters'))
+
+/** The bundled Getting-started vault, and where the student's copy of it goes. */
+function gettingStartedPaths(): { bundled: string; target: string } {
+  return {
+    bundled: join(app.getAppPath(), 'resources', 'getting-started'),
+    target: join(app.getPath('documents'), 'endleaf', 'Getting started'),
   }
-  return v
 }
 
 /**
@@ -200,7 +215,38 @@ ipcMain.handle('vault:forget', async (_e, root: string) => {
 })
 ipcMain.handle('vault:set-name', (_e, name: string) => requireVault().saveName(name))
 ipcMain.handle('vault:open-path', async (_e, root: string) => (await openVault(root)).info())
-ipcMain.handle('vault:new', async () => (await newVault())?.info() ?? null)
+ipcMain.handle('vault:new', () => newVault())
+ipcMain.handle('vault:make', async (_e, root: string, name: string, starter: string) => {
+  const main = await makeVault(root, { name, starter }, await globalTemplatesDir())
+  return { vault: await (await openVault(root)).info(), main }
+})
+ipcMain.handle('vault:getting-started', async () => {
+  const { bundled, target } = gettingStartedPaths()
+  const { changed } = await openCopy(bundled, target)
+  return { vault: await (await openVault(target)).info(), changed }
+})
+ipcMain.handle('vault:getting-started-over', async () => {
+  const { bundled, target } = gettingStartedPaths()
+  const r = await dialog.showMessageBox(win!, {
+    type: 'question',
+    message: 'Start the Getting-started vault over?',
+    detail: `Your copy, with your changes, goes to the ${process.platform === 'darwin' ? 'Trash' : 'Recycle Bin'}, and a fresh one takes its place.\n\n${target}`,
+    buttons: ['Start over', 'Cancel'],
+    defaultId: 0,
+    cancelId: 1,
+    noLink: true,
+  })
+  if (r.response !== 0) return null
+  await closeVault() // stops the watcher, so the folder can go
+  vault = null
+  try {
+    await replaceCopy(bundled, target, (abs) => shell.trashItem(abs))
+  } catch (e) {
+    await openVault(target) // the copy is still there: back to it, as the renderer still shows it
+    throw e
+  }
+  return (await openVault(target)).info()
+})
 ipcMain.handle('vault:close', async () => {
   await closeVault()
   vault = null
@@ -230,10 +276,25 @@ ipcMain.handle('file:copyIn', (_e, paths: string[], dirRel: string) => fileops.c
 ipcMain.handle('file:delete', (_e, rels: string[]) => fileops.hold(requireVault(), rels))
 ipcMain.handle('file:undelete', async (_e, token: string) => void (await fileops.restore(requireVault(), token)))
 ipcMain.handle('file:release', (_e, token: string) => fileops.release(requireVault(), token, trash))
-ipcMain.handle('starters:list', async () => {
+/** The New file dialog's starters: built in, the enabled plugins', and the template folders'. */
+async function vaultStarters(vault: Vault): Promise<Starter[]> {
   const on = (await plugins.states()).filter((s) => s.enabled).map((s) => s.manifest)
-  return listStarters(requireVault(), on)
+  return listStarters(vault, on)
+}
+ipcMain.handle('starters:list', async () => {
+  const vault = requireVault()
+  const starters = await vaultStarters(vault)
+  return { starters, preselect: defaultStarter(starters, vault.defaultStarter, await appDefaultStarter())?.id ?? null }
 })
+ipcMain.handle('starters:create', async (_e, id: string, rel: string, values: Record<string, string>) => {
+  const vault = requireVault()
+  const starter = (await vaultStarters(vault)).find((s) => s.id === id)
+  if (!starter) throw new Error('That starter is no longer there')
+  const filename = basename(rel)
+  const auto = { date: new Date().toISOString().slice(0, 10), filename, basename: splitExt(filename)[0] }
+  await writeStarter(vault, rel, starter, values, auto)
+})
+ipcMain.handle('starters:setVaultDefault', (_e, name: string | null) => requireVault().saveDefaultStarter(name))
 ipcMain.handle('starters:openFolder', async (_e, source: Starter['source']) => {
   const folder = await startersFolder(requireVault(), source)
   if (!folder) throw new Error('No template folder')
@@ -311,10 +372,29 @@ ipcMain.handle('images:list', async () => (await requireVault().files()).filter(
 ipcMain.handle('images:import', (_e, source: string) => importImage(requireVault(), source))
 ipcMain.handle('images:save', (_e, name: string, bytes: Uint8Array) => saveImage(requireVault(), name, bytes))
 ipcMain.handle('templates:move', (_e, rel: string) => moveToGlobalTemplates(rel))
-// Credit links (e.g. Detexify's) open in the browser; only these sites.
+// Credit links (e.g. Detexify's), the no-TeX card's downloads and Help → Report an Issue open in the browser; only these sites.
 ipcMain.handle('open-external', (_e, url: string) => {
-  if (/^https:\/\/(detexify\.kirelabs\.org|github\.com\/kirel\/detexify)/.test(url)) shell.openExternal(url)
+  const allowed =
+    /^https:\/\/(detexify\.kirelabs\.org|github\.com\/kirel\/detexify)/.test(url) ||
+    Object.values(TEX_DOWNLOADS).some((u) => url.startsWith(u)) ||
+    url === ISSUES ||
+    url.startsWith(`${ISSUES}?`)
+  if (allowed) shell.openExternal(url)
 })
+// Which TeX builds use (null without one): the renderer asks at launch and on Check again.
+ipcMain.handle('tex:detect', () => findTeX())
+const OS_NAMES: Partial<Record<NodeJS.Platform, string>> = { win32: 'Windows', darwin: 'macOS', linux: 'Linux' }
+ipcMain.handle(
+  'app:about',
+  async (): Promise<AboutInfo> => ({
+    version: app.getVersion(),
+    electron: process.versions.electron,
+    chromium: process.versions.chrome,
+    os: `${OS_NAMES[process.platform] ?? process.platform} ${release()} (${process.arch})`,
+    // The distribution Help → About names ("MiKTeX 24.4"); null shows "none found".
+    tex: texName(await findTeX()),
+  }),
+)
 // Trackpad tracing: absolute finger positions while the symbol pad traces.
 ipcMain.handle('touchpad:start', async () => {
   try {
@@ -345,6 +425,9 @@ ipcMain.handle('window:close', () => {
   win?.close()
 })
 ipcMain.handle('appearance:get', () => appAppearance())
+ipcMain.handle('hints:dismissed', async () => (await loadSettings()).dismissedHints ?? [])
+ipcMain.handle('hints:dismiss', (_e, id: string) => dismissHint(id))
+ipcMain.handle('hints:clear', () => saveSettings({ dismissedHints: [] }))
 ipcMain.handle('appearance:set', (_e, changes: Partial<AppAppearance>) => saveAppAppearance(changes))
 ipcMain.handle('appearance:set-vault', async (_e, changes: Partial<VaultAppearance>) => {
   const appearance = await requireVault().saveAppearance(changes)
@@ -544,7 +627,6 @@ app.whenReady().then(async () => {
     updateIcon()
   })
   await createWindow()
-  if (win) await ensureTeX(win)
 })
 app.on('window-all-closed', () => app.quit())
 // Deletes nobody undid go to the OS trash on the way out.

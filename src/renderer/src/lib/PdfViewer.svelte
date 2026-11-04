@@ -2,6 +2,8 @@
   import * as pdfjs from 'pdfjs-dist'
   import type { PDFDocumentLoadingTask, PDFDocumentProxy } from 'pdfjs-dist'
   import type { SyncTarget } from '@shared/api'
+  import NoTexCard from './NoTexCard.svelte'
+  import { texMissing } from './texDist.svelte'
   import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
   pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
@@ -18,6 +20,7 @@
     scope = null,
     canDrag = true,
     onmessage = () => {},
+    keyFor = () => null,
   }: {
     pdf: string | null
     version: number
@@ -33,7 +36,15 @@
     canDrag?: boolean
     /** Something to tell the user, e.g. why the PDF wouldn't open. */
     onmessage?: (msg: string) => void
+    /** The key that runs a command, by id, from the registry ("Ctrl+S"); null without one. */
+    keyFor?: (commandId: string) => string | null
   } = $props()
+
+  /** " (Ctrl+S)" for a command with a key, else nothing. */
+  const keyNote = (id: string): string => {
+    const k = keyFor(id)
+    return k ? ` (${k})` : ''
+  }
 
   /** The PDF in the system's PDF app, for printing. */
   function openOutside(): void {
@@ -190,11 +201,12 @@
     <button onclick={() => (zoom = Math.max(0.4, zoom - 0.1))} title="Zoom out">−</button>
     <button onclick={() => (zoom = 1)} title="Fit the width ({Math.round(zoom * 100)}% now)">Fit</button>
     <button onclick={() => (zoom = Math.min(3, zoom + 0.1))} title="Zoom in">+</button>
-    <button onclick={onclose} title="Close the PDF (Ctrl+Alt+V)" aria-label="Close the PDF">×</button>
+    <button onclick={onclose} title="Close the PDF{keyNote('view.togglePdf')}" aria-label="Close the PDF">×</button>
   </div>
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="scroller" bind:this={scroller} bind:clientWidth={width} {ondblclick} title="Double-click to jump to the source">
-    {#if !pdf}<p class="empty">Save a .tex file (Ctrl+S) to compile it, or build it as it is with Ctrl+Shift+B.</p>{/if}
+    {#if !pdf && texMissing()}<div class="no-tex"><NoTexCard /></div>
+    {:else if !pdf}<p class="empty">Save a .tex file{keyNote('file.save')} to build its PDF, or build it as it is{keyNote('build.recompile')}.</p>{/if}
     <div class="pages" bind:this={pages}></div>
   </div>
 </div>
@@ -315,6 +327,11 @@
     100% {
       opacity: 0;
     }
+  }
+  .no-tex {
+    display: flex;
+    justify-content: center;
+    margin: 40px 16px 0;
   }
   .empty {
     width: fit-content;

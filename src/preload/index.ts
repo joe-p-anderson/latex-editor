@@ -5,11 +5,15 @@ import type { PluginState } from '../shared/plugin'
 // The renderer's only door to the filesystem and compiler. Everything goes
 // through named IPC channels handled in src/main/index.ts.
 const api: Api = {
+  detectTeX: () => ipcRenderer.invoke('tex:detect'),
   openVault: () => ipcRenderer.invoke('vault:open'),
   getVault: () => ipcRenderer.invoke('vault:get'),
   recentVaults: () => ipcRenderer.invoke('vault:recent'),
   openVaultAt: (root) => ipcRenderer.invoke('vault:open-path', root),
   newVault: () => ipcRenderer.invoke('vault:new'),
+  makeVault: (root, name, starter) => ipcRenderer.invoke('vault:make', root, name, starter),
+  openGettingStarted: () => ipcRenderer.invoke('vault:getting-started'),
+  startGettingStartedOver: () => ipcRenderer.invoke('vault:getting-started-over'),
   closeVault: () => ipcRenderer.invoke('vault:close'),
   forgetVault: (root) => ipcRenderer.invoke('vault:forget', root),
   setVaultName: (name) => ipcRenderer.invoke('vault:set-name', name),
@@ -29,6 +33,8 @@ const api: Api = {
   revealFile: (rel) => ipcRenderer.invoke('shell:reveal', rel),
   openInDefaultApp: (rel) => ipcRenderer.invoke('shell:openFile', rel),
   listStarters: () => ipcRenderer.invoke('starters:list'),
+  createFromStarter: (id, rel, values) => ipcRenderer.invoke('starters:create', id, rel, values),
+  setVaultDefaultStarter: (name) => ipcRenderer.invoke('starters:setVaultDefault', name),
   openStartersFolder: (source) => ipcRenderer.invoke('starters:openFolder', source),
   dragPdf: (pdf) => ipcRenderer.send('pdf:drag', pdf),
   openPdf: (pdf) => ipcRenderer.invoke('pdf:open', pdf),
@@ -54,6 +60,7 @@ const api: Api = {
   reloadWords: () => ipcRenderer.invoke('spell:reload'),
   setSpellcheckMenu: (on) => ipcRenderer.invoke('menu:set-spellcheck', on),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
+  about: () => ipcRenderer.invoke('app:about'),
   touchpadStart: () => ipcRenderer.invoke('touchpad:start'),
   touchpadStop: () => ipcRenderer.invoke('touchpad:stop'),
   onTouchpad: (cb) => {
@@ -80,6 +87,9 @@ const api: Api = {
     return () => ipcRenderer.removeListener('tree-changed', listener)
   },
   getAppearance: () => ipcRenderer.invoke('appearance:get'),
+  dismissedHints: () => ipcRenderer.invoke('hints:dismissed'),
+  dismissHint: (id) => ipcRenderer.invoke('hints:dismiss', id),
+  clearDismissedHints: () => ipcRenderer.invoke('hints:clear'),
   setAppearance: (changes) => ipcRenderer.invoke('appearance:set', changes),
   setVaultAppearance: (changes) => ipcRenderer.invoke('appearance:set-vault', changes),
   setWindowChrome: (color, symbolColor) => ipcRenderer.invoke('window:chrome', color, symbolColor),

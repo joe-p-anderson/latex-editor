@@ -1,8 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { lineBreakOf, withLineBreaks } from '@shared/edits'
   import { badName, joinRel, splitExt } from '@shared/paths'
-  import { fields, fill, type Starter } from '@shared/starters'
+  import { fill, starterFields, type Starter } from '@shared/starters'
   import Icon from './Icon.svelte'
 
   /** Pick a starter, name the file, fill in its fields, choose a folder. */
@@ -21,14 +20,16 @@
     vaultName: string
     /** What to start with: a starter by name (one of the user's before a built-in), the file name, and field values by field name (any case). */
     preset?: { starter?: string; name?: string; values?: Record<string, string> } | null
-    /** Makes the file; resolves to an error message to show here, or null when it worked. */
-    oncreate: (rel: string, text: string) => Promise<string | null>
+    /**
+     * Makes the file from the starter, and a folder starter's other files
+     * relative to it (each only if missing); resolves to an error message to
+     * show here, or null when it worked.
+     */
+    oncreate: (rel: string, starter: Starter, values: Record<string, string>) => Promise<string | null>
     oncancel: () => void
   } = $props()
 
   const NEW_FOLDER = '\0new'
-  // The starter picked last, chosen first next time.
-  const LAST_KEY = 'endleaf-new-file-starter'
   const SOURCES = [
     ['built-in', 'Built in'],
     ['vault', 'This vault'],
@@ -37,6 +38,8 @@
 
   let starters = $state<Starter[]>([])
   let chosen = $state<Starter | null>(null)
+  /** The default starter's id: the vault's, else the app-wide one. */
+  let preselect = $state<string | null>(null)
   // svelte-ignore state_referenced_locally
   let folder = $state(dir && !folders.includes(dir) ? NEW_FOLDER : dir)
   // svelte-ignore state_referenced_locally
@@ -51,14 +54,10 @@
   let nameInput: HTMLInputElement
 
   onMount(async () => {
-    starters = await window.api.listStarters()
-    let last: string | null = null
-    try {
-      last = localStorage.getItem(LAST_KEY)
-    } catch {}
+    ;({ starters, preselect } = await window.api.listStarters())
     const asked = preset?.starter?.toLowerCase()
     const named = asked ? starters.findLast((s) => s.name.toLowerCase() === asked) : undefined
-    pick(named ?? starters.find((s) => s.id === last) ?? starters.find((s) => s.name === 'Section') ?? starters[0])
+    pick(named ?? starters.find((s) => s.id === preselect) ?? starters[0])
     nameInput?.focus()
   })
 
@@ -66,12 +65,12 @@
     if (!s) return
     chosen = s
     const given = new Map(Object.entries(preset?.values ?? {}).map(([k, v]) => [k.toLowerCase(), v]))
-    values = Object.fromEntries(fields(s.text).map((f) => [f.name, given.get(f.name.toLowerCase()) ?? f.default]))
-    tall = new Set(fields(s.text).flatMap((f) => (/\btext$/i.test(f.name) || values[f.name].includes('\n') ? [f.name] : [])))
+    values = Object.fromEntries(starterFields(s).map((f) => [f.name, given.get(f.name.toLowerCase()) ?? f.default]))
+    tall = new Set(starterFields(s).flatMap((f) => (/\btext$/i.test(f.name) || values[f.name].includes('\n') ? [f.name] : [])))
     error = null
   }
 
-  const fieldList = $derived(chosen ? fields(chosen.text) : [])
+  const fieldList = $derived(chosen ? starterFields(chosen) : [])
   /** The file name, with the starter's extension added when none was typed. */
   const fileName = $derived.by(() => {
     const n = name.trim()
@@ -97,19 +96,23 @@
 
   const today = () => new Date().toISOString().slice(0, 10)
 
+  async function starterMenu(e: MouseEvent, s: Starter) {
+    e.preventDefault()
+    const id = await window.api.contextMenu([{ id: 'default', label: "Use as this vault's default", enabled: s.id !== preselect }])
+    if (id !== 'default') return
+    try {
+      await window.api.setVaultDefaultStarter(s.name)
+      preselect = s.id
+    } catch (err) {
+      error = `Couldn't set the default: ${(err as Error).message}`
+    }
+  }
+
   async function create() {
     if (!chosen || problem || busy) return
     busy = true
-    const base = splitExt(fileName)[0]
-    // Values typed or pasted in have \n breaks; the file takes the starter's.
-    const text = withLineBreaks(fill(chosen.text, values, { date: today(), filename: fileName, basename: base }), lineBreakOf(chosen.text))
-    error = await oncreate(rel, text)
+    error = await oncreate(rel, chosen, values)
     busy = false
-    // A preset (another feature's dialog) isn't the user's own pick to remember.
-    if (!error && !preset)
-      try {
-        localStorage.setItem(LAST_KEY, chosen.id)
-      } catch {}
   }
 
   function onkeydown(e: KeyboardEvent) {
@@ -144,8 +147,13 @@
           {#if group.length}
             <div class="group">{label}</div>
             {#each group as s (s.id)}
-              <button class="item" class:on={chosen?.id === s.id} role="option" aria-selected={chosen?.id === s.id} onclick={() => pick(s)}>
-                <span class="name">{s.name}</span><span class="ext">{s.ext}</span>
+              <button class="item" class:on={chosen?.id === s.id} role="option"
+                aria-selected={chosen?.id === s.id}
+                title={s.id === preselect ? 'The default here. Right-click to change it' : "Right-click to make it this vault's default"}
+                onclick={() => pick(s)}
+                oncontextmenu={(e) => starterMenu(e, s)}
+              >
+                <span class="name">{s.name}</span>{#if s.files?.length}<span class="several" title="Makes several files"><Icon name="folder" size={12} /></span>{/if}{#if s.id === preselect}<span class="dflt" aria-label="default">•</span>{/if}<span class="ext">{s.ext}</span>
               </button>
             {/each}
           {/if}
@@ -153,6 +161,9 @@
       </div>
       <div class="form">
         {#if chosen?.description}<span class="hint">{chosen.description}</span>{/if}
+        {#if chosen?.files?.length}
+          <span class="hint">Also makes, beside it unless already there: {chosen.files.map((f) => (f.kind === 'folder' ? `${f.path}/` : f.path)).join(', ')}</span>
+        {/if}
         <label>
           Name
           <input bind:this={nameInput} bind:value={name} placeholder={`untitled${chosen?.ext ?? ''}`} spellcheck="false" />
@@ -282,6 +293,17 @@
   .item:hover,
   .item.on {
     background: var(--sel);
+  }
+  .dflt {
+    flex: none;
+    margin-left: 5px;
+    color: var(--detail);
+  }
+  .several {
+    flex: none;
+    align-self: center;
+    margin-left: 5px;
+    color: var(--ink-soft);
   }
   .ext {
     flex: none;

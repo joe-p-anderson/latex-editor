@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import type { BibInfo, CompileResult, EditorContext, PaperInfo, Problem, QuickFix, SectionTarget, TextEdit, TreeNode, VaultInfo } from '@shared/api'
+  import type { BibInfo, CompileResult, EditorContext, PaperInfo, Problem, QuickFix, SectionTarget, TextEdit, TreeNode, VaultInfo, NewVaultPick } from '@shared/api'
   import { dirOf, isDocument, magicRoot, parseIncludes, rootComment, type Include } from '@shared/project'
   import { extractRange, extractSection, includeBlock, inlineInclude, moveInclude, placeNewFile, renameIncludes, renumberPlan, slugify, toggleInclude } from '@shared/paperedit'
   import PaperMap, { type PaperMapActions } from './lib/PaperMap.svelte'
@@ -14,14 +14,21 @@
   import Editor from './lib/Editor.svelte'
   import PdfViewer from './lib/PdfViewer.svelte'
   import ProblemsPanel from './lib/ProblemsPanel.svelte'
+  import HintStrip from './lib/HintStrip.svelte'
+  import { showHintsAgainCommand, triggerHint } from './lib/hints.svelte'
   import ImagePicker from './lib/ImagePicker.svelte'
   import Outline from './lib/Outline.svelte'
   import TabBar from './lib/TabBar.svelte'
   import QuickOpen from './lib/QuickOpen.svelte'
   import CommandPalette from './lib/CommandPalette.svelte'
+  import ShortcutsPanel from './lib/ShortcutsPanel.svelte'
+  import AboutDialog from './lib/AboutDialog.svelte'
+  import { issueUrl, type AboutInfo } from '@shared/about'
   import { CommandRegistry, type Command, type Context } from './lib/commands'
   import { coreCommands } from './lib/coreCommands'
+  import { gettingStartedCommand } from './lib/gettingStarted'
   import { menuBar } from './lib/menuBar'
+  import { canBuild, checkTeX, texDist, texReady } from './lib/texDist.svelte'
   import type { EditingHooks } from './lib/editing'
   import { blankComments, mergeTextSnippets, parseSnippets, type OutlineItem, type Snippet } from '@shared/latexedit'
   import { includegraphics, type ImageHooks } from './lib/imageSupport'
@@ -32,8 +39,10 @@
   import ReplaceReport from './lib/ReplaceReport.svelte'
   import PromptDialog from './lib/PromptDialog.svelte'
   import NewFileDialog from './lib/NewFileDialog.svelte'
+  import NewVaultDialog from './lib/NewVaultDialog.svelte'
   import { findReferences, retarget, type RefChange } from '@shared/references'
   import { badName, basename as baseName, dirname as dirName, isInside, joinRel, movedPath, type Move } from '@shared/paths'
+  import type { Starter } from '@shared/starters'
   import TableEditor from './lib/TableEditor.svelte'
   import { insertRow, newTable, packagesFor, parseTable, pasteGrid, serializeTable, type TableModel } from '@shared/tablemodel'
   import { normalizeEol } from '@shared/search'
@@ -52,6 +61,7 @@
   import Icon from './lib/Icon.svelte'
   import Welcome from './lib/Welcome.svelte'
   import EmptyPlate from './lib/EmptyPlate.svelte'
+  import { EMPTY_PLATE_LINKS, emptyPlateKeys } from './lib/emptyPlate'
   import IndexTabs from './lib/IndexTabs.svelte'
   import { tick, untrack } from 'svelte'
   import {
@@ -73,6 +83,9 @@
   let tabs = $state<string[]>([])
   let mru: string[] = []
   let quickOpen = $state(false)
+  // Help → Keyboard Shortcuts (Ctrl+K Ctrl+S) and About endleaf.
+  let shortcuts = $state(false)
+  let about = $state<AboutInfo | null>(null)
   // Ctrl+Shift+P: the command palette.
   let palette = $state(false)
   // The commands the palette lists: those whose `when` held as it opened.
@@ -261,7 +274,7 @@
     (hint) => flash(hint),
   )
   /** What the commands' `when` conditions are checked against. */
-  const commandContext = (): Context => ({ vault: !!vault, editor: !!active, tex: !!active?.toLowerCase().endsWith('.tex') })
+  const commandContext = (): Context => ({ vault: !!vault, editor: !!active, tex: !!active?.toLowerCase().endsWith('.tex'), build: canBuild() })
   commands.register(
     ...coreCommands({
       newFile: () => newFile(newFileDir()),
@@ -298,15 +311,25 @@
       },
       recompile: () => !!active && (compile(active), true),
       syncForward: () => void syncForward(),
+      keyboardShortcuts: () => (shortcuts = true),
+      reportIssue: async () => void window.api.openExternal(issueUrl(await window.api.about())),
+      about: async () => void (about = await window.api.about()),
     }),
+    showHintsAgainCommand(),
+    gettingStartedCommand(() => openGettingStarted()),
   )
   const plugins = new PluginRuntime(host, commands)
   // The menu bar comes from the registry too: sent again when a command comes or goes
-  // (a plugin switched on) and when what's enabled may change (a vault, the active file).
+  // (a plugin switched on) and when what's enabled may change (a vault, the active file, TeX found).
   let commandsChanged = $state(0)
   commands.subscribe(() => commandsChanged++)
+  // The empty editor's keys and Help links, from the registry; a link shows once its command is registered.
+  const plateKeys = $derived((void commandsChanged, emptyPlateKeys(commands, { build: canBuild() })))
+  // A command's key for people ("Ctrl+S"), following the registry.
+  const keyFor = $derived((void commandsChanged, (id: string) => commands.keyFor(id)))
+  const plateLinks = $derived((void commandsChanged, EMPTY_PLATE_LINKS.filter((l) => commands.get(l.id))))
   $effect(() => {
-    void [commandsChanged, vault, active]
+    void [commandsChanged, vault, active, texDist.checked, texDist.info]
     untrack(() => window.api.setMenuBar(menuBar(commands.all(), commandContext())))
   })
   // Each vault has its own plugins on; the main process has switched them already.
@@ -733,12 +756,21 @@
       ? `Just ${result.section} of ${result.root}, numbered as in the whole paper, with its labels and citations from the last full build. The whole paper builds when another of its files changes, or with Build → Recompile`
       : `${result.root}: ${result.passes} pass${result.passes === 1 ? '' : 'es'}${result.preloaded ? ', preamble preloaded' : ''}${result.fullReason ? `. Built in full: ${result.fullReason}` : ''}`
     const what = result.section ? result.section : result.draft ? 'Preview' : 'Built'
-    if (errors) return { kind: 'err', note: `${errors} error${errors === 1 ? '' : 's'}${result.section ? ` in ${result.section}` : result.draft ? ' in preview' : ' · pdf/ unchanged'}`, detail: how }
-    return { kind: 'ok', note: `${what} · ${(result.durationMs / 1000).toFixed(1)} s`, detail: how }
+    if (errors) {
+      const section = result.section ? { text: result.section, tip: 'The section of the document the error is in' } : undefined
+      return { kind: 'err', note: `${errors} error${errors === 1 ? '' : 's'}${result.section ? ` in ${result.section}` : result.draft ? ' in preview' : ' · pdf/ unchanged'}`, detail: how, section }
+    }
+    const section = result.section ? { text: result.section, tip: 'The section of the document that was built' } : undefined
+    return { kind: 'ok', note: `${what} · ${(result.durationMs / 1000).toFixed(1)} s`, detail: how, section }
   })
   const problemCounts = $derived({
     errors: result?.problems.filter((p) => p.severity === 'error' && !p.hidden && !p.followOn).length ?? 0,
     warnings: result?.problems.filter((p) => p.severity === 'warning' && !p.hidden).length ?? 0,
+  })
+
+  // The first time the Problems panel shows an error, its hint explains it.
+  $effect(() => {
+    if (panelOpen && panelTab === 'problems' && problemCounts.errors) untrack(() => triggerHint('first-error'))
   })
 
   function togglePdf(): void {
@@ -994,6 +1026,7 @@
 
   onMount(() => {
     window.api.getAppearance().then((a) => (appearance = a))
+    checkTeX()
     window.api.getVault().then((v) => {
       vault = v
       started = true
@@ -1027,17 +1060,85 @@
 
   /**
    * Swaps in the vault `get` opens (after offering to save unsaved files);
-   * `get` returning null (a cancelled dialog) changes nothing.
+   * `get` returning null (a cancelled dialog) changes nothing. True if it switched.
    */
-  async function switchVault(get: () => Promise<VaultInfo | null>): Promise<void> {
-    if (vault && !(await settleUnsaved('opening another vault'))) return
-    const v = await get().catch((e: Error) => (flash(e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')), null))
-    if (!v) return
+  async function switchVault(get: () => Promise<VaultInfo | null>): Promise<boolean> {
+    if (vault && !(await settleUnsaved('opening another vault'))) return false
+    const v = await get().catch((e: Error) => (flash(remoteMessage(e)), null))
+    if (v) adopt(v)
+    return !!v
+  }
+
+  const remoteMessage = (e: Error) => e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
+
+  /** Shows `v` in place of the open vault (if any). */
+  function adopt(v: VaultInfo): void {
     reset()
     vault = v
     loadImages()
     loadSnippets()
     refreshBranch()
+  }
+
+  /**
+   * Help → Getting Started, and the welcome screen's button: the student's
+   * copy of the Getting-started vault, with main.tex in Live view beside the
+   * PDF pane. A copy that has changed since it was made offers Start over.
+   */
+  async function openGettingStarted(): Promise<void> {
+    let changed = false
+    const opened = await switchVault(async () => {
+      const r = await window.api.openGettingStarted()
+      changed = r.changed
+      return r.vault
+    })
+    if (!opened) return
+    await openInLive('main.tex')
+    if (changed) flash('This is your copy of the Getting-started vault, with your changes.', { label: 'Start over', run: () => void startGettingStartedOver() })
+  }
+
+  /** Replaces the student's Getting-started copy with a fresh one (the main process asks first). */
+  async function startGettingStartedOver(): Promise<void> {
+    if (await switchVault(() => window.api.startGettingStartedOver())) await openInLive('main.tex')
+  }
+
+  /** Opens `rel` of a vault just adopted in Live view, beside the PDF pane. */
+  async function openInLive(rel: string): Promise<void> {
+    await tick() // the editor mounts once the vault is set
+    await go(rel)
+    editor?.setLiveMode(true)
+    pdfOpen = true
+  }
+
+  /** The new vault being set up, once its folder is picked: its name and starter are asked next. */
+  let vaultSetup = $state<Extract<NewVaultPick, { kind: 'setup' }> | null>(null)
+
+  /**
+   * New vault…: a folder already holding .tex files opens as it is; any other
+   * is named and given a starter (NewVaultDialog), then made by makeVault.
+   */
+  async function newVault(): Promise<void> {
+    await switchVault(async () => {
+      const pick = await window.api.newVault()
+      if (pick?.kind === 'setup') vaultSetup = pick
+      return pick?.kind === 'opened' ? pick.vault : null
+    })
+  }
+
+  /** Makes the vault being set up and opens its main.tex in Live view beside its PDF, building once. Resolves to an error to show, or null. */
+  async function makeVault(name: string, starter: string): Promise<string | null> {
+    if (!vaultSetup) return null
+    let made: { vault: VaultInfo; main: string }
+    try {
+      made = await window.api.makeVault(vaultSetup.root, name, starter)
+    } catch (e) {
+      return remoteMessage(e as Error)
+    }
+    vaultSetup = null
+    adopt(made.vault)
+    await openInLive(made.main)
+    await compile(made.main) // without TeX it doesn't build, and the PDF pane shows what to install
+    return null
   }
 
   /** Back to the welcome screen. */
@@ -1083,6 +1184,7 @@
     }
     if (!cycling) mru = [rel, ...mru.filter((r) => r !== rel)]
     loadMacros(rel)
+    if (rel.toLowerCase().endsWith('.tex')) triggerHint('live-source')
   }
 
   // --- Back and forward ---------------------------------------------------------
@@ -1457,9 +1559,9 @@
   const newFileDir = () => (active ? dirName(active) : (tree?.targetDir() ?? ''))
   const allFolders = (nodes: TreeNode[]): string[] => nodes.flatMap((n) => (n.kind === 'dir' ? [n.rel, ...allFolders(n.children ?? [])] : []))
 
-  async function createFromStarter(rel: string, text: string): Promise<string | null> {
+  async function createFromStarter(rel: string, starter: Starter, values: Record<string, string>): Promise<string | null> {
     try {
-      await window.api.createFile(rel, text)
+      await window.api.createFromStarter(starter.id, rel, values)
     } catch (e) {
       return (e as Error).message
     }
@@ -1815,6 +1917,7 @@
    * for a file of a marked paper when that's enough (the main process decides).
    */
   async function compile(rel: string, saving = false): Promise<void> {
+    if (!(await texReady())) return // no TeX: saving just saves; the PDF pane says what to install
     clearTimeout(previewTimer) // this build includes whatever the preview would have
     const seq = ++compileSeq
     compiling = true
@@ -1825,6 +1928,8 @@
       if (!r) return
       if (seq !== compileSeq) return // a newer save superseded this compile
       show(r)
+      // Without TeX nothing builds (see the top of compile), so this hint can't show then.
+      if (r.pdf && !r.problems.some((p) => p.severity === 'error' && !p.hidden)) triggerHint('first-build')
     } finally {
       if (seq === compileSeq) compiling = false
     }
@@ -1856,7 +1961,7 @@
   }
 
   async function preview(rel: string, force = false): Promise<void> {
-    if (!editor) return
+    if (!editor || !(await texReady())) return
     // A saved build is running: try again after it, which may make this unnecessary.
     if (compiling) return schedulePreview(rel)
     const buffers = Object.fromEntries(editor.dirtyTexts())
@@ -1968,6 +2073,7 @@
     ontogglepanel={() => togglePanel()}
     onribbon={() => togglePanel('problems')}
   />
+  <HintStrip {keyFor} />
 
   {#if !started}
     <div class="starting"></div>
@@ -1975,7 +2081,8 @@
     <Welcome
       onopen={openVault}
       onopenat={(root) => switchVault(() => window.api.openVaultAt(root))}
-      onnew={() => switchVault(() => window.api.newVault())}
+      onnew={newVault}
+      ontry={openGettingStarted}
     />
     {#if note}<div class="note welcome-note">{note}</div>{/if}
   {:else}
@@ -2179,7 +2286,7 @@
                 onfindstep={findStep}
               />
             </div>
-            {#if !active}<EmptyPlate logo={logoUrl(endpaper.palette, 'mid')} />{/if}
+            {#if !active}<EmptyPlate logo={logoUrl(endpaper.palette, 'mid')} keys={plateKeys} links={plateLinks} onrun={(id) => commands.run(id, commandContext())} />{/if}
             {#if replaced}
               <ReplaceReport
                 files={replaced}
@@ -2197,7 +2304,7 @@
           </section>
           <div class="splitter v" hidden={!showPdf} role="separator" aria-orientation="vertical" onpointerdown={startDrag}></div>
           <section class="pdf-pane" hidden={!showPdf}>
-            <PdfViewer bind:this={viewer} {pdf} version={pdfVersion} scope={pdfScope} canDrag={!!result && !result.draft && !result.section} onsyncclick={syncInverse} onclose={() => (pdfOpen = false)} onmessage={flash} />
+            <PdfViewer bind:this={viewer} {pdf} version={pdfVersion} scope={pdfScope} canDrag={!!result && !result.draft && !result.section} onsyncclick={syncInverse} onclose={() => (pdfOpen = false)} onmessage={flash} {keyFor} />
           </section>
         </div>
         <div class="splitter h" hidden={!panelOpen} role="separator" aria-orientation="horizontal" onpointerdown={dragPanel}></div>
@@ -2241,6 +2348,11 @@
       editor?.focus()
     }}
   />
+{/if}
+
+{#if vaultSetup}
+  {@const vs = vaultSetup}
+  <NewVaultDialog folder={vs.root} name={vs.name} starters={vs.starters} preselect={vs.preselect} oncreate={makeVault} oncancel={() => (vaultSetup = null)} />
 {/if}
 
 {#if newFileIn !== null && vault}
@@ -2304,6 +2416,26 @@
     }}
     onclose={() => {
       quickOpen = false
+      editor?.focus()
+    }}
+  />
+{/if}
+
+{#if shortcuts}
+  <ShortcutsPanel
+    commands={commands.all()}
+    onclose={() => {
+      shortcuts = false
+      editor?.focus()
+    }}
+  />
+{/if}
+
+{#if about}
+  <AboutDialog
+    info={about}
+    onclose={() => {
+      about = null
       editor?.focus()
     }}
   />

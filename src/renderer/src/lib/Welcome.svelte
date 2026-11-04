@@ -8,16 +8,21 @@
   import { defaultVaultAppearance, type VaultAppearance } from '@shared/appearance'
   import { logoUrl } from './appearance'
   import { marbleCss } from './marbles.svelte'
+  import NoTexCard from './NoTexCard.svelte'
+  import { texMissing } from './texDist.svelte'
 
   let {
     onopen,
     onopenat,
     onnew,
+    ontry,
   }: {
     /** Open a folder with the system picker. */
     onopen: () => void
     onopenat: (root: string) => void
     onnew: () => void
+    /** Open the Getting-started vault. */
+    ontry: () => void
   } = $props()
 
   let recent = $state<RecentVault[]>([])
@@ -79,7 +84,10 @@
     <div class="actions">
       <button class="btn primary" onclick={onopen}>Open a folder…</button>
       <button class="btn" onclick={onnew}>New vault…</button>
+      <button class="btn" onclick={ontry} title="A short lab report that shows you round endleaf as you read it">Try the Getting-started vault</button>
     </div>
+    <p class="about">A vault is a folder of related .tex files: a course, a lab report, a paper.</p>
+    {#if texMissing()}<div class="tex-card"><NoTexCard /></div>{/if}
   </div>
 </div>
 
@@ -221,6 +229,14 @@
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
+  }
+  .about {
+    margin: 12px 0 0;
+    font: italic 15px var(--f-page);
+    color: var(--ink-soft);
+  }
+  .tex-card {
+    margin-top: 18px;
   }
   .btn {
     border: 1px solid color-mix(in srgb, var(--ink) 45%, transparent);

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { CommandRegistry, keyLabel, paletteLabel, pluginCommand, searchCommands, type Command, type Context } from '../src/renderer/src/lib/commands'
 
-const NONE: Context = { vault: false, editor: false, tex: false }
-const TEX: Context = { vault: true, editor: true, tex: true }
+const NONE: Context = { vault: false, editor: false, tex: false, build: true }
+const TEX: Context = { vault: true, editor: true, tex: true, build: true }
 
 const cmd = (c: Partial<Command> & { id: string }): Command => ({ title: c.id, category: 'Edit', run: () => {}, ...c })
 
@@ -25,7 +25,7 @@ describe('command registry', () => {
     const r = new CommandRegistry()
     r.register(cmd({ id: 'always' }), cmd({ id: 'vault', when: ['vault'] }), cmd({ id: 'tex', when: ['vault', 'tex'] }))
     expect(r.available(NONE).map((c) => c.id)).toEqual(['always'])
-    expect(r.available({ vault: true, editor: true, tex: false }).map((c) => c.id)).toEqual(['always', 'vault'])
+    expect(r.available({ vault: true, editor: true, tex: false, build: true }).map((c) => c.id)).toEqual(['always', 'vault'])
     expect(r.available(TEX).map((c) => c.id)).toEqual(['always', 'vault', 'tex'])
   })
 })
@@ -69,8 +69,8 @@ describe('keys', () => {
     const hints: string[] = []
     const r = new CommandRegistry(undefined, (h) => hints.push(h))
     r.register(cmd({ id: 'cite', key: 'Mod-Shift-c', when: ['vault', 'tex'], hint: 'Open a .tex file to cite' }), cmd({ id: 'plain', key: 'Mod-Shift-x', when: ['tex'] }))
-    expect(r.handleKey(press('C', { ctrl: true, shift: true }), { vault: true, editor: true, tex: false }, 'app')).toBe(true)
-    expect(r.handleKey(press('X', { ctrl: true, shift: true }), { vault: true, editor: true, tex: false }, 'app')).toBe(false)
+    expect(r.handleKey(press('C', { ctrl: true, shift: true }), { vault: true, editor: true, tex: false, build: true }, 'app')).toBe(true)
+    expect(r.handleKey(press('X', { ctrl: true, shift: true }), { vault: true, editor: true, tex: false, build: true }, 'app')).toBe(false)
     expect(hints).toEqual(['Open a .tex file to cite'])
   })
 
@@ -86,6 +86,55 @@ describe('keys', () => {
     const r = new CommandRegistry()
     r.register(cmd({ id: 'eq', key: 'Mod-Alt-e', editorKey: true }))
     expect(r.handleKey(press('é', { ctrl: true, alt: true }, 'KeyE'), TEX, 'editor')).toBe(true)
+  })
+})
+
+describe('chords', () => {
+  const chorded = () => {
+    const ran: string[] = []
+    const r = new CommandRegistry()
+    r.register(
+      cmd({ id: 'shortcuts', key: 'Mod-k Mod-s', run: () => void ran.push('shortcuts') }),
+      cmd({ id: 'save', key: 'Mod-s', run: () => void ran.push('save') }),
+    )
+    return { r, ran }
+  }
+
+  it('runs a two-key chord: the first key arms it, the second runs it', () => {
+    const { r, ran } = chorded()
+    expect(r.handleKey(press('k', { ctrl: true }), TEX, 'app')).toBe(true)
+    expect(ran).toEqual([])
+    expect(r.handleKey(press('s', { ctrl: true }), TEX, 'app')).toBe(true)
+    expect(ran).toEqual(['shortcuts'])
+  })
+
+  it('cancels on Escape or any other key, swallowing it, and then keys work as usual', () => {
+    const { r, ran } = chorded()
+    r.handleKey(press('k', { ctrl: true }), TEX, 'app')
+    expect(r.handleKey(press('Escape'), TEX, 'app')).toBe(true)
+    r.handleKey(press('k', { ctrl: true }), TEX, 'app')
+    expect(r.handleKey(press('x', { ctrl: true }), TEX, 'app')).toBe(true)
+    expect(ran).toEqual([])
+    expect(r.handleKey(press('s', { ctrl: true }), TEX, 'app')).toBe(true)
+    expect(ran).toEqual(['save'])
+  })
+
+  it("doesn't arm for a chord whose condition doesn't hold", () => {
+    const r = new CommandRegistry()
+    r.register(cmd({ id: 'x', key: 'Mod-k Mod-s', when: ['vault'] }))
+    expect(r.handleKey(press('k', { ctrl: true }), NONE, 'app')).toBe(false)
+  })
+
+  it('ignores a modifier pressed on its own between the two keys', () => {
+    const { r, ran } = chorded()
+    r.handleKey(press('k', { ctrl: true }), TEX, 'app')
+    r.handleKey(press('Control', { ctrl: true }), TEX, 'app')
+    r.handleKey(press('s', { ctrl: true }), TEX, 'app')
+    expect(ran).toEqual(['shortcuts'])
+  })
+
+  it('labels a chord as its two keys', () => {
+    expect(keyLabel('Mod-k Mod-s', false)).toBe('Ctrl+K Ctrl+S')
   })
 })
 
@@ -105,15 +154,15 @@ describe("a plugin's command", () => {
     expect(paletteLabel(symbols)).toBe('Insert: Symbols…')
     const r = new CommandRegistry()
     r.register(symbols)
-    expect(r.available({ vault: true, editor: true, tex: false })).toEqual([])
+    expect(r.available({ vault: true, editor: true, tex: false, build: true })).toEqual([])
     expect(r.available(TEX)).toEqual([symbols])
   })
 
   it('needs an open file, as it acts on the editor', () => {
     const r = new CommandRegistry()
     r.register(sync)
-    expect(r.available({ vault: true, editor: false, tex: false })).toEqual([])
-    expect(r.available({ vault: true, editor: true, tex: false })).toEqual([sync])
+    expect(r.available({ vault: true, editor: false, tex: false, build: true })).toEqual([])
+    expect(r.available({ vault: true, editor: true, tex: false, build: true })).toEqual([sync])
   })
 })
 
@@ -122,6 +171,14 @@ describe('key labels', () => {
     expect(keyLabel('Mod-Shift-b', false)).toBe('Ctrl+Shift+B')
     expect(keyLabel('Alt-ArrowLeft', false)).toBe('Alt+Left')
     expect(keyLabel('F2', false)).toBe('F2')
+  })
+
+  it("gives a registered command's key by id, or null without one", () => {
+    const r = new CommandRegistry()
+    r.register(cmd({ id: 'file.save', key: 'Mod-s' }), cmd({ id: 'file.quiet' }))
+    expect(r.keyFor('file.save', false)).toBe('Ctrl+S')
+    expect(r.keyFor('file.quiet', false)).toBeNull()
+    expect(r.keyFor('file.missing', false)).toBeNull()
   })
 })
 

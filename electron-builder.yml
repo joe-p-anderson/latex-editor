@@ -10,6 +10,12 @@ directories:
 files:
   - out/**
   - resources/pdf-drag.png
+  # The Getting-started vault, copied into Documents on first use (src/main/gettingStarted.ts).
+  - resources/getting-started/**
+  - resources/getting-started/.vault.json
+  # The built-in starters, read by the New file and New vault dialogs (src/main/starters.ts).
+  - resources/starters/**
+  - resources/starters/**/.keep
   - endleaf-marbled-themes/icons/*.ico
   - package.json
 win:

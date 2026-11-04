@@ -13,7 +13,7 @@ A folder that holds document classes (`.cls`), styles and a `starters/` subfolde
 _Avoid:_ "template" on its own for a file a new document is made from. That's a starter.
 
 **Starter**
-A file a new document is created from, shown in the New file dialog. Starters are built in, shipped by plugins, or read from `starters/` in a template folder. Examples: Article, Handout, Lab report (revtex).
+A file or folder a new document is created from, shown in the New file and New vault dialogs. A folder starter's **entry file** (its `main.tex`, or its only top-level `.tex` file) becomes the new document, and its other files are made beside it, each only if missing. Starters are built in (`resources/starters/`), shipped by plugins, or read from `starters/` in a template folder; one of the user's replaces a built-in one of the same name. Examples: Article, Handout, Lab report (revtex).
 _Avoid:_ template (for this meaning).
 
 **Default starter**
@@ -33,6 +33,12 @@ The editor mode that shows plain LaTeX source with syntax colouring.
 **Build**
 Running LaTeX on a document's root to produce its PDF. Saving a `.tex` file builds it. Build → Recompile and Ctrl+Shift+B build without saving.
 _Avoid:_ compile in UI text (fine in code).
+
+**Layout problem**
+A build message about how the text sits on the page rather than an error: a line sticking out into the margin (overfull), one stretched too loosely (underfull), or a figure that couldn't go exactly "here". The PDF still builds. The Problems panel lists them under Layout.
+
+**Section build**
+Building just one section file (§III) of a multi-part paper, numbered as in the whole paper. The § in the title bar's build note names the section built, or the one the error is in.
 
 **Command**
 A named action the user can run, with an id, title, category, optional default key and a condition for when it applies. Every command is in the command registry, which generates the command palette, the menus, the keymap and the keyboard shortcuts panel. See [ADR-0001](docs/adr/0001-one-command-registry.md).

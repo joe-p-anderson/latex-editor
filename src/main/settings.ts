@@ -4,6 +4,7 @@ import { app } from 'electron'
 import { copyFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { normalizeAppAppearance, type AppAppearance } from '../shared/appearance'
+import { DEFAULT_STARTER, starterName } from '../shared/starters'
 import type { GlobalPluginEntry } from '../shared/plugin'
 
 export interface AppSettings {
@@ -17,6 +18,10 @@ export interface AppSettings {
   appearance?: Partial<AppAppearance>
   /** Each plugin's default for vaults that haven't said, and its global settings. */
   plugins?: Record<string, GlobalPluginEntry>
+  /** The starter New file preselects in vaults that name none; read through appDefaultStarter(). */
+  defaultStarter?: string
+  /** First-time hints closed with their ×, never shown again (src/shared/hints.ts). */
+  dismissedHints?: string[]
 }
 
 const settingsPath = () => join(app.getPath('userData'), 'settings.json')
@@ -33,6 +38,12 @@ export async function loadSettings(): Promise<AppSettings> {
 export async function saveSettings(changes: Partial<AppSettings>): Promise<void> {
   const s = { ...(await loadSettings()), ...changes }
   await writeFile(settingsPath(), JSON.stringify(s, null, 2))
+}
+
+/** Stores a first-time hint as dismissed. */
+export async function dismissHint(id: string): Promise<void> {
+  const ids = (await loadSettings()).dismissedHints ?? []
+  if (!ids.includes(id)) await saveSettings({ dismissedHints: [...ids, id] })
 }
 
 /** The global snippet files, null where missing. */
@@ -73,4 +84,9 @@ export async function saveAppAppearance(changes: Partial<AppAppearance>): Promis
   const next = normalizeAppAppearance({ ...(await appAppearance()), ...changes })
   await saveSettings({ appearance: next })
   return next
+}
+
+/** The app-wide default starter's name: the one in settings.json, else Lab report (revtex). */
+export async function appDefaultStarter(): Promise<string> {
+  return starterName((await loadSettings()).defaultStarter) ?? DEFAULT_STARTER
 }

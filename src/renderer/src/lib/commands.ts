@@ -8,8 +8,11 @@ import type { MenuLabel } from '@shared/menu'
 /** The menu a command goes in, which the palette names it by too. */
 export type Category = MenuLabel
 
-/** A condition a command needs: a vault is open, a file is open in the editor, or a `.tex` file is. */
-export type Condition = 'vault' | 'editor' | 'tex'
+/**
+ * A condition a command needs: a vault is open, a file is open in the
+ * editor, a `.tex` file is, or TeX is installed so documents can build.
+ */
+export type Condition = 'vault' | 'editor' | 'tex' | 'build'
 
 /** Which conditions hold now. */
 export type Context = Record<Condition, boolean>
@@ -22,7 +25,7 @@ export interface Command {
   category: Category
   /** The plugin's name, for a plugin's command: the palette shows "Tools: Zotero: …". */
   group?: string
-  /** Default key, in CodeMirror notation (`Mod-Shift-b`). */
+  /** Default key, in CodeMirror notation (`Mod-Shift-b`); a chord is two, space-separated (`Mod-k Mod-s`). */
   key?: string
   /** Other keys that run it too (Ctrl+Shift+H for Find in Vault); menus and the palette show only `key`. */
   aliases?: string[]
@@ -41,6 +44,11 @@ export interface Command {
   menuTitle?: (ctx: Context) => string
   /** False keeps it out of the menu bar (it's in the palette all the same). */
   menu?: false
+  /**
+   * Its place in its menu, lowest first, for a menu whose commands are
+   * registered apart (Help); those without one follow, in registration order.
+   */
+  menuOrder?: number
   /** Other words the palette finds it by ("compile" for Recompile). */
   keywords?: string[]
   /** Returning false means it didn't apply, and a key falls through to whatever else binds it. */
@@ -67,6 +75,8 @@ export const pluginCommand = (c: { id: string; title: string; plugin: string; ke
 export class CommandRegistry {
   private list: Command[] = []
   private listeners = new Set<() => void>()
+  /** The scope a chord's first key was pressed in, while it waits for the second. */
+  private armed: 'app' | 'editor' | null = null
 
   /**
    * `onError` is called with a failed command and its error (a rejected
@@ -99,6 +109,12 @@ export class CommandRegistry {
     return this.list
   }
 
+  /** The key that runs `id`, for people ("Ctrl+S"); null if it isn't registered or has no key. */
+  keyFor(id: string, mac?: boolean): string | null {
+    const key = this.get(id)?.key
+    return key ? keyLabel(key, mac) : null
+  }
+
   /** The commands that can run now, in registration order. */
   available(ctx: Context): Command[] {
     return this.list.filter((c) => holds(c, ctx))
@@ -117,10 +133,24 @@ export class CommandRegistry {
    * caller then stops the event.
    */
   handleKey(e: KeyLike, ctx: Context, scope: 'app' | 'editor'): boolean {
+    const mine = this.list.filter((c) => !!c.editorKey === (scope === 'editor'))
+    const keys = (c: Command) => [c.key, ...(c.aliases ?? [])].filter((k): k is string => !!k).map(keyPresses)
+    // A chord's second key: it runs the chord it completes, and any other key (Escape too) cancels. Either way it's swallowed.
+    if (this.armed === scope) {
+      if (MODIFIERS.includes(e.key)) return false
+      this.armed = null
+      const c = mine.find((c) => holds(c, ctx) && keys(c).some((k) => k.length === 2 && keyMatches(k[1], e)))
+      if (c) this.call(c)
+      return true
+    }
     let hint: string | undefined
-    for (const c of this.list) {
-      if (!!c.editorKey !== (scope === 'editor')) continue
-      if (![c.key, ...(c.aliases ?? [])].some((k) => k && keyMatches(k, e))) continue
+    for (const c of mine) {
+      const ks = keys(c)
+      if (holds(c, ctx) && ks.some((k) => k.length === 2 && keyMatches(k[0], e))) {
+        this.armed = scope
+        return true
+      }
+      if (!ks.some((k) => k.length === 1 && keyMatches(k[0], e))) continue
       if (!holds(c, ctx)) hint ??= c.hint
       else if (this.call(c)) return true
     }
@@ -154,6 +184,14 @@ export class CommandRegistry {
 /** The parts of a KeyboardEvent a key binding looks at. */
 export type KeyLike = Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'altKey' | 'shiftKey' | 'metaKey'> & { code?: string }
 
+/** A key's presses: one, or two for a chord (`Mod-k Mod-s`). */
+export const keyPresses = (key: string): string[] => key.split(' ')
+
+/** Whether `key` is a chord: two presses, one after the other. */
+export const isChord = (key: string): boolean => keyPresses(key).length === 2
+
+const MODIFIERS = ['Control', 'Shift', 'Alt', 'Meta', 'AltGraph']
+
 const isMac = typeof navigator !== 'undefined' && /Mac/.test(navigator.platform)
 
 /** Whether `e` is the key `key` (CodeMirror notation: `Mod-Shift-b`, `Alt-ArrowLeft`, `F2`). */
@@ -178,6 +216,7 @@ export function keyMatches(key: string, e: KeyLike, mac = isMac): boolean {
 
 /** A key for people: `Mod-Shift-b` → "Ctrl+Shift+B". */
 export function keyLabel(key: string, mac = isMac): string {
+  if (isChord(key)) return keyPresses(key).map((k) => keyLabel(k, mac)).join(' ')
   return key
     .split(/-(?!$)/)
     .map((p) => (p === 'Mod' ? (mac ? 'Cmd' : 'Ctrl') : p.startsWith('Arrow') ? p.slice(5) : p.length === 1 ? p.toUpperCase() : p))

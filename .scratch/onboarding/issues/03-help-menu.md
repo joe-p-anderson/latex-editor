@@ -1,6 +1,6 @@
 # Help menu and Keyboard Shortcuts panel
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: ux-fixes 01, ux-fixes 02
 
 Spec: [../spec.md](../spec.md#help-menu).
@@ -26,3 +26,7 @@ If the registry doesn't support chords yet, add them: the first key arms the cho
 - [ ] The panel is generated from the registry: a test adds a command with a key and sees it listed.
 
 ## Comments
+
+## Comments
+
+Resolved on branch `onboarding` (2026-11-04).

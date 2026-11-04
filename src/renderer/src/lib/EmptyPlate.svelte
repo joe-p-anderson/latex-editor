@@ -1,14 +1,22 @@
 <script lang="ts">
-  /** No file open: the vault's marbling, with a small bookplate of the main keys. */
-  let { logo }: { logo?: string } = $props()
+  /**
+   * No file open: the vault's marbling, with a small bookplate of the main
+   * keys (from the command registry) and links to Help's commands.
+   */
+  import type { PlateKey } from './emptyPlate'
 
-  const KEYS: [string, string][] = [
-    ['Ctrl P', 'Go to a file'],
-    ['Ctrl Shift F', 'Search the vault'],
-    ['Ctrl Alt B', 'Show or hide the sidebar'],
-    ['Ctrl Alt V', 'Show or hide the PDF'],
-    ['Ctrl J', 'Problems and log'],
-  ]
+  let {
+    logo,
+    keys,
+    links = [],
+    onrun,
+  }: {
+    logo?: string
+    keys: PlateKey[]
+    /** Commands to offer as links, by id; only the registered ones are passed. */
+    links?: { id: string; label: string }[]
+    onrun: (id: string) => void
+  } = $props()
 </script>
 
 <div class="empty">
@@ -17,8 +25,13 @@
     {#if logo}<img class="logo" src={logo} alt="" />{/if}
     <h3>No file open</h3>
     <div class="keys">
-      {#each KEYS as [key, what] (key)}<kbd>{key}</kbd><span>{what}</span>{/each}
+      {#each keys as k (k.id)}<kbd>{k.key}</kbd><span>{k.title}</span>{/each}
     </div>
+    {#if links.length}
+      <p class="links">
+        {#each links as l, i (l.id)}{#if i}<span class="dot"> · </span>{/if}<button onclick={() => onrun(l.id)}>{l.label}</button>{/each}
+      </p>
+    {/if}
   </div>
 </div>
 
@@ -75,6 +88,25 @@
     align-items: center;
     font: 15px var(--f-page);
     color: var(--ink-soft);
+  }
+  .links {
+    margin: 14px 0 0;
+    font: 15px var(--f-page);
+    color: var(--ink-soft);
+  }
+  .links button {
+    font: inherit;
+    color: var(--ink);
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--ink) 40%, transparent);
+    text-underline-offset: 3px;
+  }
+  .links button:hover {
+    text-decoration-color: currentColor;
   }
   kbd {
     justify-self: end;

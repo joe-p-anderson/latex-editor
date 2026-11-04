@@ -6,6 +6,7 @@ import type { TreeNode, VaultInfo } from '../shared/api'
 import { DEFAULT_LISTS } from '../shared/latexedit'
 import { normalizeVaultAppearance, type VaultAppearance } from '../shared/appearance'
 import type { SettingValues, VaultPluginEntry } from '../shared/plugin'
+import { starterName } from '../shared/starters'
 
 /**
  * `dir` with Windows 8.3 short names (C:\Users\JANDER~1) expanded, or `dir`
@@ -45,6 +46,8 @@ interface VaultSettings {
   papers?: string[]
   /** Plugins on or off in this vault, and their vault settings (src/shared/plugin.ts). */
   plugins?: Record<string, VaultPluginEntry>
+  /** The starter New file preselects here, by name; the app-wide default when unset. */
+  defaultStarter?: string
 }
 
 // Where images go when none is configured: the first of these that exists.
@@ -79,6 +82,8 @@ export class Vault {
   papers: string[] = []
   /** Plugin entries from .vault.json. */
   plugins: Record<string, VaultPluginEntry> = {}
+  /** The starter New file preselects here, by name, or null for the app-wide default. */
+  defaultStarter: string | null = null
   private watcher: FSWatcher | null = null
   /** Called with each file added, changed or removed (vault-relative), for plugins. */
   private fileListeners = new Set<(event: 'add' | 'change' | 'unlink', rel: string) => void>()
@@ -155,6 +160,17 @@ export class Vault {
     this.appearance = normalizeVaultAppearance(settings.appearance, this.folderName)
     this.papers = Array.isArray(settings.papers) ? settings.papers.filter((p) => typeof p === 'string') : []
     this.plugins = settings.plugins && typeof settings.plugins === 'object' ? settings.plugins : {}
+    this.defaultStarter = starterName(settings.defaultStarter)
+  }
+
+  /** Sets the starter New file preselects in this vault (null goes back to the app-wide default), in .vault.json. */
+  saveDefaultStarter(name: string | null): Promise<void> {
+    return this.updateSettings((settings) => {
+      const trimmed = name?.trim() || null
+      if (trimmed) settings.defaultStarter = trimmed
+      else delete settings.defaultStarter
+      this.defaultStarter = trimmed
+    })
   }
 
   /**

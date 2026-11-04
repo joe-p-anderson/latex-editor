@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { CommandRegistry, paletteLabel, searchCommands, type Context } from '../src/renderer/src/lib/commands'
 import { coreCommands, type CoreActions } from '../src/renderer/src/lib/coreCommands'
+import { emptyPlateKeys } from '../src/renderer/src/lib/emptyPlate'
+import { gettingStartedCommand } from '../src/renderer/src/lib/gettingStarted'
 
 /** Actions that record what ran. */
 function recorder(): { actions: CoreActions; ran: string[] } {
@@ -21,9 +23,9 @@ const registry = () => {
   return { reg, ran: r.ran }
 }
 
-const NONE: Context = { vault: false, editor: false, tex: false }
-const BIB: Context = { vault: true, editor: true, tex: false }
-const TEX: Context = { vault: true, editor: true, tex: true }
+const NONE: Context = { vault: false, editor: false, tex: false, build: true }
+const BIB: Context = { vault: true, editor: true, tex: false, build: true }
+const TEX: Context = { vault: true, editor: true, tex: true, build: true }
 const labels = (ctx: Context) => registry().reg.available(ctx).map(paletteLabel)
 
 describe('core commands', () => {
@@ -49,6 +51,15 @@ describe('core commands', () => {
     expect(shown).toContain('File: Switch Vault…')
     expect(shown).not.toContain('Build: Recompile')
     expect(shown).not.toContain('File: New File…')
+  })
+
+  it('leave out Recompile without TeX, but still save', () => {
+    const { reg, ran } = registry()
+    const noTeX = { ...TEX, build: false }
+    expect(reg.available(noTeX).map(paletteLabel)).not.toContain('Build: Recompile')
+    expect(reg.run('build.recompile', noTeX)).toBe(false)
+    expect(reg.run('file.save', noTeX)).toBe(true)
+    expect(ran).toEqual(['save'])
   })
 
   it('hide Insert commands unless a .tex file is active', () => {
@@ -80,6 +91,17 @@ describe('core commands', () => {
     expect(pressed('F', { shift: true })).toEqual(['findInVault'])
     expect(pressed('H', { shift: true })).toEqual(['findInVault'])
     expect(pressed('B', { shift: true })).toEqual(['recompile'])
+  })
+
+  it('open Keyboard Shortcuts on Ctrl+K Ctrl+S, and do nothing for Ctrl+K then another key', () => {
+    const { reg, ran } = registry()
+    const key = (k: string, scope: 'app' | 'editor' = 'app') => reg.handleKey({ key: k, ctrlKey: true, altKey: false, shiftKey: false, metaKey: false }, TEX, scope)
+    key('k')
+    key('s')
+    expect(ran).toEqual(['keyboardShortcuts'])
+    key('k')
+    expect(key('b')).toBe(true)
+    expect(ran).toEqual(['keyboardShortcuts'])
   })
 
   it('move figure to Ctrl+Alt+F, the sidebar to Ctrl+Alt+B, and give figure* no key', () => {
@@ -134,7 +156,47 @@ describe('core commands', () => {
   })
 
   it('hide Live View with no file open', () => {
-    expect(labels({ vault: true, editor: false, tex: false })).not.toContain('View: Live View')
+    expect(labels({ vault: true, editor: false, tex: false, build: true })).not.toContain('View: Live View')
     expect(labels(BIB)).toContain('View: Live View')
+  })
+
+})
+
+describe('Help → Getting Started', () => {
+  it('opens the Getting-started vault, with or without a vault open', () => {
+    let opened = 0
+    const reg = new CommandRegistry()
+    reg.register(gettingStartedCommand(async () => void opened++))
+    for (const ctx of [NONE, TEX]) expect(reg.available(ctx).map(paletteLabel)).toContain('Help: Getting Started')
+    reg.run('help.gettingStarted', NONE)
+    expect(opened).toBe(1)
+  })
+})
+
+describe('the empty editor', () => {
+  it('lists the main keys from the registry, as a .tex file would run them', () => {
+    const { reg } = registry()
+    expect(emptyPlateKeys(reg, { build: true, mac: false })).toEqual([
+      { id: 'tools.commandPalette', key: 'Ctrl+Shift+P', title: 'Run Command' },
+      { id: 'file.goToFile', key: 'Ctrl+P', title: 'Go to File' },
+      { id: 'file.newFile', key: 'Ctrl+N', title: 'New File' },
+      { id: 'file.save', key: 'Ctrl+S', title: 'Save and Build' },
+      { id: 'edit.findInVault', key: 'Ctrl+Shift+F', title: 'Find in Vault' },
+    ])
+  })
+
+  it("follows a command's key when it changes, and leaves out one without a key", () => {
+    const { reg } = registry()
+    reg.get('file.goToFile')!.key = 'Mod-e'
+    delete reg.get('file.newFile')!.key
+    const keys = emptyPlateKeys(reg, { build: true, mac: false })
+    expect(keys.find((k) => k.id === 'file.goToFile')?.key).toBe('Ctrl+E')
+    expect(keys.map((k) => k.id)).not.toContain('file.newFile')
+  })
+
+  it('says Save, not Save and Build, when nothing can build', () => {
+    const { reg } = registry()
+    const keys = emptyPlateKeys(reg, { build: false, mac: false })
+    expect(keys.find((k) => k.id === 'file.save')?.title).toBe('Save')
   })
 })
