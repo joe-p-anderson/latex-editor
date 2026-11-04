@@ -125,8 +125,9 @@
     margin: 8px 0;
   }
   .label {
-    font: 700 8.5px var(--f-ui);
-    letter-spacing: 0.14em;
+    font: 700 11px var(--f-ui);
+    letter-spacing: 0.08em;
+    margin-right: -0.08em; /* centre it: drop the trailing letter space */
     text-transform: uppercase;
     margin-bottom: 2px;
   }
