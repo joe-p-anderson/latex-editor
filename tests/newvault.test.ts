@@ -62,7 +62,7 @@ describe('makeVault', () => {
     expect(tex).toContain('\\title{Pendulum lab}')
     expect(tex).not.toContain('{{')
     expect(tex).not.toContain('%% starter:')
-    expect(tex).toContain('{figures/plot.pdf}')
+    expect(tex).toContain('\\includegraphics')
     const settings = JSON.parse(readFileSync(join(root, '.vault.json'), 'utf8'))
     expect(settings).toMatchObject({ name: 'Pendulum lab', defaultStarter: 'Lab report (revtex)' })
     expect(typeof settings.appearance?.palette).toBe('string')
