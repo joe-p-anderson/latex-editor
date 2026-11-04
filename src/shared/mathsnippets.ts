@@ -189,7 +189,7 @@ export const BUILTIN_MATH_SNIPPETS = parseMathSnippets(DEFAULT_MATH_SNIPPETS).sn
 /** A new vault file: how it works, with every built-in listed (commented out) to copy from. */
 export function mathSnippetsFileTemplate(): string {
   return [
-    '# Math shortcuts for this vault. They expand as you type, inside math only.',
+    '# Maths shortcuts for this vault. They expand as you type, inside maths only.',
     '# Backspace right after one puts back what you typed.',
     '#',
     '# One per line:   trigger => replacement',

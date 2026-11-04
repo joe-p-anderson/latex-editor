@@ -101,7 +101,7 @@ export function coreCommands(a: CoreActions): Command[] {
     { id: 'edit.replace', title: 'Replace', category: 'Edit', key: 'Mod-h', when: V, run: always(a.replace) },
     { id: 'edit.findInVault', title: 'Find in Vault', category: 'Edit', key: 'Mod-Shift-f', aliases: ['Mod-Shift-h'], keywords: ['search'], when: V, run: always(a.findInVault) },
     { id: 'edit.renameLabel', title: 'Rename Label', category: 'Edit', key: 'F2', editorKey: true, when: TEX, run: () => a.edit('renameLabel') },
-    { id: 'edit.mathShortcuts', title: 'Math Shortcuts…', category: 'Edit', keywords: ['snippets'], when: V, run: always(a.mathShortcuts) },
+    { id: 'edit.mathShortcuts', title: 'Maths Shortcuts…', category: 'Edit', keywords: ['math', 'snippets'], when: V, run: always(a.mathShortcuts) },
 
     // Insert
     insert('bold', 'Bold', 'bold', 'Mod-b', 'Format'),
