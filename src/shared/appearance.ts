@@ -205,6 +205,10 @@ export const editorColours = {
   lineNumber: 'var(--pencil)',
   activeLineNumber: 'var(--ink-soft)',
 }
+/** How much ink tints the cursor's line in source mode (editorTheme.ts). */
+export const ACTIVE_LINE_INK = 0.04
+/** The cursor's line: the page with a touch of ink. */
+export const activeLine = (page: string, ink: string) => mix(page, ink, ACTIVE_LINE_INK)
 /** Live view's secondary text and accent (live/theme.ts), checked the same way. */
 export const liveColours = { muted: 'var(--ink-soft)', accent: 'var(--detail)' }
 
@@ -235,40 +239,44 @@ export function plainTokens(theme: PaletteTheme, mode: 'light' | 'dark'): PlainT
     const text = mix('#EDE5D8', v, 0.1)
     const side = mix(L, m[2], 0.6)
     const chrome = mix(L, m[2], 0.35)
+    const desk = mix(L, m[0], 0.42)
     const srcbg = mix(page, v, 0.07)
+    const lit = activeLine(page, text)
     return {
       bar: L,
       chrome,
       side,
-      desk: mix(L, m[0], 0.42),
+      desk,
       page,
       text,
-      ...secondaryInks(text, page, { muted: 0.38, faint: 0.66 }, [side, chrome, srcbg], [srcbg], CONTRAST.text),
-      accent: atLeast(v, text, CONTRAST.text, [page, srcbg]),
+      ...secondaryInks(text, page, { muted: 0.38, faint: 0.66 }, [side, chrome, srcbg, lit], [srcbg, lit], CONTRAST.text),
+      accent: atLeast(v, text, CONTRAST.text, [page, srcbg, lit, side, chrome, desk]),
       line: mix(side, text, 0.12),
       sel: mix(side, v, 0.2),
       srcbg,
-      math: atLeast(mix(text, m[3], 0.38), text, CONTRAST.text, [page, srcbg]),
+      math: atLeast(mix(text, m[3], 0.38), text, CONTRAST.text, [page, srcbg, lit]),
     }
   }
   const page = L
   const text = mix('#211C18', m[5], 0.14)
   const side = mix(m[2], L, 0.4)
   const chrome = mix(m[2], m[0], 0.55)
+  const desk = mix(m[0], m[4], 0.5)
   const srcbg = mix(page, m[0], 0.45)
+  const lit = activeLine(page, text)
   return {
     bar: mix(m[4], m[1], 0.45),
     chrome,
     side,
-    desk: mix(m[0], m[4], 0.5),
+    desk,
     page,
     text,
-    ...secondaryInks(text, page, { muted: 0.44, faint: 0.68 }, [side, chrome, srcbg], [srcbg], CONTRAST.paperText),
-    accent: atLeast(v, text, CONTRAST.paperText, [page, srcbg]),
+    ...secondaryInks(text, page, { muted: 0.44, faint: 0.68 }, [side, chrome, srcbg, lit], [srcbg, lit], CONTRAST.paperText),
+    accent: atLeast(v, text, CONTRAST.paperText, [page, srcbg, lit, side, chrome, desk]),
     line: mix(side, text, 0.14),
     sel: mix(side, m[3], 0.22),
     srcbg,
-    math: atLeast(mix(m[3], text, 0.35), text, CONTRAST.paperText, [page, srcbg]),
+    math: atLeast(mix(m[3], text, 0.35), text, CONTRAST.paperText, [page, srcbg, lit]),
   }
 }
 
@@ -349,8 +357,11 @@ export function appearanceTokens(app: AppAppearance, endpaper: VaultAppearance, 
   }
   // Bench's lighter inks, held to the same targets as Plain's (see secondaryInks).
   const min = black ? CONTRAST.text : CONTRAST.paperText
-  t['ink-soft'] = atLeast(t['ink-soft'], t.ink, min + MUTED_STEP, [t.paper, t.srcbg, t.side, t.tabpaper])
-  t.pencil = atLeast(t.pencil, t.ink, min, [t.paper, t.srcbg])
+  const lit = activeLine(t.paper, t.ink)
+  t['ink-soft'] = atLeast(t['ink-soft'], t.ink, min + MUTED_STEP, [t.paper, t.srcbg, lit, t.side, t.tabpaper])
+  t.pencil = atLeast(t.pencil, t.ink, min, [t.paper, t.srcbg, lit])
+  t.detail = atLeast(t.detail, t.ink, min, [t.paper, t.srcbg, lit, t.side, t.tabpaper])
+  t.math = atLeast(t.math, t.ink, min, [t.paper, t.srcbg, lit])
   t.line = mix(t.side, t.ink, 0.14)
   t.sel = mix(t.side, t.detail, 0.2)
   t.bar = t.side

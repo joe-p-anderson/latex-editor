@@ -3,7 +3,7 @@
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { EditorView } from '@codemirror/view'
 import { tags as t } from '@lezer/highlight'
-import { editorColours as c } from '@shared/appearance'
+import { ACTIVE_LINE_INK, editorColours as c } from '@shared/appearance'
 
 // The page column (docs/design/ENDLEAF.md, "The page column"). The scroller
 // is the desk; the gutters are the page's inner margin (line numbers sit
@@ -51,7 +51,7 @@ const theme = EditorView.theme({
   // CodeMirror draws the selection beneath the text, but the page's paper is
   // painted on the text layer itself and would hide it: lift it above, see-through.
   '.cm-selectionLayer': { zIndex: '1 !important', pointerEvents: 'none' },
-  '.cm-activeLine': { backgroundColor: 'color-mix(in srgb, var(--ink) 4%, transparent)' },
+  '.cm-activeLine': { backgroundColor: `color-mix(in srgb, var(--ink) ${ACTIVE_LINE_INK * 100}%, transparent)` },
   '&.cm-live .cm-activeLine:not(.cm-live-src)': { backgroundColor: 'transparent' },
   '.cm-activeLineGutter': { backgroundColor: 'transparent', color: c.activeLineNumber },
   '.cm-foldPlaceholder': { backgroundColor: 'var(--sel)', border: 'none', color: 'var(--ink-soft)' },

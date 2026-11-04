@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest'
 import themes from '../endleaf-marbled-themes/themes.json'
 import {
+  activeLine,
   appearanceTokens,
   DEFAULT_APP_APPEARANCE,
   defaultVaultAppearance,
@@ -26,7 +27,7 @@ const GRAPHIC = 3
  * keeps a margin when the page is paper (on black the grain barely shows).
  */
 const PAPER_MARGIN = 0.3
-const GRAINED = ['paper', 'srcbg', 'side']
+const GRAINED = ['paper', 'srcbg', 'side', 'active-line']
 
 /** `var(--ink)` → `ink`; a bare token name passes through. */
 const token = (css: string) => css.match(/^var\(--([\w-]+)\)$/)?.[1] ?? css
@@ -74,6 +75,9 @@ const PAIRS: Pair[] = [
   { what: 'maths', fg: editorColours.math, bg: ['paper'], min: TEXT },
   { what: 'comments', fg: editorColours.comment, bg: ['paper'], min: TEXT },
   { what: 'comments in a Live source block', fg: editorColours.comment, bg: ['srcbg'], min: TEXT },
+  { what: 'LaTeX commands on the cursor line', fg: editorColours.command, bg: ['active-line'], min: TEXT },
+  { what: 'maths on the cursor line', fg: editorColours.math, bg: ['active-line'], min: TEXT },
+  { what: 'comments on the cursor line', fg: editorColours.comment, bg: ['active-line'], min: TEXT },
   { what: 'braces', fg: editorColours.bracket, bg: ['paper'], min: TEXT },
   { what: 'line numbers', fg: editorColours.lineNumber, bg: ['paper'], min: GRAPHIC },
   { what: 'active line number', fg: editorColours.activeLineNumber, bg: ['paper'], min: GRAPHIC },
@@ -89,10 +93,13 @@ const PAIRS: Pair[] = [
   // Sidebar (App.svelte, FileTree, Outline).
   { what: 'sidebar text', fg: 'ink', bg: ['side'], min: TEXT },
   { what: 'sidebar labels', fg: 'ink-soft', bg: ['side'], min: TEXT },
+  { what: 'sidebar accents', fg: 'detail', bg: ['side'], min: TEXT },
   // Tabs: Plain's tab bar (TabBar), Bench's index tabs (IndexTabs, whose × shows at 0.7 on hover).
   { what: 'tab names', fg: 'ink-soft', bg: ['tabpaper'], min: TEXT, look: 'plain' },
   { what: 'active tab name', fg: 'ink', bg: ['desk'], min: TEXT, look: 'plain' },
   { what: 'tab ×', fg: 'ink-soft', bg: ['tabpaper'], min: GRAPHIC, look: 'plain' },
+  { what: "a paper's § on its tab", fg: 'detail', bg: ['tabpaper'], min: TEXT, look: 'plain' },
+  { what: "a paper's § on the active tab", fg: 'detail', bg: ['desk'], min: TEXT, look: 'plain' },
   { what: 'tab names', fg: 'ink', bg: ['tabpaper'], min: TEXT, look: 'bench' },
   { what: 'active tab name', fg: 'ink', bg: ['paper'], min: TEXT, look: 'bench' },
   { what: 'tab ×', fg: 'ink', alpha: 0.7, bg: ['tabpaper'], min: GRAPHIC, look: 'bench' },
@@ -120,6 +127,8 @@ describe('contrast', () => {
   it.each([...CONFIGS, ...LINEN])('$palette on $page, $look ($binding): every pair meets its target', ({ palette, page, look, binding }) => {
     const theme = THEMES.find((t) => t.id === palette)!
     const t = appearanceTokens({ ...DEFAULT_APP_APPEARANCE, look, page, binding }, { ...defaultVaultAppearance('x'), palette }, theme)
+    // The cursor's line isn't a token: editorTheme.ts tints the page with ink.
+    t['active-line'] = activeLine(t.paper, t.ink)
     const value = (name: string) => {
       const v = t[token(name)]
       if (!v) throw new Error(`no token ${name}`)
