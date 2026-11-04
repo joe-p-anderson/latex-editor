@@ -13,4 +13,4 @@ Add the folder starters the spec lists under `resources/starters/`: Long lab rep
 
 - [ ] Each new starter appears in the New file and New vault dialogs with a one-line description.
 - [ ] Each builds cleanly with stock MiKTeX from a new vault (an e2e test that makes a vault from every built-in folder starter and builds it, skipped when no TeX is found).
-- [ ] The Long lab report's sections are separate files in `sections/`, brought in by `input`.
+- [ ] The Long lab report's sections are separate files in `sections/`, brought in by `\input`.
