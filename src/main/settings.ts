@@ -4,6 +4,7 @@ import { app } from 'electron'
 import { copyFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { normalizeAppAppearance, type AppAppearance } from '../shared/appearance'
+import { DEFAULT_STARTER } from '../shared/starters'
 import type { GlobalPluginEntry } from '../shared/plugin'
 
 export interface AppSettings {
@@ -17,6 +18,8 @@ export interface AppSettings {
   appearance?: Partial<AppAppearance>
   /** Each plugin's default for vaults that haven't said, and its global settings. */
   plugins?: Record<string, GlobalPluginEntry>
+  /** The starter New file preselects in vaults that name none; read through appDefaultStarter(). */
+  defaultStarter?: string
 }
 
 const settingsPath = () => join(app.getPath('userData'), 'settings.json')
@@ -73,4 +76,10 @@ export async function saveAppAppearance(changes: Partial<AppAppearance>): Promis
   const next = normalizeAppAppearance({ ...(await appAppearance()), ...changes })
   await saveSettings({ appearance: next })
   return next
+}
+
+/** The app-wide default starter's name: the one in settings.json, else Lab report (revtex). */
+export async function appDefaultStarter(): Promise<string> {
+  const name = (await loadSettings()).defaultStarter
+  return (typeof name === 'string' && name.trim()) || DEFAULT_STARTER
 }

@@ -29,6 +29,7 @@ const api: Api = {
   revealFile: (rel) => ipcRenderer.invoke('shell:reveal', rel),
   openInDefaultApp: (rel) => ipcRenderer.invoke('shell:openFile', rel),
   listStarters: () => ipcRenderer.invoke('starters:list'),
+  setVaultDefaultStarter: (name) => ipcRenderer.invoke('starters:setVaultDefault', name),
   openStartersFolder: (source) => ipcRenderer.invoke('starters:openFolder', source),
   dragPdf: (pdf) => ipcRenderer.send('pdf:drag', pdf),
   openPdf: (pdf) => ipcRenderer.invoke('pdf:open', pdf),
