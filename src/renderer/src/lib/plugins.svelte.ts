@@ -102,17 +102,6 @@ export interface PluginView {
   ctx: RendererContext
 }
 
-export interface PluginCommand {
-  /** `<plugin>:<id>`. */
-  id: string
-  title: string
-  /** The plugin's name, for grouping in the Tools menu. */
-  plugin: string
-  /** A CodeMirror key, e.g. "Mod-Alt-q" (works while the editor has focus). */
-  key?: string
-  run(): void | Promise<void>
-}
-
 export interface StatusItem {
   id: number
   plugin: string
@@ -221,7 +210,6 @@ export class PluginRuntime {
   // (a deep proxy would wrap each one, so removing an entry by identity would fail).
   states = $state.raw<PluginState[]>([])
   views = $state.raw<PluginView[]>([])
-  commands = $state.raw<PluginCommand[]>([])
   status = $state.raw<StatusItem[]>([])
   citeSources = $state.raw<CiteSource[]>([])
   /** Plugins' own content for the Plugins panel, by plugin id. */
@@ -283,10 +271,11 @@ export class PluginRuntime {
     }))
   }
 
-  runCommand(id: string): void {
-    const c = this.commands.find((x) => x.id === id)
-    if (!c) return this.host.notify(`No command ${id} (is its plugin switched on?)`)
-    Promise.resolve(c.run()).catch((e) => this.host.notify(`${c.title}: ${e?.message ?? e}`))
+  /** Runs a plugin's command (`<plugin>:<id>`), from the registry. */
+  private runCommand(id: string): void {
+    const c = this.registry.get(id)
+    if (!c?.group) return this.host.notify(`No command ${id} (is its plugin switched on?)`)
+    void c.run()
   }
 
   private async start(state: PluginState): Promise<void> {
@@ -300,7 +289,7 @@ export class PluginRuntime {
     const current = () => this.states.find((s) => s.manifest.id === id) ?? state
     const addExtension = (ext: Extension) => {
       this.editorExts.set(id, [...(this.editorExts.get(id) ?? []), ext])
-      this.refreshExtensions()
+      this.extensions = [...this.editorExts.values()].flat()
     }
     const ctx: RendererContext = {
       id,
@@ -336,13 +325,9 @@ export class PluginRuntime {
       },
       commands: {
         add: (c) => {
-          const cmd: PluginCommand = { ...c, id: c.id.includes(':') ? c.id : `${id}:${c.id}`, plugin: manifest.name }
-          this.commands = [...this.commands, cmd]
-          const unregister = this.registry.register(pluginCommand(cmd, () => this.runCommand(cmd.id)))
-          own(() => {
-            this.commands = this.commands.filter((x) => x !== cmd)
-            unregister()
-          })
+          const cmd = { ...c, id: c.id.includes(':') ? c.id : `${id}:${c.id}`, plugin: manifest.name }
+          const run = () => void Promise.resolve(c.run()).catch((e) => this.host.notify(`${c.title}: ${e?.message ?? e}`))
+          own(this.registry.register(pluginCommand(cmd, run)))
         },
         run: (cid) => this.runCommand(cid.includes(':') ? cid : `${id}:${cid}`),
       },
@@ -398,11 +383,7 @@ export class PluginRuntime {
         console.error(`Stopping plugin ${id}:`, e)
       }
     }
-    if (this.editorExts.delete(id)) this.refreshExtensions()
-  }
-
-  private refreshExtensions(): void {
-    this.extensions = [...this.editorExts.values()].flat()
+    if (this.editorExts.delete(id)) this.extensions = [...this.editorExts.values()].flat()
   }
 }
 
