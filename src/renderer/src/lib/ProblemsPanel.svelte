@@ -214,6 +214,7 @@
   }
   .tab.warning .n.hot {
     background: var(--warn);
+    color: var(--paper);
   }
   .spacer {
     flex: 1;

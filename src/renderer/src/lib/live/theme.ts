@@ -1,11 +1,11 @@
 // Live mode's look. Everything is scoped under .cm-live, the class live mode
 // puts on the editor, so plain source mode is untouched.
 import { EditorView } from '@codemirror/view'
+import { liveColours } from '@shared/appearance'
 
 const ui = 'var(--f-ui)'
 const mono = 'var(--f-mono)'
-const muted = 'var(--ink-soft)'
-const accent = 'var(--detail)'
+const { muted, accent } = liveColours
 
 export const liveTheme = EditorView.baseTheme({
   '&.cm-live .cm-content': {

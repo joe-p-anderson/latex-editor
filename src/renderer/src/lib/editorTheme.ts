@@ -3,6 +3,7 @@
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { EditorView } from '@codemirror/view'
 import { tags as t } from '@lezer/highlight'
+import { editorColours as c } from '@shared/appearance'
 
 // The page column (docs/design/ENDLEAF.md, "The page column"). The scroller
 // is the desk; the gutters are the page's inner margin (line numbers sit
@@ -10,7 +11,7 @@ import { tags as t } from '@lezer/highlight'
 // margin. The geometry (--leaf-w, --book-x, --pad-l, --pad-r) is worked out
 // on the editor's container in App.svelte, where the index tabs share it.
 const page = EditorView.theme({
-  '&': { color: 'var(--ink)', backgroundColor: 'var(--desk)' },
+  '&': { color: c.text, backgroundColor: 'var(--desk)' },
   '.cm-scroller': {
     paddingTop: '44px',
     paddingBottom: '90px',
@@ -18,7 +19,7 @@ const page = EditorView.theme({
   },
   '.cm-gutters': {
     backgroundColor: 'var(--paper)',
-    color: 'var(--pencil)',
+    color: c.lineNumber,
     border: 'none',
     minWidth: 'var(--pad-l)', // the inner margin (Bench's boards sit outside, bench.css)
     boxSizing: 'border-box',
@@ -39,7 +40,7 @@ const page = EditorView.theme({
   // Live: only the source block under the cursor is numbered.
   '&.cm-live .cm-lineNumbers .cm-gutterElement': { visibility: 'hidden' },
   '&.cm-live .cm-lineNumbers .cm-gutterElement.cm-live-srcnum': { visibility: 'visible' },
-  '&.cm-live .cm-activeLineGutter': { color: 'var(--pencil)' },
+  '&.cm-live .cm-activeLineGutter': { color: c.lineNumber },
 })
 
 const theme = EditorView.theme({
@@ -52,7 +53,7 @@ const theme = EditorView.theme({
   '.cm-selectionLayer': { zIndex: '1 !important', pointerEvents: 'none' },
   '.cm-activeLine': { backgroundColor: 'color-mix(in srgb, var(--ink) 4%, transparent)' },
   '&.cm-live .cm-activeLine:not(.cm-live-src)': { backgroundColor: 'transparent' },
-  '.cm-activeLineGutter': { backgroundColor: 'transparent', color: 'var(--ink-soft)' },
+  '.cm-activeLineGutter': { backgroundColor: 'transparent', color: c.activeLineNumber },
   '.cm-foldPlaceholder': { backgroundColor: 'var(--sel)', border: 'none', color: 'var(--ink-soft)' },
   '.cm-matchingBracket, &.cm-focused .cm-matchingBracket': {
     backgroundColor: 'color-mix(in srgb, var(--detail) 22%, transparent)',
@@ -83,11 +84,11 @@ const theme = EditorView.theme({
 
 // LaTeX source: commands in the accent, math in the math ink, comments faint.
 const highlight = HighlightStyle.define([
-  { tag: [t.tagName, t.keyword, t.macroName], color: 'var(--detail)' },
-  { tag: [t.atom, t.bool, t.special(t.variableName)], color: 'var(--detail)' },
-  { tag: [t.string, t.number, t.literal], color: 'var(--math)' },
-  { tag: [t.comment, t.lineComment, t.blockComment], color: 'var(--pencil)', fontStyle: 'italic' },
-  { tag: [t.bracket, t.paren, t.squareBracket, t.brace, t.punctuation], color: 'var(--ink-soft)' },
+  { tag: [t.tagName, t.keyword, t.macroName], color: c.command },
+  { tag: [t.atom, t.bool, t.special(t.variableName)], color: c.command },
+  { tag: [t.string, t.number, t.literal], color: c.math },
+  { tag: [t.comment, t.lineComment, t.blockComment], color: c.comment, fontStyle: 'italic' },
+  { tag: [t.bracket, t.paren, t.squareBracket, t.brace, t.punctuation], color: c.bracket },
   { tag: t.invalid, color: 'var(--err)' },
   { tag: t.heading, fontWeight: '700' },
   { tag: t.emphasis, fontStyle: 'italic' },
