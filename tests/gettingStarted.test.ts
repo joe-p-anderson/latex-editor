@@ -72,3 +72,32 @@ describe('the Getting-started copy', () => {
     expect(readFileSync(join(target, 'main.tex'), 'utf8')).toBe('edited\n')
   })
 })
+
+describe('the bundled Getting-started vault', () => {
+  const BUNDLED = join(import.meta.dirname, '../resources/getting-started')
+  const read = (rel: string) => readFileSync(join(BUNDLED, rel), 'utf8')
+
+  it('has the lab report, its Methods file, references and figure', () => {
+    for (const rel of ['main.tex', 'methods.tex', 'references.bib', 'period.pdf', '.vault.json']) expect(existsSync(join(BUNDLED, rel)), rel).toBe(true)
+    expect(read('main.tex')).toContain(String.raw`\input{methods}`)
+    expect(read('main.tex')).toContain(String.raw`\includegraphics[width=\linewidth]{period.pdf}`)
+  })
+
+  it('fixes its look and its New file starter in .vault.json', () => {
+    const settings = JSON.parse(read('.vault.json'))
+    expect(settings.appearance.palette).toBe('bookbinders-blue')
+    expect(settings.defaultStarter).toBe('Lab report (revtex)')
+    expect(settings.papers).toEqual(['main.tex'])
+  })
+
+  it('is plain revtex, with nothing from a template folder', () => {
+    expect(read('main.tex')).toMatch(/\\documentclass\[[^\]]*\]\{revtex4-2\}/)
+    expect(read('main.tex') + read('methods.tex')).not.toMatch(/physicsinprogress|pip\.cls/)
+  })
+
+  it('has both deliberate slips: an undefined command, and units typed as maths beside \\qty', () => {
+    expect(read('main.tex')).toContain(String.raw`\emhp{`)
+    expect(read('main.tex')).toContain('$g = 9.8 m/s^2$')
+    expect(read('main.tex')).toContain(String.raw`\qty{9.81}{m/s^2}`)
+  })
+})

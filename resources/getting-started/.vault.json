@@ -1,0 +1,11 @@
+{
+  "name": "Getting started",
+  "appearance": {
+    "palette": "bookbinders-blue",
+    "marbling": "combed",
+    "tone": "rich",
+    "seed": 1066
+  },
+  "papers": ["main.tex"],
+  "defaultStarter": "Lab report (revtex)"
+}
