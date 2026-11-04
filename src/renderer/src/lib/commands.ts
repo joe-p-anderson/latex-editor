@@ -8,8 +8,11 @@ import type { MenuLabel } from '@shared/menu'
 /** The menu a command goes in, which the palette names it by too. */
 export type Category = MenuLabel
 
-/** A condition a command needs: a vault is open, a file is open in the editor, or a `.tex` file is. */
-export type Condition = 'vault' | 'editor' | 'tex'
+/**
+ * A condition a command needs: a vault is open, a file is open in the
+ * editor, a `.tex` file is, or TeX is installed so documents can build.
+ */
+export type Condition = 'vault' | 'editor' | 'tex' | 'build'
 
 /** Which conditions hold now. */
 export type Context = Record<Condition, boolean>

@@ -14,7 +14,7 @@ import { appAppearance, globalSnippets, globalTemplatesDir, loadSettings, migrat
 import { searchVault } from './search'
 import { addWord, misspelled, reloadWords, suggestions } from './spell'
 import { startTouchpad, stopTouchpad } from './touchpad'
-import { ensureTeX } from './tex'
+import { findTeX } from './tex'
 import { forward, inverse } from './synctex'
 import { Vault } from './vault'
 import * as fileops from './fileops'
@@ -313,8 +313,10 @@ ipcMain.handle('images:save', (_e, name: string, bytes: Uint8Array) => saveImage
 ipcMain.handle('templates:move', (_e, rel: string) => moveToGlobalTemplates(rel))
 // Credit links (e.g. Detexify's) open in the browser; only these sites.
 ipcMain.handle('open-external', (_e, url: string) => {
-  if (/^https:\/\/(detexify\.kirelabs\.org|github\.com\/kirel\/detexify)/.test(url)) shell.openExternal(url)
+  if (/^https:\/\/(detexify\.kirelabs\.org|github\.com\/kirel\/detexify|miktex\.org\/download|tug\.org\/texlive)/.test(url)) shell.openExternal(url)
 })
+// Which TeX builds use (null without one): the renderer asks at launch and on Check again.
+ipcMain.handle('tex:detect', () => findTeX())
 // Trackpad tracing: absolute finger positions while the symbol pad traces.
 ipcMain.handle('touchpad:start', async () => {
   try {
@@ -544,7 +546,6 @@ app.whenReady().then(async () => {
     updateIcon()
   })
   await createWindow()
-  if (win) await ensureTeX(win)
 })
 app.on('window-all-closed', () => app.quit())
 // Deletes nobody undid go to the OS trash on the way out.

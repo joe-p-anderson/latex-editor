@@ -8,6 +8,8 @@
   import { defaultVaultAppearance, type VaultAppearance } from '@shared/appearance'
   import { logoUrl } from './appearance'
   import { marbleCss } from './marbles.svelte'
+  import NoTexCard from './NoTexCard.svelte'
+  import { texMissing } from './tex.svelte'
 
   let {
     onopen,
@@ -80,6 +82,7 @@
       <button class="btn primary" onclick={onopen}>Open a folder…</button>
       <button class="btn" onclick={onnew}>New vault…</button>
     </div>
+    {#if texMissing()}<div class="tex-card"><NoTexCard /></div>{/if}
   </div>
 </div>
 
@@ -221,6 +224,9 @@
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
+  }
+  .tex-card {
+    margin-top: 18px;
   }
   .btn {
     border: 1px solid color-mix(in srgb, var(--ink) 45%, transparent);
