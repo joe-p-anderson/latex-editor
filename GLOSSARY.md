@@ -13,7 +13,7 @@ A folder that holds document classes (`.cls`), styles and a `starters/` subfolde
 _Avoid:_ "template" on its own for a file a new document is made from. That's a starter.
 
 **Starter**
-A file a new document is created from, shown in the New file dialog. Starters are built in, shipped by plugins, or read from `starters/` in a template folder. Examples: Article, Handout, Lab report (revtex).
+A file or folder a new document is created from, shown in the New file and New vault dialogs. A folder starter's **entry file** (its `main.tex`, or its only top-level `.tex` file) becomes the new document, and its other files are made beside it, each only if missing. Starters are built in (`resources/starters/`), shipped by plugins, or read from `starters/` in a template folder; one of the user's replaces a built-in one of the same name. Examples: Article, Handout, Lab report (revtex).
 _Avoid:_ template (for this meaning).
 
 **Default starter**
