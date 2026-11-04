@@ -72,11 +72,15 @@ const PAIRS: Pair[] = [
   { what: 'body text', fg: editorColours.text, bg: ['paper'], min: TEXT },
   { what: 'LaTeX commands', fg: editorColours.command, bg: ['paper'], min: TEXT },
   { what: 'LaTeX commands in a Live source block', fg: editorColours.command, bg: ['srcbg'], min: TEXT },
+  { what: 'LaTeX structure (environment names, keys)', fg: editorColours.structure, bg: ['paper'], min: TEXT },
+  { what: 'LaTeX structure in a Live source block', fg: editorColours.structure, bg: ['srcbg'], min: TEXT },
   { what: 'maths', fg: editorColours.math, bg: ['paper'], min: TEXT },
+  { what: 'maths in a Live source block', fg: editorColours.math, bg: ['srcbg'], min: TEXT },
   { what: 'comments', fg: editorColours.comment, bg: ['paper'], min: TEXT },
   { what: 'comments in a Live source block', fg: editorColours.comment, bg: ['srcbg'], min: TEXT },
   { what: 'LaTeX commands on the cursor line', fg: editorColours.command, bg: ['active-line'], min: TEXT },
   { what: 'maths on the cursor line', fg: editorColours.math, bg: ['active-line'], min: TEXT },
+  { what: 'LaTeX structure on the cursor line', fg: editorColours.structure, bg: ['active-line'], min: TEXT },
   { what: 'comments on the cursor line', fg: editorColours.comment, bg: ['active-line'], min: TEXT },
   { what: 'braces', fg: editorColours.bracket, bg: ['paper'], min: TEXT },
   { what: 'line numbers', fg: editorColours.lineNumber, bg: ['paper'], min: GRAPHIC },
@@ -143,5 +147,37 @@ describe('contrast', () => {
       if (r < min) failures.push(`${palette} ${page} ${look}${binding === 'linen' ? ' (linen)' : ''}: ${p.what} (${token(p.fg)} on ${p.bg.join(' over ')}) is ${r.toFixed(2)}:1, needs ${min}:1`)
     }
     expect(failures).toEqual([])
+  })
+})
+
+/** CIE L*a*b* of an opaque #RRGGBB colour (D65). */
+function lab(c: string): number[] {
+  const lin = parse(c).slice(0, 3).map((v) => ((v /= 255) <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+  const [r, g, b] = lin
+  const xyz = [
+    (0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047,
+    0.2126 * r + 0.7152 * g + 0.0722 * b,
+    (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883,
+  ].map((v) => (v > 0.008856 ? Math.cbrt(v) : 7.787 * v + 16 / 116))
+  return [116 * xyz[1] - 16, 500 * (xyz[0] - xyz[1]), 200 * (xyz[1] - xyz[2])]
+}
+const deltaE = (a: string, b: string) => Math.hypot(...lab(a).map((v, i) => v - lab(b)[i]))
+/** How far apart (ΔE*ab) two syntax roles must be to tell apart at a glance. */
+const DISTINCT = 20
+
+describe('syntax roles', () => {
+  it.each(CONFIGS)('$palette on $page, $look: commands, structure and maths are visibly different colours', ({ palette, page, look, binding }) => {
+    const theme = THEMES.find((t) => t.id === palette)!
+    const t = appearanceTokens({ ...DEFAULT_APP_APPEARANCE, look, page, binding }, { ...defaultVaultAppearance('x'), palette }, theme)
+    const roles = { command: editorColours.command, structure: editorColours.structure, math: editorColours.math }
+    const colour = Object.fromEntries(Object.entries(roles).map(([k, v]) => [k, t[token(v)]]))
+    const close: string[] = []
+    const names = Object.keys(roles)
+    for (const [i, a] of names.entries())
+      for (const b of names.slice(i + 1)) {
+        const d = deltaE(colour[a], colour[b])
+        if (!(d >= DISTINCT)) close.push(`${a} ${colour[a]} and ${b} ${colour[b]} are ΔE ${d.toFixed(1)}`)
+      }
+    expect(close).toEqual([])
   })
 })

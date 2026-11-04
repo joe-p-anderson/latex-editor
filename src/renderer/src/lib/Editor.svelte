@@ -4,8 +4,7 @@
   import { Compartment, EditorState, Prec, type Extension, type StateEffect } from '@codemirror/state'
   import { keymap } from '@codemirror/view'
   import { indentWithTab, undo } from '@codemirror/commands'
-  import { StreamLanguage } from '@codemirror/language'
-  import { stex } from '@codemirror/legacy-modes/mode/stex'
+  import { latex } from './latexLanguage'
   import { lintGutter, setDiagnostics, type Diagnostic } from '@codemirror/lint'
   import type { Problem, TextEdit } from '@shared/api'
   import { lineBreakOf, locateOnLine, withLineBreaks } from '@shared/edits'
@@ -84,7 +83,6 @@
   // Where each file was scrolled to, so switching back returns there.
   const scrolls = new Map<string, StateEffect<unknown>>()
 
-  const latex = StreamLanguage.define(stex)
   // Which file a state holds, for the live view's place in the paper; changed on rename.
   const fileName = new Compartment()
   // What plugins add (src/renderer/src/lib/plugins.svelte.ts), swapped as they're switched.
