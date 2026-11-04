@@ -106,7 +106,7 @@ describe('the Help menu', () => {
   })
 
   it('works with no vault open, but for Maths Shortcuts, which edits the vault’s file', () => {
-    const enabled = help({ vault: false, editor: false, tex: false }, []).filter((n) => n.enabled).map((n) => n.label)
+    const enabled = help({ vault: false, editor: false, tex: false, build: true }, []).filter((n) => n.enabled).map((n) => n.label)
     expect(enabled).toEqual(['Keyboard Shortcuts', 'Report an Issue…', 'About endleaf'])
   })
 
