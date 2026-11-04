@@ -3,6 +3,7 @@ import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { copyFile, mkdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises'
 import { basename, join, resolve, sep } from 'node:path'
+import { release } from 'node:os'
 import { pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
 import { bibInfo } from './bibliography'
@@ -14,7 +15,7 @@ import { appAppearance, appDefaultStarter, dismissHint, globalSnippets, globalTe
 import { searchVault } from './search'
 import { addWord, misspelled, reloadWords, suggestions } from './spell'
 import { startTouchpad, stopTouchpad } from './touchpad'
-import { ensureTeX } from './tex'
+import { findTeX, texName } from './tex'
 import { forward, inverse } from './synctex'
 import { Vault } from './vault'
 import { holdsTex, makeVault, newVaultChoices } from './newvault'
@@ -23,6 +24,7 @@ import { listStarters, startersFolder } from './starters'
 import { PluginHost } from './plugins'
 import { menuTemplate } from './menu'
 import type { MenuBarMenu } from '../shared/menu'
+import { ISSUES, type AboutInfo } from '../shared/about'
 import type { SettingValues } from '../shared/plugin'
 import { isImage } from '../shared/images'
 import type { SearchOptions } from '../shared/search'
@@ -318,10 +320,24 @@ ipcMain.handle('images:list', async () => (await requireVault().files()).filter(
 ipcMain.handle('images:import', (_e, source: string) => importImage(requireVault(), source))
 ipcMain.handle('images:save', (_e, name: string, bytes: Uint8Array) => saveImage(requireVault(), name, bytes))
 ipcMain.handle('templates:move', (_e, rel: string) => moveToGlobalTemplates(rel))
-// Credit links (e.g. Detexify's) open in the browser; only these sites.
+// Credit links (e.g. Detexify's) and Help → Report an Issue open in the browser; only these sites.
 ipcMain.handle('open-external', (_e, url: string) => {
-  if (/^https:\/\/(detexify\.kirelabs\.org|github\.com\/kirel\/detexify)/.test(url)) shell.openExternal(url)
+  if (/^https:\/\/(detexify\.kirelabs\.org|github\.com\/kirel\/detexify|miktex\.org\/download|tug\.org\/texlive)/.test(url) || url === ISSUES || url.startsWith(`${ISSUES}?`)) shell.openExternal(url)
 })
+// Which TeX builds use (null without one): the renderer asks at launch and on Check again.
+ipcMain.handle('tex:detect', () => findTeX())
+const OS_NAMES: Partial<Record<NodeJS.Platform, string>> = { win32: 'Windows', darwin: 'macOS', linux: 'Linux' }
+ipcMain.handle(
+  'app:about',
+  async (): Promise<AboutInfo> => ({
+    version: app.getVersion(),
+    electron: process.versions.electron,
+    chromium: process.versions.chrome,
+    os: `${OS_NAMES[process.platform] ?? process.platform} ${release()} (${process.arch})`,
+    // The distribution Help → About names ("MiKTeX 24.4"); null shows "none found".
+    tex: texName(await findTeX()),
+  }),
+)
 // Trackpad tracing: absolute finger positions while the symbol pad traces.
 ipcMain.handle('touchpad:start', async () => {
   try {
@@ -554,7 +570,6 @@ app.whenReady().then(async () => {
     updateIcon()
   })
   await createWindow()
-  if (win) await ensureTeX(win)
 })
 app.on('window-all-closed', () => app.quit())
 // Deletes nobody undid go to the OS trash on the way out.

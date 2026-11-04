@@ -1,3 +1,4 @@
+import type { AboutInfo } from './about'
 import type { AppAppearance, VaultAppearance } from './appearance'
 import type { BibSummary } from './bibtex'
 import type { CommandSig } from './latexedit'
@@ -176,7 +177,21 @@ export interface PaperInfo {
 
 export type TouchpadEvent = { type: 'contact'; id: number; tip: boolean; x: number; y: number } | { type: 'button'; down: boolean }
 
+/** The TeX distribution builds use, as found on this machine. */
+export interface TexInfo {
+  /** The folder pdflatex is in. */
+  bin: string
+  /** "MiKTeX", "TeX Live", or "TeX" when pdflatex doesn't say. */
+  distribution: string
+  /** The distribution's version ("24.4", "2024"); empty if unknown. */
+  version: string
+  /** Found on PATH (rather than in a usual install folder, then added to PATH). */
+  onPath: boolean
+}
+
 export interface Api {
+  /** Looks for TeX again; null if none is installed. */
+  detectTeX(): Promise<TexInfo | null>
   openVault(): Promise<VaultInfo | null>
   getVault(): Promise<VaultInfo | null>
   /** Vaults opened before that still exist, most recent first. */
@@ -282,8 +297,10 @@ export interface Api {
   reloadWords(): Promise<void>
   /** Keeps the View → Check Spelling tick in step. */
   setSpellcheckMenu(on: boolean): Promise<void>
-  /** Opens a credit link (Detexify's sites only) in the browser. */
+  /** Opens a credit link (Detexify's sites) or a new endleaf issue in the browser; no other sites. */
   openExternal(url: string): Promise<void>
+  /** The version, Electron/Chromium versions, OS and TeX distribution, for Help → About and Report an Issue. */
+  about(): Promise<AboutInfo>
   /** Starts reading finger positions from the trackpad (Windows Precision Touchpad), with its aspect ratio. */
   touchpadStart(): Promise<{ ok: true; aspect: number } | { ok: false; error: string }>
   touchpadStop(): Promise<void>

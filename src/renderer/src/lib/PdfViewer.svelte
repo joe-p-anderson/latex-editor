@@ -2,6 +2,8 @@
   import * as pdfjs from 'pdfjs-dist'
   import type { PDFDocumentLoadingTask, PDFDocumentProxy } from 'pdfjs-dist'
   import type { SyncTarget } from '@shared/api'
+  import NoTexCard from './NoTexCard.svelte'
+  import { texMissing } from './tex.svelte'
   import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
   pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
@@ -194,7 +196,8 @@
   </div>
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="scroller" bind:this={scroller} bind:clientWidth={width} {ondblclick} title="Double-click to jump to the source">
-    {#if !pdf}<p class="empty">Save a .tex file (Ctrl+S) to compile it, or build it as it is with Ctrl+Shift+B.</p>{/if}
+    {#if !pdf && texMissing()}<div class="no-tex"><NoTexCard /></div>
+    {:else if !pdf}<p class="empty">Save a .tex file (Ctrl+S) to compile it, or build it as it is with Ctrl+Shift+B.</p>{/if}
     <div class="pages" bind:this={pages}></div>
   </div>
 </div>
@@ -315,6 +318,11 @@
     100% {
       opacity: 0;
     }
+  }
+  .no-tex {
+    display: flex;
+    justify-content: center;
+    margin: 40px 16px 0;
   }
   .empty {
     width: fit-content;

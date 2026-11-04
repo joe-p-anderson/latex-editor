@@ -24,7 +24,7 @@ export interface PlateKey {
  * since that's what the keys do once a file is open.
  */
 export function emptyPlateKeys(registry: CommandRegistry, mac?: boolean): PlateKey[] {
-  const tex: Context = { vault: true, editor: true, tex: true }
+  const tex: Context = { vault: true, editor: true, tex: true, build: true }
   return EMPTY_PLATE_COMMANDS.flatMap((id) => {
     const c = registry.get(id)
     if (!c?.key) return []

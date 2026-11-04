@@ -22,9 +22,9 @@ const registry = () => {
   return { reg, ran: r.ran }
 }
 
-const NONE: Context = { vault: false, editor: false, tex: false }
-const BIB: Context = { vault: true, editor: true, tex: false }
-const TEX: Context = { vault: true, editor: true, tex: true }
+const NONE: Context = { vault: false, editor: false, tex: false, build: true }
+const BIB: Context = { vault: true, editor: true, tex: false, build: true }
+const TEX: Context = { vault: true, editor: true, tex: true, build: true }
 const labels = (ctx: Context) => registry().reg.available(ctx).map(paletteLabel)
 
 describe('core commands', () => {
@@ -50,6 +50,15 @@ describe('core commands', () => {
     expect(shown).toContain('File: Switch Vault…')
     expect(shown).not.toContain('Build: Recompile')
     expect(shown).not.toContain('File: New File…')
+  })
+
+  it('leave out Recompile without TeX, but still save', () => {
+    const { reg, ran } = registry()
+    const noTeX = { ...TEX, build: false }
+    expect(reg.available(noTeX).map(paletteLabel)).not.toContain('Build: Recompile')
+    expect(reg.run('build.recompile', noTeX)).toBe(false)
+    expect(reg.run('file.save', noTeX)).toBe(true)
+    expect(ran).toEqual(['save'])
   })
 
   it('hide Insert commands unless a .tex file is active', () => {
@@ -81,6 +90,17 @@ describe('core commands', () => {
     expect(pressed('F', { shift: true })).toEqual(['findInVault'])
     expect(pressed('H', { shift: true })).toEqual(['findInVault'])
     expect(pressed('B', { shift: true })).toEqual(['recompile'])
+  })
+
+  it('open Keyboard Shortcuts on Ctrl+K Ctrl+S, and do nothing for Ctrl+K then another key', () => {
+    const { reg, ran } = registry()
+    const key = (k: string, scope: 'app' | 'editor' = 'app') => reg.handleKey({ key: k, ctrlKey: true, altKey: false, shiftKey: false, metaKey: false }, TEX, scope)
+    key('k')
+    key('s')
+    expect(ran).toEqual(['keyboardShortcuts'])
+    key('k')
+    expect(key('b')).toBe(true)
+    expect(ran).toEqual(['keyboardShortcuts'])
   })
 
   it('move figure to Ctrl+Alt+F, the sidebar to Ctrl+Alt+B, and give figure* no key', () => {
@@ -135,7 +155,7 @@ describe('core commands', () => {
   })
 
   it('hide Live View with no file open', () => {
-    expect(labels({ vault: true, editor: false, tex: false })).not.toContain('View: Live View')
+    expect(labels({ vault: true, editor: false, tex: false, build: true })).not.toContain('View: Live View')
     expect(labels(BIB)).toContain('View: Live View')
   })
 })
