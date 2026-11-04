@@ -179,6 +179,13 @@ export interface Api {
   openVaultAt(root: string): Promise<VaultInfo>
   /** Picks or makes a folder and opens it as a new vault; null if cancelled. */
   newVault(): Promise<VaultInfo | null>
+  /**
+   * Opens the student's copy of the Getting-started vault (Documents/endleaf/Getting started),
+   * copying the bundled one there first if it isn't there; `changed` says the copy differs from the bundle.
+   */
+  openGettingStarted(): Promise<{ vault: VaultInfo; changed: boolean }>
+  /** Asks, then trashes the Getting-started copy and opens a fresh one; null if the student said no. */
+  startGettingStartedOver(): Promise<VaultInfo | null>
   /** Closes the vault, back to the welcome screen. */
   closeVault(): Promise<void>
   /** Takes a vault off the welcome screen's recent list (the folder is left alone). */

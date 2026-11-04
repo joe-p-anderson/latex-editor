@@ -138,6 +138,14 @@ describe('core commands', () => {
     expect(labels({ vault: true, editor: false, tex: false })).not.toContain('View: Live View')
     expect(labels(BIB)).toContain('View: Live View')
   })
+
+  it('open the Getting-started vault from Help, with or without a vault open', () => {
+    expect(labels(NONE)).toContain('Help: Getting Started')
+    expect(labels(TEX)).toContain('Help: Getting Started')
+    const { reg, ran } = registry()
+    reg.run('help.gettingStarted', NONE)
+    expect(ran).toEqual(['gettingStarted'])
+  })
 })
 
 describe('the empty editor', () => {

@@ -58,6 +58,8 @@ export interface CoreActions {
   /** Builds the active file without saving; false with none. */
   recompile(): boolean
   syncForward(): void
+  /** Opens the student's copy of the Getting-started vault, making it first if need be. */
+  gettingStarted(): void
 }
 
 const V: Condition[] = ['vault']
@@ -142,5 +144,8 @@ export function coreCommands(a: CoreActions): Command[] {
     // Tools
     { id: 'tools.commandPalette', title: 'Run Command…', category: 'Tools', key: 'Mod-Shift-p', keywords: ['command palette'], run: always(a.commandPalette) },
     { id: 'tools.plugins', title: 'Plugins…', category: 'Tools', when: V, run: always(a.plugins) },
+
+    // Help
+    { id: 'help.gettingStarted', title: 'Getting Started', category: 'Help', keywords: ['tutorial', 'sample', 'example', 'learn'], run: always(a.gettingStarted) },
   ]
 }

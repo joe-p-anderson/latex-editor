@@ -13,11 +13,14 @@
     onopen,
     onopenat,
     onnew,
+    ontry,
   }: {
     /** Open a folder with the system picker. */
     onopen: () => void
     onopenat: (root: string) => void
     onnew: () => void
+    /** Open the Getting-started vault. */
+    ontry: () => void
   } = $props()
 
   let recent = $state<RecentVault[]>([])
@@ -79,6 +82,7 @@
     <div class="actions">
       <button class="btn primary" onclick={onopen}>Open a folder…</button>
       <button class="btn" onclick={onnew}>New vault…</button>
+      <button class="btn" onclick={ontry} title="A short lab report that shows you round endleaf as you read it">Try the Getting-started vault</button>
     </div>
     <p class="about">A vault is a folder of related .tex files: a course, a lab report, a paper.</p>
   </div>
