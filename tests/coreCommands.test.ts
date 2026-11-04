@@ -104,4 +104,24 @@ describe('core commands', () => {
       }
     }
   })
+
+  /** A registry whose actions all return `value`, as App's one-liners can (`sideOpen = !sideOpen` is false when closing). */
+  const returning = (value: unknown) => {
+    const actions = new Proxy({} as CoreActions, { get: () => () => value })
+    const reg = new CommandRegistry()
+    reg.register(...coreCommands(actions))
+    return reg
+  }
+  const key = (k: string, m: { shift?: boolean; alt?: boolean } = {}) => ({ key: k, ctrlKey: true, altKey: !!m.alt, shiftKey: !!m.shift, metaKey: false })
+
+  it.each([false, '', null, 0])('count an always-applies action as applied whatever it returns (%j)', (value) => {
+    const reg = returning(value)
+    expect(reg.handleKey(key('b', { alt: true }), TEX, 'app')).toBe(true)
+    expect(reg.run('view.togglePanel', TEX)).toBe(true)
+  })
+
+  it('let Ctrl+W fall through when there is no tab to close', () => {
+    expect(returning(false).handleKey(key('w'), TEX, 'app')).toBe(false)
+    expect(returning(true).handleKey(key('w'), TEX, 'app')).toBe(true)
+  })
 })

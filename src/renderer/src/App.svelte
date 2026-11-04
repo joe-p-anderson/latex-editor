@@ -267,7 +267,7 @@
       goToFile: () => (quickOpen = true),
       save: () => !!active && !!editor && (editor.saveCurrent(), true),
       saveAll: () => saveAll(),
-      closeTab: () => active && closeTab(active),
+      closeTab: () => !!active && (closeTab(active), true),
       find: () => openSearch('file'),
       replace: () => openSearch('file', true),
       findInVault: () => openSearch('vault'),
