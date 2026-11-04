@@ -20,6 +20,11 @@ export interface TreeNode {
   children?: TreeNode[]
 }
 
+/** What New vault…'s folder picker found (see Api.newVault). */
+export type NewVaultPick =
+  | { kind: 'opened'; vault: VaultInfo }
+  | { kind: 'setup'; root: string; name: string; starters: Starter[]; preselect: string | null }
+
 export interface VaultInfo {
   root: string
   name: string
@@ -177,8 +182,14 @@ export interface Api {
   /** Vaults opened before that still exist, most recent first. */
   recentVaults(): Promise<RecentVault[]>
   openVaultAt(root: string): Promise<VaultInfo>
-  /** Picks or makes a folder and opens it as a new vault; null if cancelled. */
-  newVault(): Promise<VaultInfo | null>
+  /**
+   * New vault…'s folder picker. A folder already holding .tex files opens
+   * as it is ('opened'); any other comes back to be set up with makeVault
+   * ('setup'), nothing written yet. Null if cancelled.
+   */
+  newVault(): Promise<NewVaultPick | null>
+  /** Sets up a vault at `root` from a starter (by id) and opens it; resolves to the vault and main.tex's path. */
+  makeVault(root: string, name: string, starter: string): Promise<{ vault: VaultInfo; main: string }>
   /** Closes the vault, back to the welcome screen. */
   closeVault(): Promise<void>
   /** Takes a vault off the welcome screen's recent list (the folder is left alone). */

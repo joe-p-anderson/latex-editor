@@ -10,6 +10,7 @@ const api: Api = {
   recentVaults: () => ipcRenderer.invoke('vault:recent'),
   openVaultAt: (root) => ipcRenderer.invoke('vault:open-path', root),
   newVault: () => ipcRenderer.invoke('vault:new'),
+  makeVault: (root, name, starter) => ipcRenderer.invoke('vault:make', root, name, starter),
   closeVault: () => ipcRenderer.invoke('vault:close'),
   forgetVault: (root) => ipcRenderer.invoke('vault:forget', root),
   setVaultName: (name) => ipcRenderer.invoke('vault:set-name', name),
