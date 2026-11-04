@@ -3,8 +3,10 @@
 // generated. Plain TypeScript (no runes), so it can be unit-tested; App.svelte
 // mirrors its changes into reactive state with `subscribe`.
 import { fuzzyScore } from '@shared/images'
+import type { MenuLabel } from '@shared/menu'
 
-export type Category = 'File' | 'Edit' | 'Insert' | 'View' | 'Build' | 'Tools' | 'Help'
+/** The menu a command goes in, which the palette names it by too. */
+export type Category = MenuLabel
 
 /** A condition a command needs: a vault is open, a file is open in the editor, or a `.tex` file is. */
 export type Condition = 'vault' | 'editor' | 'tex'
