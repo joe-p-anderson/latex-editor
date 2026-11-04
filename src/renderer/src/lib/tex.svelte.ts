@@ -12,7 +12,11 @@ export const tex = $state<{
   info: TexInfo | null
 }>({ checked: false, info: null })
 
-/** Whether documents can build: TeX is installed, or the first check hasn't finished yet. */
+/**
+ * Whether documents can build, for what menus and keys say: TeX is
+ * installed, or the first check hasn't finished yet. A build itself waits
+ * for the check instead (`texReady`).
+ */
 export const canBuild = (): boolean => !tex.checked || !!tex.info
 
 /** Whether TeX was looked for and isn't installed: the card shows, and nothing builds. */
@@ -32,4 +36,13 @@ export function checkTeX(): Promise<TexInfo | null> {
       return info
     })
   return pending
+}
+
+/**
+ * Whether documents can build, once TeX has been looked for: a build awaits
+ * this, so none starts before detection reports TeX missing. Saving doesn't.
+ */
+export async function texReady(): Promise<boolean> {
+  if (!tex.checked) await checkTeX()
+  return !!tex.info
 }

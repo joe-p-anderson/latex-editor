@@ -28,7 +28,7 @@
   import { coreCommands } from './lib/coreCommands'
   import { gettingStartedCommand } from './lib/gettingStarted'
   import { menuBar } from './lib/menuBar'
-  import { canBuild, checkTeX, tex } from './lib/tex.svelte'
+  import { canBuild, checkTeX, tex, texReady } from './lib/tex.svelte'
   import type { EditingHooks } from './lib/editing'
   import { blankComments, mergeTextSnippets, parseSnippets, type OutlineItem, type Snippet } from '@shared/latexedit'
   import { includegraphics, type ImageHooks } from './lib/imageSupport'
@@ -1135,7 +1135,7 @@
     await go(made.main)
     editor?.setLiveMode(true)
     pdfOpen = true
-    if (canBuild()) await compile(made.main) // without TeX, the PDF pane shows what to install
+    await compile(made.main) // without TeX it doesn't build, and the PDF pane shows what to install
     return null
   }
 
@@ -1916,7 +1916,7 @@
    * for a file of a marked paper when that's enough (the main process decides).
    */
   async function compile(rel: string, saving = false): Promise<void> {
-    if (!canBuild()) return // no TeX: saving just saves; the PDF pane says what to install
+    if (!(await texReady())) return // no TeX: saving just saves; the PDF pane says what to install
     clearTimeout(previewTimer) // this build includes whatever the preview would have
     const seq = ++compileSeq
     compiling = true
@@ -1960,7 +1960,7 @@
   }
 
   async function preview(rel: string, force = false): Promise<void> {
-    if (!editor || !canBuild()) return
+    if (!editor || !(await texReady())) return
     // A saved build is running: try again after it, which may make this unnecessary.
     if (compiling) return schedulePreview(rel)
     const buffers = Object.fromEntries(editor.dirtyTexts())
