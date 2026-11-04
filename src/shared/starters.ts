@@ -11,6 +11,21 @@ export interface Starter {
   description: string
   source: 'built-in' | 'vault' | 'global'
   text: string
+  /** Files made beside the new one, by name, unless one of that name is already there (e.g. references.bib). */
+  companions?: { name: string; text: string }[]
+}
+
+/** The app-wide default starter, until the user picks another. */
+export const DEFAULT_STARTER = 'Lab report (revtex)'
+
+/**
+ * The starter to preselect: the one named by the vault's default, else by the
+ * app's, else the shipped default; a user's starter wins over a built-in one
+ * of the same name. Names match ignoring case.
+ */
+export function defaultStarter(starters: Starter[], vaultDefault: string | null, appDefault: string): Starter | undefined {
+  const named = (name: string | null) => (name ? starters.findLast((s) => s.name.toLowerCase() === name.toLowerCase()) : undefined)
+  return named(vaultDefault) ?? named(appDefault) ?? named(DEFAULT_STARTER) ?? starters[0]
 }
 
 export interface StarterField {

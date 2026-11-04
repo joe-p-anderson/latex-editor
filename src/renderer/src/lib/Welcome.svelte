@@ -82,6 +82,7 @@
       <button class="btn primary" onclick={onopen}>Open a folder…</button>
       <button class="btn" onclick={onnew}>New vault…</button>
     </div>
+    <p class="about">A vault is a folder of related .tex files: a course, a lab report, a paper.</p>
     {#if texMissing()}<div class="tex-card"><NoTexCard /></div>{/if}
   </div>
 </div>
@@ -224,6 +225,11 @@
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
+  }
+  .about {
+    margin: 12px 0 0;
+    font: italic 15px var(--f-page);
+    color: var(--ink-soft);
   }
   .tex-card {
     margin-top: 18px;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { CommandRegistry, paletteLabel, searchCommands, type Context } from '../src/renderer/src/lib/commands'
 import { coreCommands, type CoreActions } from '../src/renderer/src/lib/coreCommands'
+import { emptyPlateKeys } from '../src/renderer/src/lib/emptyPlate'
 
 /** Actions that record what ran. */
 function recorder(): { actions: CoreActions; ran: string[] } {
@@ -145,5 +146,27 @@ describe('core commands', () => {
   it('hide Live View with no file open', () => {
     expect(labels({ vault: true, editor: false, tex: false, build: true })).not.toContain('View: Live View')
     expect(labels(BIB)).toContain('View: Live View')
+  })
+})
+
+describe('the empty editor', () => {
+  it('lists the main keys from the registry, as a .tex file would run them', () => {
+    const { reg } = registry()
+    expect(emptyPlateKeys(reg, false)).toEqual([
+      { id: 'tools.commandPalette', key: 'Ctrl+Shift+P', title: 'Run Command' },
+      { id: 'file.goToFile', key: 'Ctrl+P', title: 'Go to File' },
+      { id: 'file.newFile', key: 'Ctrl+N', title: 'New File' },
+      { id: 'file.save', key: 'Ctrl+S', title: 'Save and Build' },
+      { id: 'edit.findInVault', key: 'Ctrl+Shift+F', title: 'Find in Vault' },
+    ])
+  })
+
+  it("follows a command's key when it changes, and leaves out one without a key", () => {
+    const { reg } = registry()
+    reg.get('file.goToFile')!.key = 'Mod-e'
+    delete reg.get('file.newFile')!.key
+    const keys = emptyPlateKeys(reg, false)
+    expect(keys.find((k) => k.id === 'file.goToFile')?.key).toBe('Ctrl+E')
+    expect(keys.map((k) => k.id)).not.toContain('file.newFile')
   })
 })

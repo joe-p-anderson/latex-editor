@@ -31,6 +31,78 @@ const BUILT_IN: Omit<Starter, 'source' | 'id'>[] = [
 `,
   },
   {
+    name: 'Lab report (revtex)',
+    ext: '.tex',
+    description: 'A lab report in APS style, with references.bib beside it',
+    text: `\\documentclass[reprint,aps]{revtex4-2}
+\\usepackage{amsmath}
+\\usepackage{graphicx}
+\\usepackage{siunitx}
+
+\\begin{document}
+
+\\title{{{Title}}}
+\\author{{{Author}}}
+\\affiliation{Department of Physics}
+\\date{\\today}
+
+\\begin{abstract}
+What you measured, how, and what you found, in a few sentences.
+\\end{abstract}
+
+\\maketitle
+
+\\section{Introduction}
+Why the experiment is worth doing, and what it sets out to measure~\\cite{example}.
+
+\\section{Theory}
+The period of a simple pendulum of length $L$ is
+\\begin{equation}
+  T = 2\\pi\\sqrt{\\frac{L}{g}},
+  \\label{eq:period}
+\\end{equation}
+so a plot of $T$ against $\\sqrt{L}$ is a straight line of slope $2\\pi/\\sqrt{g}$.
+
+\\section{Methods}
+The apparatus and procedure. The pendulum was \\qty{0.50}{m} long.
+
+\\section{Results}
+Fig.~\\ref{fig:data} shows the data, and fitting Eq.~\\eqref{eq:period} to it gives $g$.
+
+\\begin{figure}
+  % Put your plot in the vault and uncomment the next line, naming it.
+  % \\includegraphics[width=\\linewidth]{plot.pdf}
+  \\fbox{\\parbox[c][4cm][c]{0.9\\linewidth}{\\centering Your figure here}}
+  \\caption{The period $T$ against $\\sqrt{L}$, with a straight-line fit.}
+  \\label{fig:data}
+\\end{figure}
+
+\\section{Conclusion}
+What the results show, and how they compare with the accepted value.
+
+\\begin{acknowledgments}
+Thanks to your lab partner and demonstrator.
+\\end{acknowledgments}
+
+\\bibliography{references}
+
+\\end{document}
+`,
+    companions: [
+      {
+        name: 'references.bib',
+        text: `@book{example,
+  author    = {Hugh D. Young and Roger A. Freedman},
+  title     = {University Physics},
+  edition   = {15},
+  publisher = {Pearson},
+  year      = {2019},
+}
+`,
+      },
+    ],
+  },
+  {
     name: 'Handout',
     ext: '.tex',
     description: 'A homework, lab or activity handout (needs handout.cls in your templates)',
