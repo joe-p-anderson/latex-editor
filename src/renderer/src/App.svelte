@@ -52,6 +52,7 @@
   import Icon from './lib/Icon.svelte'
   import Welcome from './lib/Welcome.svelte'
   import EmptyPlate from './lib/EmptyPlate.svelte'
+  import { EMPTY_PLATE_LINKS, emptyPlateKeys } from './lib/emptyPlate'
   import IndexTabs from './lib/IndexTabs.svelte'
   import { tick, untrack } from 'svelte'
   import {
@@ -305,6 +306,9 @@
   // (a plugin switched on) and when what's enabled may change (a vault, the active file).
   let commandsChanged = $state(0)
   commands.subscribe(() => commandsChanged++)
+  // The empty editor's keys and Help links, from the registry; a link shows once its command is registered.
+  const plateKeys = $derived((void commandsChanged, emptyPlateKeys(commands)))
+  const plateLinks = $derived((void commandsChanged, EMPTY_PLATE_LINKS.filter((l) => commands.get(l.id))))
   $effect(() => {
     void [commandsChanged, vault, active]
     untrack(() => window.api.setMenuBar(menuBar(commands.all(), commandContext())))
@@ -2179,7 +2183,7 @@
                 onfindstep={findStep}
               />
             </div>
-            {#if !active}<EmptyPlate logo={logoUrl(endpaper.palette, 'mid')} />{/if}
+            {#if !active}<EmptyPlate logo={logoUrl(endpaper.palette, 'mid')} keys={plateKeys} links={plateLinks} onrun={(id) => commands.run(id, commandContext())} />{/if}
             {#if replaced}
               <ReplaceReport
                 files={replaced}
