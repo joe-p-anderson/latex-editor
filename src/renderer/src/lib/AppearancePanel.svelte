@@ -85,8 +85,8 @@
   </div>
 {/snippet}
 
-{#snippet heading(title: string, scope: string)}
-  <h3 class="section-title">{title}</h3>
+{#snippet heading(title: string, scope: string, tip?: string)}
+  <h3 class="section-title" title={tip}>{title}</h3>
   <div class="scope" title={scope}>{scope}</div>
 {/snippet}
 
@@ -116,7 +116,7 @@
     </section>
 
     <section class="section" aria-label="Page">
-      {@render heading('Page', 'All vaults')}
+      {@render heading('Page', 'All vaults', 'The paper your document sits on')}
       <div class="group">
         {@render choices(pages, app.page, (page) => onapp({ page }))}
       </div>
@@ -202,7 +202,7 @@
       </section>
 
       <section class="section" aria-label="Endpaper">
-        {@render heading('Endpaper', `This vault · ${vaultName}`)}
+        {@render heading('Endpaper', `This vault · ${vaultName}`, 'This vault’s marbled sheet, from its palette: it shows on the welcome screen and behind the PDF')}
         <div class="group">
           <div class="label">Marbling</div>
           <div class="swatches">

@@ -59,7 +59,7 @@
   <button class="act" class:on={open && current === 'plugins'} onclick={() => onselect('plugins')} title="Plugins" aria-label="Plugins">
     <Icon name="plugin" size={23} />
   </button>
-  <button class="act" onclick={onswatch} title="This vault’s palette and endpaper" aria-label="Palette and endpaper">
+  <button class="act" onclick={onswatch} title="This vault’s marbled endpaper and colours" aria-label="Palette and endpaper">
     <span class="swatch" style:background-image={swatch}>{#if logo}<img src={logo} alt="" />{/if}</span>
   </button>
   <button class="act" class:on={open && current === 'appearance'} onclick={() => onselect('appearance')} title="Appearance" aria-label="Appearance">

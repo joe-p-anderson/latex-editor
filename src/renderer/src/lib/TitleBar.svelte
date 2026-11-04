@@ -8,7 +8,13 @@
   import Icon from './Icon.svelte'
   import { MENU_BAR } from '@shared/menu'
 
-  export type BuildState = { kind: 'none' | 'ok' | 'busy' | 'err'; note: string; detail?: string }
+  export type BuildState = {
+    kind: 'none' | 'ok' | 'busy' | 'err'
+    note: string
+    detail?: string
+    /** The section named in the note (§III), with what it means: it gets its own tooltip. */
+    section?: { text: string; tip: string }
+  }
 
   let {
     logo,
@@ -83,7 +89,12 @@
       </span>
       <button class="tbtn" class:on={pdfOpen} onclick={ontogglepdf} title="Show the PDF (Ctrl+Alt+V)" aria-label="PDF"><Icon name="book" size={16} /></button>
       <button class="tbtn" class:on={panelOpen} onclick={ontogglepanel} title="Problems and log (Ctrl+J)" aria-label="Problems and log"><Icon name="panel" size={16} /></button>
-      {#if build.note}<span class="note" title={build.detail}>{build.note}</span>{/if}
+      {#if build.note}
+        {@const at = build.section ? build.note.indexOf(build.section.text) : -1}
+        <span class="note" title={build.detail}
+          >{#if build.section && at >= 0}{build.note.slice(0, at)}<span class="sect" title={build.section.tip}>{build.section.text}</span>{build.note.slice(at + build.section.text.length)}{:else}{build.note}{/if}</span
+        >
+      {/if}
       {#if build.kind !== 'none'}
         <button class="ribbon {build.kind}" onclick={onribbon} title={build.detail ?? build.note} aria-label="Build: {build.note}">
           {#if build.kind === 'ok'}<Icon name="check" size={12} />{:else if build.kind === 'err'}<Icon name="alert" size={12} />{/if}
@@ -227,6 +238,11 @@
   .seg .tbtn:last-child {
     border-radius: 0 4px 4px 0;
     border-left: 0;
+  }
+  .sect {
+    text-decoration: underline dotted;
+    text-underline-offset: 2px;
+    cursor: help;
   }
   .note {
     font-size: 12px;

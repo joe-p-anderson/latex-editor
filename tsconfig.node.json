@@ -9,6 +9,6 @@
     "types": ["node"],
     "paths": { "@shared/*": ["./src/shared/*"] }
   },
-  "include": ["electron.vite.config.ts", "vitest.config.ts", "src/main/**/*", "src/preload/**/*", "src/shared/**/*", "src/plugins/**/*.ts", "tests/**/*", "scripts/**/*", "src/renderer/src/lib/commands.ts", "src/renderer/src/lib/coreCommands.ts", "src/renderer/src/lib/menuBar.ts", "src/renderer/src/lib/shortcuts.ts", "src/renderer/src/lib/latexLanguage.ts"],
+  "include": ["electron.vite.config.ts", "vitest.config.ts", "src/main/**/*", "src/preload/**/*", "src/shared/**/*", "src/plugins/**/*.ts", "tests/**/*", "scripts/**/*", "src/renderer/src/lib/commands.ts", "src/renderer/src/lib/coreCommands.ts", "src/renderer/src/lib/menuBar.ts", "src/renderer/src/lib/shortcuts.ts", "src/renderer/src/lib/emptyPlate.ts", "src/renderer/src/lib/latexLanguage.ts"],
   "exclude": ["src/plugins/renderer.ts", "src/plugins/*/renderer.ts", "src/plugins/*/ui/**"]
 }

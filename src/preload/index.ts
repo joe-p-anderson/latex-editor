@@ -29,6 +29,7 @@ const api: Api = {
   revealFile: (rel) => ipcRenderer.invoke('shell:reveal', rel),
   openInDefaultApp: (rel) => ipcRenderer.invoke('shell:openFile', rel),
   listStarters: () => ipcRenderer.invoke('starters:list'),
+  setVaultDefaultStarter: (name) => ipcRenderer.invoke('starters:setVaultDefault', name),
   openStartersFolder: (source) => ipcRenderer.invoke('starters:openFolder', source),
   dragPdf: (pdf) => ipcRenderer.send('pdf:drag', pdf),
   openPdf: (pdf) => ipcRenderer.invoke('pdf:open', pdf),
@@ -81,6 +82,9 @@ const api: Api = {
     return () => ipcRenderer.removeListener('tree-changed', listener)
   },
   getAppearance: () => ipcRenderer.invoke('appearance:get'),
+  dismissedHints: () => ipcRenderer.invoke('hints:dismissed'),
+  dismissHint: (id) => ipcRenderer.invoke('hints:dismiss', id),
+  clearDismissedHints: () => ipcRenderer.invoke('hints:clear'),
   setAppearance: (changes) => ipcRenderer.invoke('appearance:set', changes),
   setVaultAppearance: (changes) => ipcRenderer.invoke('appearance:set-vault', changes),
   setWindowChrome: (color, symbolColor) => ipcRenderer.invoke('window:chrome', color, symbolColor),

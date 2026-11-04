@@ -211,8 +211,13 @@ export interface Api {
   revealFile(rel: string): Promise<void>
   /** Opens a vault file in its default app, after asking. */
   openInDefaultApp(rel: string): Promise<void>
-  /** Starters for the New File dialog: the built-in ones and those in the template folders. */
-  listStarters(): Promise<Starter[]>
+  /**
+   * Starters for the New File dialog: the built-in ones and those in the
+   * template folders, and the id of the default one to preselect.
+   */
+  listStarters(): Promise<{ starters: Starter[]; preselect: string | null }>
+  /** Names the starter New file preselects in this vault (null: the app-wide default), in .vault.json. */
+  setVaultDefaultStarter(name: string | null): Promise<void>
   /** Opens the starters/ folder that starters from `source` live in (see startersFolder). */
   openStartersFolder(source: Starter['source']): Promise<void>
   /** Starts an OS drag of a compiled PDF, for dropping into other apps. */
@@ -287,6 +292,12 @@ export interface Api {
   /** The user asked to close the window; the renderer decides, then calls closeWindow. */
   onCloseRequested(cb: () => void): () => void
   onTreeChanged(cb: (tree: TreeNode[]) => void): () => void
+  /** The first-time hints dismissed so far, from settings.json. */
+  dismissedHints(): Promise<string[]>
+  /** Stores a first-time hint as dismissed, so it never shows again. */
+  dismissHint(id: string): Promise<void>
+  /** Forgets every dismissed hint (Help → Show Hints Again). */
+  clearDismissedHints(): Promise<void>
   /** The global appearance (look, page, type), from settings.json. */
   getAppearance(): Promise<AppAppearance>
   /** Saves changes to the global appearance; returns the whole of it. */

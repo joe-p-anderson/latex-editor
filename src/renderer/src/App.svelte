@@ -14,6 +14,8 @@
   import Editor from './lib/Editor.svelte'
   import PdfViewer from './lib/PdfViewer.svelte'
   import ProblemsPanel from './lib/ProblemsPanel.svelte'
+  import HintStrip from './lib/HintStrip.svelte'
+  import { showHintsAgainCommand, triggerHint } from './lib/hints.svelte'
   import ImagePicker from './lib/ImagePicker.svelte'
   import Outline from './lib/Outline.svelte'
   import TabBar from './lib/TabBar.svelte'
@@ -55,6 +57,7 @@
   import Icon from './lib/Icon.svelte'
   import Welcome from './lib/Welcome.svelte'
   import EmptyPlate from './lib/EmptyPlate.svelte'
+  import { EMPTY_PLATE_LINKS, emptyPlateKeys } from './lib/emptyPlate'
   import IndexTabs from './lib/IndexTabs.svelte'
   import { tick, untrack } from 'svelte'
   import {
@@ -308,12 +311,16 @@
       reportIssue: async () => void window.api.openExternal(issueUrl(await window.api.about())),
       about: async () => void (about = await window.api.about()),
     }),
+    showHintsAgainCommand(),
   )
   const plugins = new PluginRuntime(host, commands)
   // The menu bar comes from the registry too: sent again when a command comes or goes
   // (a plugin switched on) and when what's enabled may change (a vault, the active file).
   let commandsChanged = $state(0)
   commands.subscribe(() => commandsChanged++)
+  // The empty editor's keys and Help links, from the registry; a link shows once its command is registered.
+  const plateKeys = $derived((void commandsChanged, emptyPlateKeys(commands)))
+  const plateLinks = $derived((void commandsChanged, EMPTY_PLATE_LINKS.filter((l) => commands.get(l.id))))
   $effect(() => {
     void [commandsChanged, vault, active]
     untrack(() => window.api.setMenuBar(menuBar(commands.all(), commandContext())))
@@ -742,12 +749,21 @@
       ? `Just ${result.section} of ${result.root}, numbered as in the whole paper, with its labels and citations from the last full build. The whole paper builds when another of its files changes, or with Build → Recompile`
       : `${result.root}: ${result.passes} pass${result.passes === 1 ? '' : 'es'}${result.preloaded ? ', preamble preloaded' : ''}${result.fullReason ? `. Built in full: ${result.fullReason}` : ''}`
     const what = result.section ? result.section : result.draft ? 'Preview' : 'Built'
-    if (errors) return { kind: 'err', note: `${errors} error${errors === 1 ? '' : 's'}${result.section ? ` in ${result.section}` : result.draft ? ' in preview' : ' · pdf/ unchanged'}`, detail: how }
-    return { kind: 'ok', note: `${what} · ${(result.durationMs / 1000).toFixed(1)} s`, detail: how }
+    if (errors) {
+      const section = result.section ? { text: result.section, tip: 'The section of the document the error is in' } : undefined
+      return { kind: 'err', note: `${errors} error${errors === 1 ? '' : 's'}${result.section ? ` in ${result.section}` : result.draft ? ' in preview' : ' · pdf/ unchanged'}`, detail: how, section }
+    }
+    const section = result.section ? { text: result.section, tip: 'The section of the document that was built' } : undefined
+    return { kind: 'ok', note: `${what} · ${(result.durationMs / 1000).toFixed(1)} s`, detail: how, section }
   })
   const problemCounts = $derived({
     errors: result?.problems.filter((p) => p.severity === 'error' && !p.hidden && !p.followOn).length ?? 0,
     warnings: result?.problems.filter((p) => p.severity === 'warning' && !p.hidden).length ?? 0,
+  })
+
+  // The first time the Problems panel shows an error, its hint explains it.
+  $effect(() => {
+    if (panelOpen && panelTab === 'problems' && problemCounts.errors) untrack(() => triggerHint('first-error'))
   })
 
   function togglePdf(): void {
@@ -1092,6 +1108,7 @@
     }
     if (!cycling) mru = [rel, ...mru.filter((r) => r !== rel)]
     loadMacros(rel)
+    if (rel.toLowerCase().endsWith('.tex')) triggerHint('live-source')
   }
 
   // --- Back and forward ---------------------------------------------------------
@@ -1466,9 +1483,10 @@
   const newFileDir = () => (active ? dirName(active) : (tree?.targetDir() ?? ''))
   const allFolders = (nodes: TreeNode[]): string[] => nodes.flatMap((n) => (n.kind === 'dir' ? [n.rel, ...allFolders(n.children ?? [])] : []))
 
-  async function createFromStarter(rel: string, text: string): Promise<string | null> {
+  async function createFromStarter(rel: string, text: string, companions: { rel: string; text: string }[]): Promise<string | null> {
     try {
       await window.api.createFile(rel, text)
+      for (const c of companions) if (!taken(c.rel)) await window.api.createFile(c.rel, c.text)
     } catch (e) {
       return (e as Error).message
     }
@@ -1834,6 +1852,8 @@
       if (!r) return
       if (seq !== compileSeq) return // a newer save superseded this compile
       show(r)
+      // No-TeX seam: when ticket 05's TeX check says none is installed, skip this hint.
+      if (r.pdf && !r.problems.some((p) => p.severity === 'error' && !p.hidden)) triggerHint('first-build')
     } finally {
       if (seq === compileSeq) compiling = false
     }
@@ -1977,6 +1997,7 @@
     ontogglepanel={() => togglePanel()}
     onribbon={() => togglePanel('problems')}
   />
+  <HintStrip />
 
   {#if !started}
     <div class="starting"></div>
@@ -2188,7 +2209,7 @@
                 onfindstep={findStep}
               />
             </div>
-            {#if !active}<EmptyPlate logo={logoUrl(endpaper.palette, 'mid')} />{/if}
+            {#if !active}<EmptyPlate logo={logoUrl(endpaper.palette, 'mid')} keys={plateKeys} links={plateLinks} onrun={(id) => commands.run(id, commandContext())} />{/if}
             {#if replaced}
               <ReplaceReport
                 files={replaced}
