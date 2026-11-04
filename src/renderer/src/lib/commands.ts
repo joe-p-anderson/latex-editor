@@ -129,7 +129,7 @@ export class CommandRegistry {
    */
   handleKey(e: KeyLike, ctx: Context, scope: 'app' | 'editor'): boolean {
     const mine = this.list.filter((c) => !!c.editorKey === (scope === 'editor'))
-    const keys = (c: Command) => [c.key, ...(c.aliases ?? [])].filter((k): k is string => !!k).map((k) => k.split(' '))
+    const keys = (c: Command) => [c.key, ...(c.aliases ?? [])].filter((k): k is string => !!k).map(keyPresses)
     // A chord's second key: it runs the chord it completes, and any other key (Escape too) cancels. Either way it's swallowed.
     if (this.armed === scope) {
       if (MODIFIERS.includes(e.key)) return false
@@ -179,6 +179,12 @@ export class CommandRegistry {
 /** The parts of a KeyboardEvent a key binding looks at. */
 export type KeyLike = Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'altKey' | 'shiftKey' | 'metaKey'> & { code?: string }
 
+/** A key's presses: one, or two for a chord (`Mod-k Mod-s`). */
+export const keyPresses = (key: string): string[] => key.split(' ')
+
+/** Whether `key` is a chord: two presses, one after the other. */
+export const isChord = (key: string): boolean => keyPresses(key).length === 2
+
 const MODIFIERS = ['Control', 'Shift', 'Alt', 'Meta', 'AltGraph']
 
 const isMac = typeof navigator !== 'undefined' && /Mac/.test(navigator.platform)
@@ -205,7 +211,7 @@ export function keyMatches(key: string, e: KeyLike, mac = isMac): boolean {
 
 /** A key for people: `Mod-Shift-b` → "Ctrl+Shift+B". */
 export function keyLabel(key: string, mac = isMac): string {
-  if (key.includes(' ')) return key.split(' ').map((k) => keyLabel(k, mac)).join(' ')
+  if (isChord(key)) return keyPresses(key).map((k) => keyLabel(k, mac)).join(' ')
   return key
     .split(/-(?!$)/)
     .map((p) => (p === 'Mod' ? (mac ? 'Cmd' : 'Ctrl') : p.startsWith('Arrow') ? p.slice(5) : p.length === 1 ? p.toUpperCase() : p))

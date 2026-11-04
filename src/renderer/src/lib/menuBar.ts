@@ -1,7 +1,7 @@
 // The menu bar, generated from the command registry (./commands.ts). The
 // main process adds its native items (src/main/menu.ts).
 import { MENU_BAR, type MenuBarMenu, type MenuLabel, type MenuNode } from '@shared/menu'
-import { holds, keyLabel, type Command, type Context } from './commands'
+import { holds, isChord, keyLabel, type Command, type Context } from './commands'
 import { HELP_ORDER } from './coreCommands'
 
 /** Menus with a fixed order, for commands registered apart from the core ones (Getting Started, Show Hints Again); others follow. */
@@ -19,7 +19,7 @@ export function menuBar(cmds: Command[], ctx: Context, mac?: boolean): MenuBarMe
     id: c.id,
     label: c.menuTitle?.(ctx) ?? c.title,
     // A chord (Ctrl+K Ctrl+S) isn't an Electron accelerator; the Keyboard Shortcuts panel shows it.
-    ...(c.key && !c.key.includes(' ') ? { accelerator: keyLabel(c.key, mac) } : {}),
+    ...(c.key && !isChord(c.key) ? { accelerator: keyLabel(c.key, mac) } : {}),
     enabled: holds(c, ctx),
   })
   return MENU_BAR.map((label) => {
