@@ -1,3 +1,4 @@
+import { realpathSync } from 'node:fs'
 import { readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { watch, type FSWatcher } from 'chokidar'
@@ -5,6 +6,20 @@ import type { TreeNode, VaultInfo } from '../shared/api'
 import { DEFAULT_LISTS } from '../shared/latexedit'
 import { normalizeVaultAppearance, type VaultAppearance } from '../shared/appearance'
 import type { SettingValues, VaultPluginEntry } from '../shared/plugin'
+
+/**
+ * `dir` with Windows 8.3 short names (C:\Users\JANDER~1) expanded, or `dir`
+ * itself if it can't be resolved. TeX reads `~` as its tie character, so a
+ * short-form path that reaches TeX's command line (preview and section builds
+ * name files by their full path) stops the build before it starts.
+ */
+export function longPath(dir: string): string {
+  try {
+    return realpathSync.native(resolve(dir))
+  } catch {
+    return dir
+  }
+}
 
 /** Optional per-vault settings, read from <vault>/.vault.json. */
 interface VaultSettings {
@@ -68,12 +83,16 @@ export class Vault {
   /** Called with each file added, changed or removed (vault-relative), for plugins. */
   private fileListeners = new Set<(event: 'add' | 'change' | 'unlink', rel: string) => void>()
 
+  /** The vault's folder, in its long form (see longPath). */
+  readonly root: string
+
   /** `globalTemplates` is the per-install template library shared by every vault. */
   constructor(
-    readonly root: string,
+    root: string,
     public globalTemplates: string | null = null,
   ) {
-    this.name = basename(root)
+    this.root = longPath(root)
+    this.name = basename(this.root)
     this.appearance = normalizeVaultAppearance(undefined, this.folderName)
   }
 

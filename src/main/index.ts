@@ -81,7 +81,7 @@ async function openVault(root: string): Promise<Vault> {
   const recent = (await loadSettings()).recentVaults ?? []
   await saveSettings({
     lastVault: vault.root,
-    recentVaults: [{ root: vault.root, opened: Date.now() }, ...recent.filter((r) => r.root !== vault!.root)].slice(0, 8),
+    recentVaults: [{ root: vault.root, opened: Date.now() }, ...recent.filter((r) => r.root !== vault!.root && r.root !== root)].slice(0, 8),
   })
   return vault
 }
