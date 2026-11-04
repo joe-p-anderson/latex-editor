@@ -30,6 +30,12 @@ describe('appearance settings', () => {
     expect(a).toMatchObject({ look: 'bench', page: 'black', lineLength: 96, textSize: 19, typeface: 'EB Garamond' })
   })
 
+  it('hides the spaces in Live view unless asked to show them', () => {
+    expect(normalizeAppAppearance({}).showSpaces).toBe(false)
+    expect(normalizeAppAppearance({ showSpaces: 'yes' }).showSpaces).toBe(false)
+    expect(normalizeAppAppearance({ showSpaces: true }).showSpaces).toBe(true)
+  })
+
   it("gives each vault a fixed seed from its name until it's remarbled", () => {
     expect(defaultVaultAppearance('thesis').seed).toBe(defaultVaultAppearance('thesis').seed)
     expect(defaultVaultAppearance('thesis').seed).not.toBe(defaultVaultAppearance('physics').seed)

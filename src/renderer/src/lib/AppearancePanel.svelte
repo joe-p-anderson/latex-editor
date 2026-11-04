@@ -131,6 +131,12 @@
           {/each}
         </div>
       </div>
+      <div class="group">
+        <label class="check">
+          <input type="checkbox" checked={app.showSpaces} onchange={(e) => onapp({ showSpaces: e.currentTarget.checked })} />
+          Show spaces in Live view
+        </label>
+      </div>
     </div>
   {:else if endpaper}
     <div class="head">
@@ -246,6 +252,14 @@
   .name {
     width: 100%;
     box-sizing: border-box;
+  }
+  .check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font: 14px var(--f-page);
+    color: var(--ink);
+    cursor: pointer;
   }
   .hint {
     margin: 6px 0 0;

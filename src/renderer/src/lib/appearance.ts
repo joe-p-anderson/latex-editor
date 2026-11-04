@@ -39,6 +39,8 @@ export function applyAppearance(app: AppAppearance, endpaper: VaultAppearance): 
   root.dataset.look = app.look
   root.dataset.page = app.page
   root.dataset.tabs = app.tabs
+  // Live view's space dots (lib/live/theme.ts) show only under data-spaces.
+  root.toggleAttribute('data-spaces', app.showSpaces)
   root.style.colorScheme = app.page === 'black' ? 'dark' : 'light'
   return tokens
 }
