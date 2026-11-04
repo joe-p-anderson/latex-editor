@@ -4,7 +4,7 @@ import { app } from 'electron'
 import { copyFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { normalizeAppAppearance, type AppAppearance } from '../shared/appearance'
-import { DEFAULT_STARTER } from '../shared/starters'
+import { DEFAULT_STARTER, starterName } from '../shared/starters'
 import type { GlobalPluginEntry } from '../shared/plugin'
 
 export interface AppSettings {
@@ -88,6 +88,5 @@ export async function saveAppAppearance(changes: Partial<AppAppearance>): Promis
 
 /** The app-wide default starter's name: the one in settings.json, else Lab report (revtex). */
 export async function appDefaultStarter(): Promise<string> {
-  const name = (await loadSettings()).defaultStarter
-  return (typeof name === 'string' && name.trim()) || DEFAULT_STARTER
+  return starterName((await loadSettings()).defaultStarter) ?? DEFAULT_STARTER
 }

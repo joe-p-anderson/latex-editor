@@ -18,6 +18,9 @@ export interface Starter {
 /** The app-wide default starter, until the user picks another. */
 export const DEFAULT_STARTER = 'Lab report (revtex)'
 
+/** A default starter's name as read from a settings file: trimmed, or null when it isn't there or is blank. */
+export const starterName = (value: unknown): string | null => (typeof value === 'string' && value.trim()) || null
+
 /**
  * The starter to preselect: the one named by the vault's default, else by the
  * app's, else the shipped default; a user's starter wins over a built-in one

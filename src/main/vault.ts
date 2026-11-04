@@ -6,6 +6,7 @@ import type { TreeNode, VaultInfo } from '../shared/api'
 import { DEFAULT_LISTS } from '../shared/latexedit'
 import { normalizeVaultAppearance, type VaultAppearance } from '../shared/appearance'
 import type { SettingValues, VaultPluginEntry } from '../shared/plugin'
+import { starterName } from '../shared/starters'
 
 /**
  * `dir` with Windows 8.3 short names (C:\Users\JANDER~1) expanded, or `dir`
@@ -159,7 +160,7 @@ export class Vault {
     this.appearance = normalizeVaultAppearance(settings.appearance, this.folderName)
     this.papers = Array.isArray(settings.papers) ? settings.papers.filter((p) => typeof p === 'string') : []
     this.plugins = settings.plugins && typeof settings.plugins === 'object' ? settings.plugins : {}
-    this.defaultStarter = (typeof settings.defaultStarter === 'string' && settings.defaultStarter.trim()) || null
+    this.defaultStarter = starterName(settings.defaultStarter)
   }
 
   /** Sets the starter New file preselects in this vault (null goes back to the app-wide default), in .vault.json. */
