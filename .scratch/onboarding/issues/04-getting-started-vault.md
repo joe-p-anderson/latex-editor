@@ -1,6 +1,6 @@
 # Getting-started vault
 
-Status: ready-for-human
+Status: resolved
 Blocked by: 01
 
 Spec: [../spec.md](../spec.md#getting-started-vault).
@@ -33,3 +33,5 @@ Marked ready-for-human because the teaching prose is the product here, and the m
 ## Comments
 
 Mechanism built and merged on branch `onboarding` (2026-11-04). The teaching prose in `resources/getting-started/` is an agent draft awaiting maintainer review; check the Beléndez DOI in `references.bib`. Open questions: the vault cannot force the Black page (a global setting), and the first-build hint cannot show until the deliberate `\emhp` slip is fixed (conflicts with ticket 06 acceptance).
+
+Reviewed and accepted by the maintainer (2026-11-04), including the prose and references. Accepted as is: the vault doesn't force the Black page, and the first-build hint shows after the slip is fixed.

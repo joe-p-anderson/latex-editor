@@ -21,7 +21,7 @@ Keep the hints in one list in code. The spec caps them at three.
 
 ## Acceptance
 
-- [ ] On a fresh profile, opening the Getting-started vault shows the Live/Source hint. Saving shows the first-build hint once the first is dismissed or after it.
+- [ ] On a fresh profile, opening the Getting-started vault shows the Live/Source hint. Once the student fixes the deliberate `\emhp` slip, the first clean build shows the first-build hint (queued behind the Live/Source hint if that's still showing).
 - [ ] The first build error shows the first-error hint.
 - [ ] Dismissed hints don't come back after a restart, and Show Hints Again brings all three back.
 
@@ -30,3 +30,5 @@ Keep the hints in one list in code. The spec caps them at three.
 ## Comments
 
 Resolved on branch `onboarding` (2026-11-04).
+
+Acceptance reworded (2026-11-04): the Getting-started vault's first save fails on purpose, so the first-build hint shows after the slip is fixed. The maintainer accepted this.
