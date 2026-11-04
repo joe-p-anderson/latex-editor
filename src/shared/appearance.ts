@@ -158,6 +158,70 @@ export function mix(a: string, b: string, t: number): string {
   return hex(A.map((v, i) => v + (B[i] - v) * t))
 }
 
+const luminance = (h: string) => {
+  const f = (v: number) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
+  const [r, g, b] = rgb(h)
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
+}
+/** The WCAG contrast ratio of two opaque colours. */
+export function contrast(a: string, b: string): number {
+  const x = luminance(a)
+  const y = luminance(b)
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)
+}
+
+/**
+ * Contrast targets (.scratch/ux-fixes/spec.md, "Contrast"): text 4.5:1,
+ * line numbers and icons 3:1. Text on a paper page keeps a margin for the
+ * grain, which isn't in the tokens.
+ */
+export const CONTRAST = { text: 4.5, graphic: 3, paperText: 4.8 }
+/**
+ * What the derivations aim for: a little over the targets, because the
+ * browser's color-mix() rounds differently from `mix` (the cursor line
+ * measured 4.49:1 when aimed at exactly 4.5).
+ */
+const AIM = { text: CONTRAST.text + 0.1, paperText: CONTRAST.paperText + 0.1 }
+
+/**
+ * `c` moved towards `toward` just far enough to reach `min`:1 against each of
+ * `on`. A colour that already passes is returned as it is, so a derivation's
+ * usual mix stands wherever it's readable and is pulled in only where not.
+ */
+export function atLeast(c: string, toward: string, min: number, on: string[]): string {
+  const ok = (x: string) => on.every((b) => contrast(x, b) >= min)
+  if (ok(c)) return c
+  let lo = 0
+  let hi = 1
+  for (let i = 0; i < 20; i++) {
+    const t = (lo + hi) / 2
+    if (ok(mix(c, toward, t))) hi = t
+    else lo = t
+  }
+  return mix(c, toward, hi)
+}
+
+/**
+ * The colour of each thing source mode draws (editorTheme.ts), as a CSS
+ * variable. tests/contrast.test.ts holds each to its target on the page:
+ * 4.5:1 for text, 3:1 for line numbers.
+ */
+export const editorColours = {
+  text: 'var(--ink)',
+  command: 'var(--detail)',
+  math: 'var(--math)',
+  comment: 'var(--pencil)',
+  bracket: 'var(--ink-soft)',
+  lineNumber: 'var(--pencil)',
+  activeLineNumber: 'var(--ink-soft)',
+}
+/** How much ink tints the cursor's line in source mode (editorTheme.ts). */
+export const ACTIVE_LINE_INK = 0.04
+/** The cursor's line: the page with a touch of ink. */
+export const activeLine = (page: string, ink: string) => mix(page, ink, ACTIVE_LINE_INK)
+/** Live view's secondary text and accent (live/theme.ts), checked the same way. */
+export const liveColours = { muted: 'var(--ink-soft)', accent: 'var(--detail)' }
+
 export interface PlainTokens {
   bar: string
   chrome: string
@@ -184,41 +248,64 @@ export function plainTokens(theme: PaletteTheme, mode: 'light' | 'dark'): PlainT
     const page = mix(m[2], '#ffffff', 0.045)
     const text = mix('#EDE5D8', v, 0.1)
     const side = mix(L, m[2], 0.6)
+    const chrome = mix(L, m[2], 0.35)
+    const desk = mix(L, m[0], 0.42)
+    const srcbg = mix(page, v, 0.07)
+    const lit = activeLine(page, text)
     return {
       bar: L,
-      chrome: mix(L, m[2], 0.35),
+      chrome,
       side,
-      desk: mix(L, m[0], 0.42),
+      desk,
       page,
       text,
-      muted: mix(text, page, 0.38),
-      faint: mix(text, page, 0.66),
-      accent: v,
+      ...secondaryInks(text, page, { muted: 0.38, faint: 0.66 }, [side, chrome, srcbg, lit], [srcbg, lit], AIM.text),
+      accent: atLeast(v, text, AIM.text, [page, srcbg, lit, side, chrome, desk]),
       line: mix(side, text, 0.12),
       sel: mix(side, v, 0.2),
-      srcbg: mix(page, v, 0.07),
-      math: mix(text, m[3], 0.38),
+      srcbg,
+      math: atLeast(mix(text, m[3], 0.38), text, AIM.text, [page, srcbg, lit]),
     }
   }
   const page = L
   const text = mix('#211C18', m[5], 0.14)
   const side = mix(m[2], L, 0.4)
+  const chrome = mix(m[2], m[0], 0.55)
+  const desk = mix(m[0], m[4], 0.5)
+  const srcbg = mix(page, m[0], 0.45)
+  const lit = activeLine(page, text)
   return {
     bar: mix(m[4], m[1], 0.45),
-    chrome: mix(m[2], m[0], 0.55),
+    chrome,
     side,
-    desk: mix(m[0], m[4], 0.5),
+    desk,
     page,
     text,
-    muted: mix(text, page, 0.44),
-    faint: mix(text, page, 0.68),
-    accent: v,
+    ...secondaryInks(text, page, { muted: 0.44, faint: 0.68 }, [side, chrome, srcbg, lit], [srcbg, lit], AIM.paperText),
+    accent: atLeast(v, text, AIM.paperText, [page, srcbg, lit, side, chrome, desk]),
     line: mix(side, text, 0.14),
     sel: mix(side, m[3], 0.22),
-    srcbg: mix(page, m[0], 0.45),
-    math: mix(m[3], text, 0.35),
+    srcbg,
+    math: atLeast(mix(m[3], text, 0.35), text, AIM.paperText, [page, srcbg, lit]),
   }
 }
+
+/**
+ * The two lighter inks, faded from the text towards the page: `muted` for
+ * secondary text (labels, the inactive tabs, panel text), `faint` for
+ * comments and line numbers. Each fades as far as its usual mix unless that
+ * would drop it below its target on a ground it's drawn on: faint must stay
+ * readable as text (comments), and muted keeps a step above it, so comments
+ * still read as the quieter of the two.
+ */
+function secondaryInks(text: string, page: string, usual: { muted: number; faint: number }, mutedOn: string[], faintOn: string[], min: number) {
+  return {
+    muted: atLeast(mix(text, page, usual.muted), text, min + MUTED_STEP, [page, ...mutedOn]),
+    faint: atLeast(mix(text, page, usual.faint), text, min, [page, ...faintOn]),
+  }
+}
+/** How far muted text stays above faint, in contrast ratio. */
+const MUTED_STEP = 1
 
 /** The gilt: the dark foil's stop nearest offset 0.34. */
 export function gilt(theme: PaletteTheme): string {
@@ -278,6 +365,13 @@ export function appearanceTokens(app: AppAppearance, endpaper: VaultAppearance, 
       tabpaper: mix(st.paper, '#9C8F7A', 0.2),
     })
   }
+  // Bench's lighter inks, held to the same targets as Plain's (see secondaryInks).
+  const min = black ? AIM.text : AIM.paperText
+  const lit = activeLine(t.paper, t.ink)
+  t['ink-soft'] = atLeast(t['ink-soft'], t.ink, min + MUTED_STEP, [t.paper, t.srcbg, lit, t.side, t.tabpaper])
+  t.pencil = atLeast(t.pencil, t.ink, min, [t.paper, t.srcbg, lit])
+  t.detail = atLeast(t.detail, t.ink, min, [t.paper, t.srcbg, lit, t.side, t.tabpaper])
+  t.math = atLeast(t.math, t.ink, min, [t.paper, t.srcbg, lit])
   t.line = mix(t.side, t.ink, 0.14)
   t.sel = mix(t.side, t.detail, 0.2)
   t.bar = t.side
@@ -305,7 +399,9 @@ export function appearanceTokens(app: AppAppearance, endpaper: VaultAppearance, 
   // bar tone; Bench binds it in a material (its tile comes from the renderer).
   // `chl` is the light deboss under chrome text.
   if (app.look === 'plain') {
-    Object.assign(t, { chrome: t.bar, 'chrome-ink': t.ink, 'chrome-ink-soft': t['ink-soft'], 'chrome-active': t.ink, 'chrome-btn': t.sel, chl: 'transparent' })
+    // Secondary chrome text sits on the bar, and on a button's tone when pressed.
+    const soft = atLeast(t['ink-soft'], t.ink, AIM.text, [t.bar, t.sel])
+    Object.assign(t, { chrome: t.bar, 'chrome-ink': t.ink, 'chrome-ink-soft': soft, 'chrome-active': t.ink, 'chrome-btn': t.sel, chl: 'transparent' })
   } else {
     Object.assign(t, BINDING_CHROME[chromeMaterial(app)](g, st.detail))
     t.desk = app.desk === 'felt' ? '#605A53' : '#5C3826'
@@ -313,7 +409,7 @@ export function appearanceTokens(app: AppAppearance, endpaper: VaultAppearance, 
   // Status colours, readable on either page.
   Object.assign(
     t,
-    black ? { ok: '#7DBE84', err: '#F08A7E', warn: '#E0B65A' } : { ok: '#1A7F37', err: '#C62F2B', warn: '#9A6700' },
+    black ? { ok: '#7DBE84', err: '#F08A7E', warn: '#E0B65A' } : { ok: '#1A7F37', err: '#C62F2B', warn: '#8A5C00' },
   )
   return t
 }
@@ -325,8 +421,9 @@ export function chromeMaterial(app: AppAppearance): Binding | 'dark' {
 
 // Icons and text stay high-contrast on every material.
 const BINDING_CHROME: Record<Binding | 'dark', (gilt: string, detail: string) => Record<string, string>> = {
-  saddle: () => ({ chrome: '#A8703F', 'chrome-ink': '#2A170A', 'chrome-ink-soft': '#4A2E18', 'chrome-active': '#0F0703', 'chrome-btn': 'rgba(255, 240, 215, 0.16)', chl: 'rgba(255, 232, 196, 0.38)' }),
-  linen: (_g, detail) => ({ chrome: '#CDC6B4', 'chrome-ink': '#26231F', 'chrome-ink-soft': '#4F4A42', 'chrome-active': detail, 'chrome-btn': 'rgba(255, 255, 255, 0.3)', chl: 'rgba(255, 255, 255, 0.5)' }),
+  saddle: () => ({ chrome: '#B8804E', 'chrome-ink': '#1E0F05', 'chrome-ink-soft': '#331D0C', 'chrome-active': '#0F0703', 'chrome-btn': 'rgba(255, 240, 215, 0.16)', chl: 'rgba(255, 232, 196, 0.38)' }),
+  // The pressed button lightens the linen, so the detail is darkened until it reads there.
+  linen: (_g, detail) => ({ chrome: '#CDC6B4', 'chrome-ink': '#26231F', 'chrome-ink-soft': '#4F4A42', 'chrome-active': atLeast(detail, '#26231F', AIM.text, ['#CDC6B4', mix('#CDC6B4', '#FFFFFF', 0.3)]), 'chrome-btn': 'rgba(255, 255, 255, 0.3)', chl: 'rgba(255, 255, 255, 0.5)' }),
   dark: (gilt) => ({ chrome: '#4A2A1A', 'chrome-ink': '#F0DDB8', 'chrome-ink-soft': '#D2BB92', 'chrome-active': gilt, 'chrome-btn': 'rgba(0, 0, 0, 0.2)', chl: 'rgba(0, 0, 0, 0.65)' }),
 }
 
