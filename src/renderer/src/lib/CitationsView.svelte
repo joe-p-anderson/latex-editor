@@ -133,7 +133,7 @@
     display: flex;
     align-items: center;
     padding: 0 12px;
-    font: 600 14px var(--f-page);
+    font: 600 14px var(--f-ui);
     letter-spacing: 0.12em;
     font-variant-caps: all-small-caps;
     color: var(--ink-soft);
@@ -163,7 +163,7 @@
     border: 1px solid var(--line);
     background: var(--paper);
     text-align: left;
-    font: 13px/1.4 var(--f-page);
+    font: 13px/1.4 var(--f-ui);
   }
   .card:hover:not(:disabled) {
     background: var(--paper);
@@ -197,7 +197,7 @@
   }
   .hint {
     margin: 2px 12px 8px;
-    font: italic 13.5px/1.4 var(--f-page);
+    font: italic 13.5px/1.4 var(--f-ui);
     color: var(--ink-soft);
   }
 </style>

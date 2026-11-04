@@ -150,7 +150,7 @@
   .bar .ptab {
     position: relative;
     padding: 5px 9px;
-    font: 600 14px var(--f-page);
+    font: 600 14px var(--f-ui);
     letter-spacing: 0.12em;
     font-variant-caps: all-small-caps;
     color: var(--ink-soft);
