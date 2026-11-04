@@ -59,23 +59,28 @@ const ROLE_DISTINCT = 24
 /**
  * The structure and maths inks for Source view (.scratch/ux-fixes/spec.md,
  * "Syntax roles"). Commands are in the detail. Maths takes the palette's body
- * hue (`body`), so it changes with the palette; structure prefers a green.
- * Each is darkened (paper) or lightened (black) towards the ink as far as it
- * needs to read on `on`, and turned in hue only as far as it must to look
- * clearly different from the roles before it.
+ * hue (`body`), and structure a neighbouring hue on the side away from the
+ * commands, so both change with the palette. Each is darkened (paper) or
+ * lightened (black) towards the ink as far as it needs to read on `on`, and
+ * turned in hue only as far as it must to look clearly different from the
+ * roles before it.
  */
 export function syntaxInks(detail: string, ink: string, black: boolean, on: string[], body: number) {
   const [s, l] = black ? [0.5, 0.74] : [0.55, 0.32]
   const min = black ? AIM.text : AIM.paperText
   const inkAt = (h: number) => atLeast(fromHsl(((h % 360) + 360) % 360, s, l), ink, min, on)
-  const nearest = (want: number, clearOf: string[]) => {
+  /** The hue nearest `want` whose ink is clear of `clearOf`, trying the `first` direction (+1 or −1) first at each step. */
+  const nearest = (want: number, clearOf: string[], first: 1 | -1 = 1) => {
     for (let d = 0; d <= 180; d += 5)
-      for (const h of [want + d, want - d]) {
+      for (const h of [want + first * d, want - first * d]) {
         const c = inkAt(h)
-        if (clearOf.every((o) => deltaE(c, o) >= ROLE_DISTINCT)) return c
+        if (clearOf.every((o) => deltaE(c, o) >= ROLE_DISTINCT)) return { h, c }
       }
-    return inkAt(want)
+    return { h: want, c: inkAt(want) }
   }
   const math = nearest(body, [detail])
-  return { math, structure: nearest(140, [detail, math]) }
+  // Which way round the hue circle the commands sit from maths; structure goes the other way.
+  const towardCommands = ((hsl(detail)[0] - math.h + 540) % 360) - 180
+  const structure = nearest(math.h, [detail, math.c], towardCommands > 0 ? -1 : 1)
+  return { math: math.c, structure: structure.c }
 }

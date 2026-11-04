@@ -205,6 +205,21 @@ describe('maths follows the palette', () => {
     expect(new Set(colours).size).toBe(PALETTES.length)
   })
 
+  it.each(PAGES_LOOKS)('on $page, $look: every palette has its own structure colour', ({ page, look }) => {
+    const colours = PALETTES.map((p) => tokensFor(p, page, look)[token(editorColours.structure)])
+    expect(new Set(colours).size).toBe(PALETTES.length)
+  })
+
+  it.each(PAGES_LOOKS)('on $page, $look: structure is a neighbour of the maths hue', ({ page, look }) => {
+    const far: string[] = []
+    for (const p of PALETTES) {
+      const t = tokensFor(p, page, look)
+      const d = Math.abs(hue(t[token(editorColours.structure)]) - hue(t[token(editorColours.math)]))
+      if (Math.min(d, 360 - d) > 120) far.push(`${p}: ${Math.min(d, 360 - d).toFixed(0)}°`)
+    }
+    expect(far).toEqual([])
+  })
+
   it.each(PAGES_LOOKS)('on $page, $look: maths takes the hue of the palette where the commands leave room', ({ page, look }) => {
     // A palette's maths is in its own hue range unless the commands are
     // already in that range (Bench draws commands in the palette's colour).

@@ -29,3 +29,4 @@ Braces stay dimmed. Add the three tokens to the contrast test from ticket 03 at 
 - Checked by eye in the app (Plain look, Forest Floor, black and Natural pages), in both Source and Live's source block. The other palettes are checked only by the tests.
 
 - Follow-up (user): maths was one fixed blue (plum only on Bookbinder's Blue paper) in every palette. It now starts from the palette's body hue (saturation-weighted mean of the dark marbling) and turns only until it is ΔE 24 from the commands; structure then clears both. Tests: "maths follows the palette" in tests/contrast.test.ts.
+- Follow-up (user): structure now also follows the palette: it starts from the maths hue and turns away from the commands until it is ΔE 24 from both, so it is a neighbour of the palette colour (plum → rose, oxblood → wine, slate → steel blue).
