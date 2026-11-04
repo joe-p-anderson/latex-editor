@@ -55,6 +55,7 @@ const api: Api = {
   reloadWords: () => ipcRenderer.invoke('spell:reload'),
   setSpellcheckMenu: (on) => ipcRenderer.invoke('menu:set-spellcheck', on),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
+  about: () => ipcRenderer.invoke('app:about'),
   touchpadStart: () => ipcRenderer.invoke('touchpad:start'),
   touchpadStop: () => ipcRenderer.invoke('touchpad:stop'),
   onTouchpad: (cb) => {
