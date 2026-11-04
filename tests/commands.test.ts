@@ -89,6 +89,55 @@ describe('keys', () => {
   })
 })
 
+describe('chords', () => {
+  const chorded = () => {
+    const ran: string[] = []
+    const r = new CommandRegistry()
+    r.register(
+      cmd({ id: 'shortcuts', key: 'Mod-k Mod-s', run: () => void ran.push('shortcuts') }),
+      cmd({ id: 'save', key: 'Mod-s', run: () => void ran.push('save') }),
+    )
+    return { r, ran }
+  }
+
+  it('runs a two-key chord: the first key arms it, the second runs it', () => {
+    const { r, ran } = chorded()
+    expect(r.handleKey(press('k', { ctrl: true }), TEX, 'app')).toBe(true)
+    expect(ran).toEqual([])
+    expect(r.handleKey(press('s', { ctrl: true }), TEX, 'app')).toBe(true)
+    expect(ran).toEqual(['shortcuts'])
+  })
+
+  it('cancels on Escape or any other key, swallowing it, and then keys work as usual', () => {
+    const { r, ran } = chorded()
+    r.handleKey(press('k', { ctrl: true }), TEX, 'app')
+    expect(r.handleKey(press('Escape'), TEX, 'app')).toBe(true)
+    r.handleKey(press('k', { ctrl: true }), TEX, 'app')
+    expect(r.handleKey(press('x', { ctrl: true }), TEX, 'app')).toBe(true)
+    expect(ran).toEqual([])
+    expect(r.handleKey(press('s', { ctrl: true }), TEX, 'app')).toBe(true)
+    expect(ran).toEqual(['save'])
+  })
+
+  it("doesn't arm for a chord whose condition doesn't hold", () => {
+    const r = new CommandRegistry()
+    r.register(cmd({ id: 'x', key: 'Mod-k Mod-s', when: ['vault'] }))
+    expect(r.handleKey(press('k', { ctrl: true }), NONE, 'app')).toBe(false)
+  })
+
+  it('ignores a modifier pressed on its own between the two keys', () => {
+    const { r, ran } = chorded()
+    r.handleKey(press('k', { ctrl: true }), TEX, 'app')
+    r.handleKey(press('Control', { ctrl: true }), TEX, 'app')
+    r.handleKey(press('s', { ctrl: true }), TEX, 'app')
+    expect(ran).toEqual(['shortcuts'])
+  })
+
+  it('labels a chord as its two keys', () => {
+    expect(keyLabel('Mod-k Mod-s', false)).toBe('Ctrl+K Ctrl+S')
+  })
+})
+
 describe("a plugin's command", () => {
   const sync = pluginCommand({ id: 'zotero:sync', title: 'Sync Library', plugin: 'Zotero', key: 'Mod-Alt-z' }, () => {})
 

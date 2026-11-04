@@ -1,3 +1,4 @@
+import type { AboutInfo } from './about'
 import type { AppAppearance, VaultAppearance } from './appearance'
 import type { BibSummary } from './bibtex'
 import type { CommandSig } from './latexedit'
@@ -285,8 +286,10 @@ export interface Api {
   reloadWords(): Promise<void>
   /** Keeps the View → Check Spelling tick in step. */
   setSpellcheckMenu(on: boolean): Promise<void>
-  /** Opens a credit link (Detexify's sites only) in the browser. */
+  /** Opens a credit link (Detexify's sites) or a new endleaf issue in the browser; no other sites. */
   openExternal(url: string): Promise<void>
+  /** The version, Electron/Chromium versions, OS and TeX distribution, for Help → About and Report an Issue. */
+  about(): Promise<AboutInfo>
   /** Starts reading finger positions from the trackpad (Windows Precision Touchpad), with its aspect ratio. */
   touchpadStart(): Promise<{ ok: true; aspect: number } | { ok: false; error: string }>
   touchpadStop(): Promise<void>

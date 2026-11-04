@@ -1,8 +1,8 @@
 // Which TeX distribution builds use, for anything in the renderer that
 // depends on it: the no-TeX card, the Build commands' `build` condition,
-// About endleaf, the first-build hint. App.svelte checks at launch; the
-// card's Check again checks again. Reactive: read it in a component or
-// $derived and it updates.
+// the first-build hint. (About endleaf asks the main process.) App.svelte
+// checks at launch; the card's Check again checks again. Reactive: read it
+// in a component or $derived and it updates.
 import type { TexInfo } from '@shared/api'
 
 export const tex = $state<{
@@ -33,7 +33,3 @@ export function checkTeX(): Promise<TexInfo | null> {
     })
   return pending
 }
-
-/** How About endleaf names it: "MiKTeX 24.4", or "none found". */
-export const texLabel = (info: TexInfo | null = tex.info): string =>
-  info ? [info.distribution, info.version].filter(Boolean).join(' ') : 'none found'

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detectTeX, type TexSystem } from '../src/main/tex'
+import { detectTeX, texName, type TexSystem } from '../src/main/tex'
 
 const MIKTEX_VERSION = 'MiKTeX-pdfTeX 4.19 (MiKTeX 24.4)\n© 2024 Han The Thanh'
 const TEXLIVE_VERSION = 'pdfTeX 3.141592653-2.6-1.40.26 (TeX Live 2024)\nkpathsea version 6.4.0'
@@ -51,5 +51,13 @@ describe('detectTeX', () => {
     const sys = machine({ 'D:\\tex\\pdflatex.exe': '' }, ['D:\\tex'])
     sys.version = async () => null
     expect(await detectTeX(sys)).toEqual({ bin: 'D:\\tex', distribution: 'TeX', version: '', onPath: true })
+  })
+})
+
+describe('texName', () => {
+  it('names the distribution and version for About endleaf, or nothing', () => {
+    expect(texName({ bin: 'x', distribution: 'MiKTeX', version: '24.4', onPath: true })).toBe('MiKTeX 24.4')
+    expect(texName({ bin: 'x', distribution: 'TeX', version: '', onPath: true })).toBe('TeX')
+    expect(texName(null)).toBeNull()
   })
 })

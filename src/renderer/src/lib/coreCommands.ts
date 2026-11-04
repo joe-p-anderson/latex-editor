@@ -58,7 +58,17 @@ export interface CoreActions {
   /** Builds the active file without saving; false with none. */
   recompile(): boolean
   syncForward(): void
+  keyboardShortcuts(): void
+  reportIssue(): void
+  about(): void
 }
+
+/**
+ * The Help menu's order. Getting Started (the Getting-started vault) and
+ * Show Hints Again (hints.svelte.ts) are registered by their own features,
+ * after the core commands, so the menu sorts by this.
+ */
+export const HELP_ORDER = ['help.keyboardShortcuts', 'help.gettingStarted', 'help.mathShortcuts', 'help.showHintsAgain', 'help.reportIssue', 'help.about']
 
 const V: Condition[] = ['vault']
 const FILE: Condition[] = ['vault', 'editor']
@@ -102,7 +112,6 @@ export function coreCommands(a: CoreActions): Command[] {
     { id: 'edit.replace', title: 'Replace', category: 'Edit', key: 'Mod-h', when: V, run: always(a.replace) },
     { id: 'edit.findInVault', title: 'Find in Vault', category: 'Edit', key: 'Mod-Shift-f', aliases: ['Mod-Shift-h'], keywords: ['search'], when: V, run: always(a.findInVault) },
     { id: 'edit.renameLabel', title: 'Rename Label', category: 'Edit', key: 'F2', editorKey: true, when: TEX, run: () => a.edit('renameLabel') },
-    { id: 'edit.mathShortcuts', title: 'Maths Shortcuts…', category: 'Edit', keywords: ['math', 'snippets'], when: V, run: always(a.mathShortcuts) },
 
     // Insert
     insert('bold', 'Bold', 'bold', 'Mod-b', 'Format'),
@@ -143,5 +152,11 @@ export function coreCommands(a: CoreActions): Command[] {
     // Tools
     { id: 'tools.commandPalette', title: 'Run Command…', category: 'Tools', key: 'Mod-Shift-p', keywords: ['command palette'], run: always(a.commandPalette) },
     { id: 'tools.plugins', title: 'Plugins…', category: 'Tools', when: V, run: always(a.plugins) },
+
+    // Help (Getting Started and Show Hints Again are registered by their own features; HELP_ORDER places them)
+    { id: 'help.keyboardShortcuts', title: 'Keyboard Shortcuts', category: 'Help', key: 'Mod-k Mod-s', keywords: ['keys', 'keybindings', 'hotkeys'], run: always(a.keyboardShortcuts) },
+    { id: 'help.mathShortcuts', title: 'Maths Shortcuts…', category: 'Help', keywords: ['math', 'snippets'], when: V, run: always(a.mathShortcuts) },
+    { id: 'help.reportIssue', title: 'Report an Issue…', category: 'Help', keywords: ['bug', 'feedback', 'github'], run: always(a.reportIssue) },
+    { id: 'help.about', title: 'About endleaf', category: 'Help', keywords: ['version'], run: always(a.about) },
   ]
 }

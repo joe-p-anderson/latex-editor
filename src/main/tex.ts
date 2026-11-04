@@ -54,6 +54,10 @@ export async function detectTeX(sys: TexSystem): Promise<TexInfo | null> {
   return null
 }
 
+/** How About endleaf names what was found: "MiKTeX 24.4"; null for none. */
+export const texName = (info: TexInfo | null): string | null =>
+  info && [info.distribution, info.version].filter(Boolean).join(' ')
+
 const TEXLIVE_ROOT = 'C:\\texlive'
 
 /** Where MiKTeX and TeX Live install themselves, in the order to look. */
