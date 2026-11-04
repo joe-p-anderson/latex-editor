@@ -18,6 +18,7 @@ import { startTouchpad, stopTouchpad } from './touchpad'
 import { findTeX, texName } from './tex'
 import { forward, inverse } from './synctex'
 import { Vault } from './vault'
+import { holdsTex, makeVault, newVaultChoices } from './newvault'
 import * as fileops from './fileops'
 import { listStarters, startersFolder } from './starters'
 import { PluginHost } from './plugins'
@@ -28,8 +29,8 @@ import type { SettingValues } from '../shared/plugin'
 import { isImage } from '../shared/images'
 import type { SearchOptions } from '../shared/search'
 import { defaultStarter, type Starter } from '../shared/starters'
-import { normalizeVaultAppearance, PALETTES, type AppAppearance, type PaletteId, type VaultAppearance } from '../shared/appearance'
-import type { RecentVault, SectionTarget } from '../shared/api'
+import { normalizeVaultAppearance, type AppAppearance, type PaletteId, type VaultAppearance } from '../shared/appearance'
+import type { NewVaultPick, RecentVault, SectionTarget } from '../shared/api'
 
 let win: BrowserWindow | null = null
 let vault: Vault | null = null
@@ -102,8 +103,12 @@ async function recentVaults(): Promise<RecentVault[]> {
   return out
 }
 
-/** A new vault: a folder (picked or made in the dialog) given its own endpaper. */
-async function newVault(): Promise<Vault | null> {
+/**
+ * New vault…'s folder picker. A folder that already holds .tex files opens as
+ * an existing vault; any other comes back for the renderer to ask its name
+ * and starter (then vault:make), with nothing written yet.
+ */
+async function newVault(): Promise<NewVaultPick | null> {
   const r = await dialog.showOpenDialog(win!, {
     title: 'Choose or make a folder for the new vault',
     buttonLabel: 'Make vault here',
@@ -111,13 +116,8 @@ async function newVault(): Promise<Vault | null> {
   })
   if (r.canceled || !r.filePaths[0]) return null
   const root = r.filePaths[0]
-  await mkdir(root, { recursive: true })
-  const v = await openVault(root)
-  // A fresh vault gets a palette of its own, so the welcome screen tells them apart.
-  if (!(await stat(join(root, '.vault.json')).then(() => true, () => false))) {
-    await v.saveAppearance({ palette: PALETTES[Math.floor(Math.random() * PALETTES.length)] })
-  }
-  return v
+  if (await holdsTex(root)) return { kind: 'opened', vault: await (await openVault(root)).info() }
+  return { kind: 'setup', root, ...(await newVaultChoices(root, await globalTemplatesDir(), await appDefaultStarter())) }
 }
 
 /**
@@ -202,7 +202,11 @@ ipcMain.handle('vault:forget', async (_e, root: string) => {
 })
 ipcMain.handle('vault:set-name', (_e, name: string) => requireVault().saveName(name))
 ipcMain.handle('vault:open-path', async (_e, root: string) => (await openVault(root)).info())
-ipcMain.handle('vault:new', async () => (await newVault())?.info() ?? null)
+ipcMain.handle('vault:new', () => newVault())
+ipcMain.handle('vault:make', async (_e, root: string, name: string, starter: string) => {
+  const main = await makeVault(root, { name, starter }, await globalTemplatesDir())
+  return { vault: await (await openVault(root)).info(), main }
+})
 ipcMain.handle('vault:close', async () => {
   await closeVault()
   vault = null

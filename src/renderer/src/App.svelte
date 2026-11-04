@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import type { BibInfo, CompileResult, EditorContext, PaperInfo, Problem, QuickFix, SectionTarget, TextEdit, TreeNode, VaultInfo } from '@shared/api'
+  import type { BibInfo, CompileResult, EditorContext, PaperInfo, Problem, QuickFix, SectionTarget, TextEdit, TreeNode, VaultInfo, NewVaultPick } from '@shared/api'
   import { dirOf, isDocument, magicRoot, parseIncludes, rootComment, type Include } from '@shared/project'
   import { extractRange, extractSection, includeBlock, inlineInclude, moveInclude, placeNewFile, renameIncludes, renumberPlan, slugify, toggleInclude } from '@shared/paperedit'
   import PaperMap, { type PaperMapActions } from './lib/PaperMap.svelte'
@@ -38,6 +38,7 @@
   import ReplaceReport from './lib/ReplaceReport.svelte'
   import PromptDialog from './lib/PromptDialog.svelte'
   import NewFileDialog from './lib/NewFileDialog.svelte'
+  import NewVaultDialog from './lib/NewVaultDialog.svelte'
   import { findReferences, retarget, type RefChange } from '@shared/references'
   import { badName, basename as baseName, dirname as dirName, isInside, joinRel, movedPath, type Move } from '@shared/paths'
   import TableEditor from './lib/TableEditor.svelte'
@@ -1058,13 +1059,52 @@
    */
   async function switchVault(get: () => Promise<VaultInfo | null>): Promise<void> {
     if (vault && !(await settleUnsaved('opening another vault'))) return
-    const v = await get().catch((e: Error) => (flash(e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')), null))
-    if (!v) return
+    const v = await get().catch((e: Error) => (flash(remoteMessage(e)), null))
+    if (v) adopt(v)
+  }
+
+  const remoteMessage = (e: Error) => e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
+
+  /** Shows `v` in place of the open vault (if any). */
+  function adopt(v: VaultInfo): void {
     reset()
     vault = v
     loadImages()
     loadSnippets()
     refreshBranch()
+  }
+
+  /** The new vault being set up, once its folder is picked: its name and starter are asked next. */
+  let vaultSetup = $state<Extract<NewVaultPick, { kind: 'setup' }> | null>(null)
+
+  /**
+   * New vault…: a folder already holding .tex files opens as it is; any other
+   * is named and given a starter (NewVaultDialog), then made by makeVault.
+   */
+  async function newVault(): Promise<void> {
+    if (vault && !(await settleUnsaved('opening another vault'))) return
+    const pick = await window.api.newVault().catch((e: Error) => (flash(remoteMessage(e)), null))
+    if (pick?.kind === 'opened') adopt(pick.vault)
+    else if (pick) vaultSetup = pick
+  }
+
+  /** Makes the vault being set up and opens its main.tex in Live view beside its PDF, building once. Resolves to an error to show, or null. */
+  async function makeVault(name: string, starter: string): Promise<string | null> {
+    if (!vaultSetup) return null
+    let made: { vault: VaultInfo; main: string }
+    try {
+      made = await window.api.makeVault(vaultSetup.root, name, starter)
+    } catch (e) {
+      return remoteMessage(e as Error)
+    }
+    vaultSetup = null
+    adopt(made.vault)
+    await tick() // the editor mounts with the vault
+    await go(made.main)
+    editor?.setLiveMode(true)
+    pdfOpen = true
+    if (canBuild()) await compile(made.main) // without TeX, the PDF pane shows what to install
+    return null
   }
 
   /** Back to the welcome screen. */
@@ -2008,7 +2048,7 @@
     <Welcome
       onopen={openVault}
       onopenat={(root) => switchVault(() => window.api.openVaultAt(root))}
-      onnew={() => switchVault(() => window.api.newVault())}
+      onnew={newVault}
     />
     {#if note}<div class="note welcome-note">{note}</div>{/if}
   {:else}
@@ -2274,6 +2314,11 @@
       editor?.focus()
     }}
   />
+{/if}
+
+{#if vaultSetup}
+  {@const vs = vaultSetup}
+  <NewVaultDialog folder={vs.root} name={vs.name} starters={vs.starters} preselect={vs.preselect} oncreate={makeVault} oncancel={() => (vaultSetup = null)} />
 {/if}
 
 {#if newFileIn !== null && vault}
