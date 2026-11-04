@@ -21,14 +21,15 @@
     vaultName: string
     /** What to start with: a starter by name (one of the user's before a built-in), the file name, and field values by field name (any case). */
     preset?: { starter?: string; name?: string; values?: Record<string, string> } | null
-    /** Makes the file; resolves to an error message to show here, or null when it worked. */
-    oncreate: (rel: string, text: string) => Promise<string | null>
+    /**
+     * Makes the file, and the starter's companion files beside it (each only
+     * if missing); resolves to an error message to show here, or null when it worked.
+     */
+    oncreate: (rel: string, text: string, companions: { rel: string; text: string }[]) => Promise<string | null>
     oncancel: () => void
   } = $props()
 
   const NEW_FOLDER = '\0new'
-  // The starter picked last, chosen first next time.
-  const LAST_KEY = 'endleaf-new-file-starter'
   const SOURCES = [
     ['built-in', 'Built in'],
     ['vault', 'This vault'],
@@ -37,6 +38,8 @@
 
   let starters = $state<Starter[]>([])
   let chosen = $state<Starter | null>(null)
+  /** The default starter's id: the vault's, else the app-wide one. */
+  let preselect = $state<string | null>(null)
   // svelte-ignore state_referenced_locally
   let folder = $state(dir && !folders.includes(dir) ? NEW_FOLDER : dir)
   // svelte-ignore state_referenced_locally
@@ -51,14 +54,10 @@
   let nameInput: HTMLInputElement
 
   onMount(async () => {
-    starters = await window.api.listStarters()
-    let last: string | null = null
-    try {
-      last = localStorage.getItem(LAST_KEY)
-    } catch {}
+    ;({ starters, preselect } = await window.api.listStarters())
     const asked = preset?.starter?.toLowerCase()
     const named = asked ? starters.findLast((s) => s.name.toLowerCase() === asked) : undefined
-    pick(named ?? starters.find((s) => s.id === last) ?? starters.find((s) => s.name === 'Section') ?? starters[0])
+    pick(named ?? starters.find((s) => s.id === preselect) ?? starters[0])
     nameInput?.focus()
   })
 
@@ -97,19 +96,27 @@
 
   const today = () => new Date().toISOString().slice(0, 10)
 
+  async function starterMenu(e: MouseEvent, s: Starter) {
+    e.preventDefault()
+    const id = await window.api.contextMenu([{ id: 'default', label: "Use as this vault's default", enabled: s.id !== preselect }])
+    if (id !== 'default') return
+    try {
+      await window.api.setVaultDefaultStarter(s.name)
+      preselect = s.id
+    } catch (err) {
+      error = `Couldn't set the default: ${(err as Error).message}`
+    }
+  }
+
   async function create() {
     if (!chosen || problem || busy) return
     busy = true
     const base = splitExt(fileName)[0]
     // Values typed or pasted in have \n breaks; the file takes the starter's.
     const text = withLineBreaks(fill(chosen.text, values, { date: today(), filename: fileName, basename: base }), lineBreakOf(chosen.text))
-    error = await oncreate(rel, text)
+    const companions = (chosen.companions ?? []).map((c) => ({ rel: joinRel(targetDir, c.name), text: c.text }))
+    error = await oncreate(rel, text, companions)
     busy = false
-    // A preset (another feature's dialog) isn't the user's own pick to remember.
-    if (!error && !preset)
-      try {
-        localStorage.setItem(LAST_KEY, chosen.id)
-      } catch {}
   }
 
   function onkeydown(e: KeyboardEvent) {
@@ -144,8 +151,13 @@
           {#if group.length}
             <div class="group">{label}</div>
             {#each group as s (s.id)}
-              <button class="item" class:on={chosen?.id === s.id} role="option" aria-selected={chosen?.id === s.id} onclick={() => pick(s)}>
-                <span class="name">{s.name}</span><span class="ext">{s.ext}</span>
+              <button class="item" class:on={chosen?.id === s.id} role="option"
+                aria-selected={chosen?.id === s.id}
+                title={s.id === preselect ? 'The default here. Right-click to change it' : "Right-click to make it this vault's default"}
+                onclick={() => pick(s)}
+                oncontextmenu={(e) => starterMenu(e, s)}
+              >
+                <span class="name">{s.name}</span>{#if s.id === preselect}<span class="dflt" aria-label="default">•</span>{/if}<span class="ext">{s.ext}</span>
               </button>
             {/each}
           {/if}
@@ -282,6 +294,11 @@
   .item:hover,
   .item.on {
     background: var(--sel);
+  }
+  .dflt {
+    flex: none;
+    margin-left: 5px;
+    color: var(--detail);
   }
   .ext {
     flex: none;

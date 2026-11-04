@@ -10,7 +10,7 @@ import { cacheDirFor, compile, compileDraft, compileSection, fullBuildReason, re
 import { discoverPaperOf, paperInfo } from './project'
 import { importImage, saveImage } from './images'
 import { editorContextFor, macrosFor } from './mathmacros'
-import { appAppearance, globalSnippets, globalTemplatesDir, loadSettings, migrateSettings, saveAppAppearance, saveSettings } from './settings'
+import { appAppearance, appDefaultStarter, globalSnippets, globalTemplatesDir, loadSettings, migrateSettings, saveAppAppearance, saveSettings } from './settings'
 import { searchVault } from './search'
 import { addWord, misspelled, reloadWords, suggestions } from './spell'
 import { startTouchpad, stopTouchpad } from './touchpad'
@@ -25,7 +25,7 @@ import type { MenuBarMenu } from '../shared/menu'
 import type { SettingValues } from '../shared/plugin'
 import { isImage } from '../shared/images'
 import type { SearchOptions } from '../shared/search'
-import type { Starter } from '../shared/starters'
+import { defaultStarter, type Starter } from '../shared/starters'
 import { normalizeVaultAppearance, PALETTES, type AppAppearance, type PaletteId, type VaultAppearance } from '../shared/appearance'
 import type { RecentVault, SectionTarget } from '../shared/api'
 
@@ -231,9 +231,12 @@ ipcMain.handle('file:delete', (_e, rels: string[]) => fileops.hold(requireVault(
 ipcMain.handle('file:undelete', async (_e, token: string) => void (await fileops.restore(requireVault(), token)))
 ipcMain.handle('file:release', (_e, token: string) => fileops.release(requireVault(), token, trash))
 ipcMain.handle('starters:list', async () => {
+  const vault = requireVault()
   const on = (await plugins.states()).filter((s) => s.enabled).map((s) => s.manifest)
-  return listStarters(requireVault(), on)
+  const starters = await listStarters(vault, on)
+  return { starters, preselect: defaultStarter(starters, vault.defaultStarter, await appDefaultStarter())?.id ?? null }
 })
+ipcMain.handle('starters:setVaultDefault', (_e, name: string | null) => requireVault().saveDefaultStarter(name))
 ipcMain.handle('starters:openFolder', async (_e, source: Starter['source']) => {
   const folder = await startersFolder(requireVault(), source)
   if (!folder) throw new Error('No template folder')

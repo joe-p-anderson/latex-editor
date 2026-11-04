@@ -1465,9 +1465,10 @@
   const newFileDir = () => (active ? dirName(active) : (tree?.targetDir() ?? ''))
   const allFolders = (nodes: TreeNode[]): string[] => nodes.flatMap((n) => (n.kind === 'dir' ? [n.rel, ...allFolders(n.children ?? [])] : []))
 
-  async function createFromStarter(rel: string, text: string): Promise<string | null> {
+  async function createFromStarter(rel: string, text: string, companions: { rel: string; text: string }[]): Promise<string | null> {
     try {
       await window.api.createFile(rel, text)
+      for (const c of companions) if (!taken(c.rel)) await window.api.createFile(c.rel, c.text)
     } catch (e) {
       return (e as Error).message
     }
