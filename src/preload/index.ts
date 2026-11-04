@@ -5,6 +5,7 @@ import type { PluginState } from '../shared/plugin'
 // The renderer's only door to the filesystem and compiler. Everything goes
 // through named IPC channels handled in src/main/index.ts.
 const api: Api = {
+  detectTeX: () => ipcRenderer.invoke('tex:detect'),
   openVault: () => ipcRenderer.invoke('vault:open'),
   getVault: () => ipcRenderer.invoke('vault:get'),
   recentVaults: () => ipcRenderer.invoke('vault:recent'),

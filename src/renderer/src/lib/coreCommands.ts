@@ -26,7 +26,7 @@ export interface CoreActions {
   newFile(): void
   switchVault(): void
   goToFile(): void
-  /** Saves the open file (and builds it, if it's .tex); false with none. */
+  /** Saves the open file (and builds it, if it's .tex and TeX is installed); false with none. */
   save(): boolean
   saveAll(): void
   /** Closes the active tab; false with none (Ctrl+W then falls through). */
@@ -73,6 +73,7 @@ export const HELP_ORDER = ['help.keyboardShortcuts', 'help.gettingStarted', 'hel
 const V: Condition[] = ['vault']
 const FILE: Condition[] = ['vault', 'editor']
 const TEX: Condition[] = ['vault', 'tex']
+const BUILD: Condition[] = ['vault', 'build']
 
 /**
  * Runs an action that always applies. Whatever it returns is dropped (a
@@ -102,7 +103,7 @@ export function coreCommands(a: CoreActions): Command[] {
     { id: 'file.newFile', title: 'New File…', category: 'File', key: 'Mod-n', when: V, run: always(a.newFile) },
     { id: 'file.switchVault', title: 'Switch Vault…', category: 'File', key: 'Mod-o', keywords: ['open', 'folder'], run: always(a.switchVault) },
     { id: 'file.goToFile', title: 'Go to File…', category: 'File', key: 'Mod-p', keywords: ['open', 'quick open'], when: V, run: always(a.goToFile) },
-    { id: 'file.save', title: 'Save', category: 'File', key: 'Mod-s', menuTitle: (ctx) => (ctx.tex ? 'Save and Build' : 'Save'), when: V, run: a.save },
+    { id: 'file.save', title: 'Save', category: 'File', key: 'Mod-s', menuTitle: (ctx) => (ctx.tex && ctx.build ? 'Save and Build' : 'Save'), when: V, run: a.save },
     { id: 'file.saveAll', title: 'Save All', category: 'File', key: 'Mod-Alt-s', when: V, run: always(a.saveAll) },
     { id: 'file.closeTab', title: 'Close Tab', category: 'File', key: 'Mod-w', when: V, run: a.closeTab },
 
@@ -145,7 +146,7 @@ export function coreCommands(a: CoreActions): Command[] {
     { id: 'view.nextPaperFile', title: "Paper's Next File", category: 'View', key: 'Alt-PageDown', when: V, run: () => a.paperFile(1) },
 
     // Build
-    { id: 'build.recompile', title: 'Recompile', category: 'Build', key: 'Mod-Shift-b', keywords: ['compile', 'build', 'pdf', 'typeset'], when: V, run: a.recompile },
+    { id: 'build.recompile', title: 'Recompile', category: 'Build', key: 'Mod-Shift-b', keywords: ['compile', 'build', 'pdf', 'typeset'], when: BUILD, run: a.recompile },
     { id: 'build.syncForward', title: 'Show Cursor in PDF', category: 'Build', key: 'Mod-Alt-j', keywords: ['sync', 'synctex', 'pdf'], when: V, run: always(a.syncForward) },
 
     // Tools

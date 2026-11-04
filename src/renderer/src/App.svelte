@@ -27,6 +27,7 @@
   import { CommandRegistry, type Command, type Context } from './lib/commands'
   import { coreCommands } from './lib/coreCommands'
   import { menuBar } from './lib/menuBar'
+  import { canBuild, checkTeX, tex } from './lib/tex.svelte'
   import type { EditingHooks } from './lib/editing'
   import { blankComments, mergeTextSnippets, parseSnippets, type OutlineItem, type Snippet } from '@shared/latexedit'
   import { includegraphics, type ImageHooks } from './lib/imageSupport'
@@ -270,7 +271,7 @@
     (hint) => flash(hint),
   )
   /** What the commands' `when` conditions are checked against. */
-  const commandContext = (): Context => ({ vault: !!vault, editor: !!active, tex: !!active?.toLowerCase().endsWith('.tex') })
+  const commandContext = (): Context => ({ vault: !!vault, editor: !!active, tex: !!active?.toLowerCase().endsWith('.tex'), build: canBuild() })
   commands.register(
     ...coreCommands({
       newFile: () => newFile(newFileDir()),
@@ -315,14 +316,14 @@
   )
   const plugins = new PluginRuntime(host, commands)
   // The menu bar comes from the registry too: sent again when a command comes or goes
-  // (a plugin switched on) and when what's enabled may change (a vault, the active file).
+  // (a plugin switched on) and when what's enabled may change (a vault, the active file, TeX found).
   let commandsChanged = $state(0)
   commands.subscribe(() => commandsChanged++)
   // The empty editor's keys and Help links, from the registry; a link shows once its command is registered.
   const plateKeys = $derived((void commandsChanged, emptyPlateKeys(commands)))
   const plateLinks = $derived((void commandsChanged, EMPTY_PLATE_LINKS.filter((l) => commands.get(l.id))))
   $effect(() => {
-    void [commandsChanged, vault, active]
+    void [commandsChanged, vault, active, tex.checked, tex.info]
     untrack(() => window.api.setMenuBar(menuBar(commands.all(), commandContext())))
   })
   // Each vault has its own plugins on; the main process has switched them already.
@@ -1019,6 +1020,7 @@
 
   onMount(() => {
     window.api.getAppearance().then((a) => (appearance = a))
+    checkTeX()
     window.api.getVault().then((v) => {
       vault = v
       started = true
@@ -1842,6 +1844,7 @@
    * for a file of a marked paper when that's enough (the main process decides).
    */
   async function compile(rel: string, saving = false): Promise<void> {
+    if (!canBuild()) return // no TeX: saving just saves; the PDF pane says what to install
     clearTimeout(previewTimer) // this build includes whatever the preview would have
     const seq = ++compileSeq
     compiling = true
@@ -1852,7 +1855,7 @@
       if (!r) return
       if (seq !== compileSeq) return // a newer save superseded this compile
       show(r)
-      // No-TeX seam: when ticket 05's TeX check says none is installed, skip this hint.
+      // Without TeX nothing builds (see the top of compile), so this hint can't show then.
       if (r.pdf && !r.problems.some((p) => p.severity === 'error' && !p.hidden)) triggerHint('first-build')
     } finally {
       if (seq === compileSeq) compiling = false
@@ -1885,7 +1888,7 @@
   }
 
   async function preview(rel: string, force = false): Promise<void> {
-    if (!editor) return
+    if (!editor || !canBuild()) return
     // A saved build is running: try again after it, which may make this unnecessary.
     if (compiling) return schedulePreview(rel)
     const buffers = Object.fromEntries(editor.dirtyTexts())

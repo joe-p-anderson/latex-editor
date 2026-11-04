@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { CommandRegistry, keyLabel, paletteLabel, pluginCommand, searchCommands, type Command, type Context } from '../src/renderer/src/lib/commands'
 
-const NONE: Context = { vault: false, editor: false, tex: false }
-const TEX: Context = { vault: true, editor: true, tex: true }
+const NONE: Context = { vault: false, editor: false, tex: false, build: true }
+const TEX: Context = { vault: true, editor: true, tex: true, build: true }
 
 const cmd = (c: Partial<Command> & { id: string }): Command => ({ title: c.id, category: 'Edit', run: () => {}, ...c })
 
@@ -25,7 +25,7 @@ describe('command registry', () => {
     const r = new CommandRegistry()
     r.register(cmd({ id: 'always' }), cmd({ id: 'vault', when: ['vault'] }), cmd({ id: 'tex', when: ['vault', 'tex'] }))
     expect(r.available(NONE).map((c) => c.id)).toEqual(['always'])
-    expect(r.available({ vault: true, editor: true, tex: false }).map((c) => c.id)).toEqual(['always', 'vault'])
+    expect(r.available({ vault: true, editor: true, tex: false, build: true }).map((c) => c.id)).toEqual(['always', 'vault'])
     expect(r.available(TEX).map((c) => c.id)).toEqual(['always', 'vault', 'tex'])
   })
 })
@@ -69,8 +69,8 @@ describe('keys', () => {
     const hints: string[] = []
     const r = new CommandRegistry(undefined, (h) => hints.push(h))
     r.register(cmd({ id: 'cite', key: 'Mod-Shift-c', when: ['vault', 'tex'], hint: 'Open a .tex file to cite' }), cmd({ id: 'plain', key: 'Mod-Shift-x', when: ['tex'] }))
-    expect(r.handleKey(press('C', { ctrl: true, shift: true }), { vault: true, editor: true, tex: false }, 'app')).toBe(true)
-    expect(r.handleKey(press('X', { ctrl: true, shift: true }), { vault: true, editor: true, tex: false }, 'app')).toBe(false)
+    expect(r.handleKey(press('C', { ctrl: true, shift: true }), { vault: true, editor: true, tex: false, build: true }, 'app')).toBe(true)
+    expect(r.handleKey(press('X', { ctrl: true, shift: true }), { vault: true, editor: true, tex: false, build: true }, 'app')).toBe(false)
     expect(hints).toEqual(['Open a .tex file to cite'])
   })
 
@@ -154,15 +154,15 @@ describe("a plugin's command", () => {
     expect(paletteLabel(symbols)).toBe('Insert: Symbols…')
     const r = new CommandRegistry()
     r.register(symbols)
-    expect(r.available({ vault: true, editor: true, tex: false })).toEqual([])
+    expect(r.available({ vault: true, editor: true, tex: false, build: true })).toEqual([])
     expect(r.available(TEX)).toEqual([symbols])
   })
 
   it('needs an open file, as it acts on the editor', () => {
     const r = new CommandRegistry()
     r.register(sync)
-    expect(r.available({ vault: true, editor: false, tex: false })).toEqual([])
-    expect(r.available({ vault: true, editor: true, tex: false })).toEqual([sync])
+    expect(r.available({ vault: true, editor: false, tex: false, build: true })).toEqual([])
+    expect(r.available({ vault: true, editor: true, tex: false, build: true })).toEqual([sync])
   })
 })
 

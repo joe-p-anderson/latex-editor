@@ -15,7 +15,7 @@ import { appAppearance, appDefaultStarter, dismissHint, globalSnippets, globalTe
 import { searchVault } from './search'
 import { addWord, misspelled, reloadWords, suggestions } from './spell'
 import { startTouchpad, stopTouchpad } from './touchpad'
-import { ensureTeX } from './tex'
+import { findTeX, texName } from './tex'
 import { forward, inverse } from './synctex'
 import { Vault } from './vault'
 import * as fileops from './fileops'
@@ -318,15 +318,10 @@ ipcMain.handle('images:save', (_e, name: string, bytes: Uint8Array) => saveImage
 ipcMain.handle('templates:move', (_e, rel: string) => moveToGlobalTemplates(rel))
 // Credit links (e.g. Detexify's) and Help → Report an Issue open in the browser; only these sites.
 ipcMain.handle('open-external', (_e, url: string) => {
-  if (/^https:\/\/(detexify\.kirelabs\.org|github\.com\/kirel\/detexify)/.test(url) || url === ISSUES || url.startsWith(`${ISSUES}?`)) shell.openExternal(url)
+  if (/^https:\/\/(detexify\.kirelabs\.org|github\.com\/kirel\/detexify|miktex\.org\/download|tug\.org\/texlive)/.test(url) || url === ISSUES || url.startsWith(`${ISSUES}?`)) shell.openExternal(url)
 })
-/**
- * The TeX distribution Help → About names. Onboarding ticket 05 (TeX
- * detection) replaces this with what it found: a name, or null for none.
- */
-async function texDistribution(): Promise<string | null> {
-  return 'unknown'
-}
+// Which TeX builds use (null without one): the renderer asks at launch and on Check again.
+ipcMain.handle('tex:detect', () => findTeX())
 const OS_NAMES: Partial<Record<NodeJS.Platform, string>> = { win32: 'Windows', darwin: 'macOS', linux: 'Linux' }
 ipcMain.handle(
   'app:about',
@@ -335,7 +330,8 @@ ipcMain.handle(
     electron: process.versions.electron,
     chromium: process.versions.chrome,
     os: `${OS_NAMES[process.platform] ?? process.platform} ${release()} (${process.arch})`,
-    tex: await texDistribution(),
+    // The distribution Help → About names ("MiKTeX 24.4"); null shows "none found".
+    tex: texName(await findTeX()),
   }),
 )
 // Trackpad tracing: absolute finger positions while the symbol pad traces.
@@ -570,7 +566,6 @@ app.whenReady().then(async () => {
     updateIcon()
   })
   await createWindow()
-  if (win) await ensureTeX(win)
 })
 app.on('window-all-closed', () => app.quit())
 // Deletes nobody undid go to the OS trash on the way out.
