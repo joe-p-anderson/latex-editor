@@ -24,7 +24,7 @@ Everything else is generated from it:
 - the command palette, which shows only commands whose `when` holds;
 - the native menus, sent to the main process over IPC in the same way plugin commands are today, with keys shown as accelerators;
 - the app-wide keymap and the editor's keymap;
-- the Help → Keyboard Shortcuts panel.
+- the Help → Keyboard Shortcuts panel. (Not built yet: it comes with onboarding ticket 03, `.scratch/onboarding/issues/03-help-menu.md`.)
 
 User-rebindable keys are out of scope for now. The default key field is where overrides would plug in later.
 
