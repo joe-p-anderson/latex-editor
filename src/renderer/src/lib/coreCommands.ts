@@ -61,6 +61,7 @@ export interface CoreActions {
 }
 
 const V: Condition[] = ['vault']
+const FILE: Condition[] = ['vault', 'editor']
 const TEX: Condition[] = ['vault', 'tex']
 
 /**
@@ -119,7 +120,7 @@ export function coreCommands(a: CoreActions): Command[] {
     { id: 'insert.cite', title: 'Citation…', category: 'Insert', key: 'Mod-Shift-c', keywords: ['cite', 'reference', 'bibliography'], when: TEX, hint: 'Open a .tex file to cite', run: always(a.cite) },
 
     // View
-    { id: 'view.toggleLive', title: 'Live View', category: 'View', key: 'Mod-Shift-l', editorKey: true, keywords: ['source'], when: V, run: always(a.toggleLive) },
+    { id: 'view.toggleLive', title: 'Live View', category: 'View', key: 'Mod-Shift-l', editorKey: true, keywords: ['source'], when: FILE, run: always(a.toggleLive) },
     { id: 'view.togglePdf', title: 'Toggle PDF', category: 'View', key: 'Mod-Alt-v', keywords: ['preview', 'build', 'compile'], when: V, run: always(a.togglePdf) },
     { id: 'view.toggleSidebar', title: 'Toggle Sidebar', category: 'View', key: 'Mod-Alt-b', when: V, run: always(a.toggleSidebar) },
     { id: 'view.togglePanel', title: 'Toggle Problems and Log', category: 'View', key: 'Mod-j', keywords: ['errors'], when: V, run: always(a.togglePanel) },

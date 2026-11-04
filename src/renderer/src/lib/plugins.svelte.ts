@@ -13,7 +13,7 @@ import { whenHolds, type PluginManifest, type PluginState, type SettingValues } 
 import { RENDERER } from '../../../plugins/renderer'
 import { isLive, liveFile, setLive } from './live/live'
 import { refreshMath, type RenderFn } from './mathPreview'
-import type { CommandRegistry } from './commands'
+import { pluginCommand, type CommandRegistry } from './commands'
 
 /** What the open editor can do for a plugin. Offsets count a line break as one character. */
 export interface EditorActions {
@@ -338,17 +338,7 @@ export class PluginRuntime {
         add: (c) => {
           const cmd: PluginCommand = { ...c, id: c.id.includes(':') ? c.id : `${id}:${c.id}`, plugin: manifest.name }
           this.commands = [...this.commands, cmd]
-          // Its key works while the editor has focus, as before the registry.
-          const unregister = this.registry.register({
-            id: cmd.id,
-            title: cmd.title,
-            category: 'Tools',
-            group: cmd.plugin,
-            key: cmd.key,
-            editorKey: true,
-            when: ['vault'],
-            run: () => this.runCommand(cmd.id),
-          })
+          const unregister = this.registry.register(pluginCommand(cmd, () => this.runCommand(cmd.id)))
           own(() => {
             this.commands = this.commands.filter((x) => x !== cmd)
             unregister()

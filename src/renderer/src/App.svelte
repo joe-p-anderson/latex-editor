@@ -261,7 +261,7 @@
     (hint) => flash(hint),
   )
   /** What the commands' `when` conditions are checked against. */
-  const commandContext = (): Context => ({ vault: !!vault, tex: !!active?.toLowerCase().endsWith('.tex') })
+  const commandContext = (): Context => ({ vault: !!vault, editor: !!active, tex: !!active?.toLowerCase().endsWith('.tex') })
   commands.register(
     ...coreCommands({
       newFile: () => newFile(newFileDir()),

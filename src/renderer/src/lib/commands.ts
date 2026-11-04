@@ -6,8 +6,8 @@ import { fuzzyScore } from '@shared/images'
 
 export type Category = 'File' | 'Edit' | 'Insert' | 'View' | 'Build' | 'Tools' | 'Help'
 
-/** A condition a command needs: a vault is open, or a `.tex` file is active. */
-export type Condition = 'vault' | 'tex'
+/** A condition a command needs: a vault is open, a file is open in the editor, or a `.tex` file is. */
+export type Condition = 'vault' | 'editor' | 'tex'
 
 /** Which conditions hold now. */
 export type Context = Record<Condition, boolean>
@@ -46,6 +46,22 @@ export interface Command {
 }
 
 export const holds = (c: Command, ctx: Context): boolean => (c.when ?? []).every((w) => ctx[w])
+
+/**
+ * A plugin's command (`id` is `<plugin>:<id>`), for the registry: under
+ * Tools with its plugin's name. It acts on the editor, so its key is bound
+ * there and it needs a file open.
+ */
+export const pluginCommand = (c: { id: string; title: string; plugin: string; key?: string }, run: Command['run']): Command => ({
+  id: c.id,
+  title: c.title,
+  category: 'Tools',
+  group: c.plugin,
+  key: c.key,
+  editorKey: true,
+  when: ['vault', 'editor'],
+  run,
+})
 
 export class CommandRegistry {
   private list: Command[] = []

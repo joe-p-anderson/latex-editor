@@ -21,9 +21,9 @@ const registry = () => {
   return { reg, ran: r.ran }
 }
 
-const NONE: Context = { vault: false, tex: false }
-const BIB: Context = { vault: true, tex: false }
-const TEX: Context = { vault: true, tex: true }
+const NONE: Context = { vault: false, editor: false, tex: false }
+const BIB: Context = { vault: true, editor: true, tex: false }
+const TEX: Context = { vault: true, editor: true, tex: true }
 const labels = (ctx: Context) => registry().reg.available(ctx).map(paletteLabel)
 
 describe('core commands', () => {
@@ -131,5 +131,10 @@ describe('core commands', () => {
     reg.register(...coreCommands(recorder().actions))
     expect(reg.handleKey(key('C', { shift: true }), BIB, 'app')).toBe(true)
     expect(hints).toEqual(['Open a .tex file to cite'])
+  })
+
+  it('hide Live View with no file open', () => {
+    expect(labels({ vault: true, editor: false, tex: false })).not.toContain('View: Live View')
+    expect(labels(BIB)).toContain('View: Live View')
   })
 })
