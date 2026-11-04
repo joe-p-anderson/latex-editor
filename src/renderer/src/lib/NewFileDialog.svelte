@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import { lineBreakOf, withLineBreaks } from '@shared/edits'
   import { badName, joinRel, splitExt } from '@shared/paths'
-  import { fields, fill, type Starter } from '@shared/starters'
+  import { fields, fill, type Companion, type Starter } from '@shared/starters'
   import Icon from './Icon.svelte'
 
   /** Pick a starter, name the file, fill in its fields, choose a folder. */
@@ -25,7 +25,7 @@
      * Makes the file, and the starter's companion files beside it (each only
      * if missing); resolves to an error message to show here, or null when it worked.
      */
-    oncreate: (rel: string, text: string, companions: { rel: string; text: string }[]) => Promise<string | null>
+    oncreate: (rel: string, text: string, companions: Companion[]) => Promise<string | null>
     oncancel: () => void
   } = $props()
 
@@ -114,8 +114,7 @@
     const base = splitExt(fileName)[0]
     // Values typed or pasted in have \n breaks; the file takes the starter's.
     const text = withLineBreaks(fill(chosen.text, values, { date: today(), filename: fileName, basename: base }), lineBreakOf(chosen.text))
-    const companions = (chosen.companions ?? []).map((c) => ({ rel: joinRel(targetDir, c.name), text: c.text }))
-    error = await oncreate(rel, text, companions)
+    error = await oncreate(rel, text, chosen.companions ?? [])
     busy = false
   }
 

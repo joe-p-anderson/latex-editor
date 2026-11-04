@@ -4,6 +4,12 @@
 // `\{{` writes a literal `{{`. An optional first line, `%% starter: <text>`,
 // describes the starter and is left out of the new file.
 
+/** A file a starter makes beside the new one, by name, unless one of that name is already there (e.g. references.bib). */
+export interface Companion {
+  name: string
+  text: string
+}
+
 export interface Starter {
   id: string
   name: string
@@ -11,8 +17,7 @@ export interface Starter {
   description: string
   source: 'built-in' | 'vault' | 'global'
   text: string
-  /** Files made beside the new one, by name, unless one of that name is already there (e.g. references.bib). */
-  companions?: { name: string; text: string }[]
+  companions?: Companion[]
 }
 
 /** The app-wide default starter, until the user picks another. */

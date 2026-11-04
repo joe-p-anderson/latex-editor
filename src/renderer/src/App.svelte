@@ -42,6 +42,7 @@
   import NewVaultDialog from './lib/NewVaultDialog.svelte'
   import { findReferences, retarget, type RefChange } from '@shared/references'
   import { badName, basename as baseName, dirname as dirName, isInside, joinRel, movedPath, type Move } from '@shared/paths'
+  import type { Companion } from '@shared/starters'
   import TableEditor from './lib/TableEditor.svelte'
   import { insertRow, newTable, packagesFor, parseTable, pasteGrid, serializeTable, type TableModel } from '@shared/tablemodel'
   import { normalizeEol } from '@shared/search'
@@ -1559,10 +1560,13 @@
   const newFileDir = () => (active ? dirName(active) : (tree?.targetDir() ?? ''))
   const allFolders = (nodes: TreeNode[]): string[] => nodes.flatMap((n) => (n.kind === 'dir' ? [n.rel, ...allFolders(n.children ?? [])] : []))
 
-  async function createFromStarter(rel: string, text: string, companions: { rel: string; text: string }[]): Promise<string | null> {
+  async function createFromStarter(rel: string, text: string, companions: Companion[]): Promise<string | null> {
     try {
       await window.api.createFile(rel, text)
-      for (const c of companions) if (!taken(c.rel)) await window.api.createFile(c.rel, c.text)
+      for (const c of companions) {
+        const at = joinRel(dirName(rel), c.name)
+        if (!taken(at)) await window.api.createFile(at, c.text)
+      }
     } catch (e) {
       return (e as Error).message
     }
