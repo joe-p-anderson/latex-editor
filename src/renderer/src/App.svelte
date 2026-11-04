@@ -28,7 +28,7 @@
   import { coreCommands } from './lib/coreCommands'
   import { gettingStartedCommand } from './lib/gettingStarted'
   import { menuBar } from './lib/menuBar'
-  import { canBuild, checkTeX, tex, texReady } from './lib/tex.svelte'
+  import { canBuild, checkTeX, texDist, texReady } from './lib/texDist.svelte'
   import type { EditingHooks } from './lib/editing'
   import { blankComments, mergeTextSnippets, parseSnippets, type OutlineItem, type Snippet } from '@shared/latexedit'
   import { includegraphics, type ImageHooks } from './lib/imageSupport'
@@ -326,7 +326,7 @@
   const plateKeys = $derived((void commandsChanged, emptyPlateKeys(commands, { build: canBuild() })))
   const plateLinks = $derived((void commandsChanged, EMPTY_PLATE_LINKS.filter((l) => commands.get(l.id))))
   $effect(() => {
-    void [commandsChanged, vault, active, tex.checked, tex.info]
+    void [commandsChanged, vault, active, texDist.checked, texDist.info]
     untrack(() => window.api.setMenuBar(menuBar(commands.all(), commandContext())))
   })
   // Each vault has its own plugins on; the main process has switched them already.

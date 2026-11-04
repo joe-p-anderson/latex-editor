@@ -3,7 +3,7 @@
   import type { PDFDocumentLoadingTask, PDFDocumentProxy } from 'pdfjs-dist'
   import type { SyncTarget } from '@shared/api'
   import NoTexCard from './NoTexCard.svelte'
-  import { texMissing } from './tex.svelte'
+  import { texMissing } from './texDist.svelte'
   import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
   pdfjs.GlobalWorkerOptions.workerSrc = workerUrl

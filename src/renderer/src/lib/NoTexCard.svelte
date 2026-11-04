@@ -4,7 +4,7 @@
    * the empty PDF pane): where to get one, and Check again, which looks again
    * without a restart.
    */
-  import { checkTeX } from './tex.svelte'
+  import { checkTeX } from './texDist.svelte'
 
   const MIKTEX_URL = 'https://miktex.org/download'
   const TEXLIVE_URL = 'https://tug.org/texlive/'

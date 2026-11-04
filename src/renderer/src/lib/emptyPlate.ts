@@ -25,11 +25,11 @@ export interface PlateKey {
  * anything can build (without TeX, Ctrl+S just saves).
  */
 export function emptyPlateKeys(registry: CommandRegistry, { build, mac }: { build: boolean; mac?: boolean }): PlateKey[] {
-  const tex: Context = { vault: true, editor: true, tex: true, build }
+  const texFile: Context = { vault: true, editor: true, tex: true, build }
   return EMPTY_PLATE_COMMANDS.flatMap((id) => {
     const c = registry.get(id)
     if (!c?.key) return []
-    const title = (c.menuTitle?.(tex) ?? c.title).replace(/…$/, '')
+    const title = (c.menuTitle?.(texFile) ?? c.title).replace(/…$/, '')
     return [{ id, key: keyLabel(c.key, mac), title }]
   })
 }

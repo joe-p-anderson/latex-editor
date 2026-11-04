@@ -9,7 +9,7 @@
   import { logoUrl } from './appearance'
   import { marbleCss } from './marbles.svelte'
   import NoTexCard from './NoTexCard.svelte'
-  import { texMissing } from './tex.svelte'
+  import { texMissing } from './texDist.svelte'
 
   let {
     onopen,

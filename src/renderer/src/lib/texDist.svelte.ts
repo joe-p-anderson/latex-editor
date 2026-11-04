@@ -5,7 +5,7 @@
 // in a component or $derived and it updates.
 import type { TexInfo } from '@shared/api'
 
-export const tex = $state<{
+export const texDist = $state<{
   /** Whether detection has finished at least once. */
   checked: boolean
   /** What was found; null before the first check and when none is installed. */
@@ -17,10 +17,10 @@ export const tex = $state<{
  * installed, or the first check hasn't finished yet. A build itself waits
  * for the check instead (`texReady`).
  */
-export const canBuild = (): boolean => !tex.checked || !!tex.info
+export const canBuild = (): boolean => !texDist.checked || !!texDist.info
 
 /** Whether TeX was looked for and isn't installed: the card shows, and nothing builds. */
-export const texMissing = (): boolean => tex.checked && !tex.info
+export const texMissing = (): boolean => texDist.checked && !texDist.info
 
 let pending: Promise<TexInfo | null> | null = null
 
@@ -30,8 +30,8 @@ export function checkTeX(): Promise<TexInfo | null> {
     .detectTeX()
     .catch(() => null)
     .then((info) => {
-      tex.info = info
-      tex.checked = true
+      texDist.info = info
+      texDist.checked = true
       pending = null
       return info
     })
@@ -43,6 +43,6 @@ export function checkTeX(): Promise<TexInfo | null> {
  * this, so none starts before detection reports TeX missing. Saving doesn't.
  */
 export async function texReady(): Promise<boolean> {
-  if (!tex.checked) await checkTeX()
-  return !!tex.info
+  if (!texDist.checked) await checkTeX()
+  return !!texDist.info
 }
