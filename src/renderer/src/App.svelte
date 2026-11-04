@@ -19,6 +19,9 @@
   import TabBar from './lib/TabBar.svelte'
   import QuickOpen from './lib/QuickOpen.svelte'
   import CommandPalette from './lib/CommandPalette.svelte'
+  import ShortcutsPanel from './lib/ShortcutsPanel.svelte'
+  import AboutDialog from './lib/AboutDialog.svelte'
+  import { issueUrl, type AboutInfo } from '@shared/about'
   import { CommandRegistry, type Command, type Context } from './lib/commands'
   import { coreCommands } from './lib/coreCommands'
   import { menuBar } from './lib/menuBar'
@@ -73,6 +76,9 @@
   let tabs = $state<string[]>([])
   let mru: string[] = []
   let quickOpen = $state(false)
+  // Help → Keyboard Shortcuts (Ctrl+K Ctrl+S) and About endleaf.
+  let shortcuts = $state(false)
+  let about = $state<AboutInfo | null>(null)
   // Ctrl+Shift+P: the command palette.
   let palette = $state(false)
   // The commands the palette lists: those whose `when` held as it opened.
@@ -298,6 +304,9 @@
       },
       recompile: () => !!active && (compile(active), true),
       syncForward: () => void syncForward(),
+      keyboardShortcuts: () => (shortcuts = true),
+      reportIssue: async () => void window.api.openExternal(issueUrl(await window.api.about())),
+      about: async () => void (about = await window.api.about()),
     }),
   )
   const plugins = new PluginRuntime(host, commands)
@@ -2304,6 +2313,26 @@
     }}
     onclose={() => {
       quickOpen = false
+      editor?.focus()
+    }}
+  />
+{/if}
+
+{#if shortcuts}
+  <ShortcutsPanel
+    commands={commands.all()}
+    onclose={() => {
+      shortcuts = false
+      editor?.focus()
+    }}
+  />
+{/if}
+
+{#if about}
+  <AboutDialog
+    info={about}
+    onclose={() => {
+      about = null
       editor?.focus()
     }}
   />

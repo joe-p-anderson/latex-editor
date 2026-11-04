@@ -82,6 +82,17 @@ describe('core commands', () => {
     expect(pressed('B', { shift: true })).toEqual(['recompile'])
   })
 
+  it('open Keyboard Shortcuts on Ctrl+K Ctrl+S, and do nothing for Ctrl+K then another key', () => {
+    const { reg, ran } = registry()
+    const key = (k: string, scope: 'app' | 'editor' = 'app') => reg.handleKey({ key: k, ctrlKey: true, altKey: false, shiftKey: false, metaKey: false }, TEX, scope)
+    key('k')
+    key('s')
+    expect(ran).toEqual(['keyboardShortcuts'])
+    key('k')
+    expect(key('b')).toBe(true)
+    expect(ran).toEqual(['keyboardShortcuts'])
+  })
+
   it('move figure to Ctrl+Alt+F, the sidebar to Ctrl+Alt+B, and give figure* no key', () => {
     expect(pressed('f', { alt: true }, 'editor')).toEqual(['edit(figure)'])
     expect(pressed('b', { alt: true })).toEqual(['toggleSidebar'])

@@ -73,3 +73,38 @@ describe('the menu bar', () => {
     expect(ids).not.toContain('view.toggleSpelling')
   })
 })
+
+describe('the Help menu', () => {
+  /** Getting Started and Show Hints Again, which their own features register after the core commands. */
+  const own: Command[] = [
+    { id: 'help.showHintsAgain', title: 'Show Hints Again', category: 'Help', run: () => {} },
+    { id: 'help.gettingStarted', title: 'Getting Started', category: 'Help', run: () => {} },
+  ]
+  const help = (ctx = TEX, extra: Command[] = own) => {
+    const reg = new CommandRegistry()
+    reg.register(...coreCommands(actions), ...extra)
+    return flat(menuBar(reg.all(), ctx, false).find((m) => m.label === 'Help')!.items)
+  }
+
+  it('has the six items in order, those registered later in their places', () => {
+    expect(help().map((n) => n.label)).toEqual(['Keyboard Shortcuts', 'Getting Started', 'Maths Shortcuts…', 'Show Hints Again', 'Report an Issue…', 'About endleaf'])
+  })
+
+  it('keeps the core ones in order without the others', () => {
+    expect(help(TEX, []).map((n) => n.label)).toEqual(['Keyboard Shortcuts', 'Maths Shortcuts…', 'Report an Issue…', 'About endleaf'])
+  })
+
+  it('has Maths Shortcuts moved there from Edit', () => {
+    expect(flat(menu(TEX, 'Edit')).some((n) => n.label === 'Maths Shortcuts…')).toBe(false)
+  })
+
+  it('works with no vault open, but for Maths Shortcuts, which edits the vault’s file', () => {
+    const enabled = help({ vault: false, editor: false, tex: false }, []).filter((n) => n.enabled).map((n) => n.label)
+    expect(enabled).toEqual(['Keyboard Shortcuts', 'Report an Issue…', 'About endleaf'])
+  })
+
+  it('leaves the Keyboard Shortcuts chord out of the native menu, which has no chords', () => {
+    expect(help()[0].label).toBe('Keyboard Shortcuts')
+    expect(help()[0]).not.toHaveProperty('accelerator')
+  })
+})
