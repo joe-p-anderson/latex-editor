@@ -164,7 +164,7 @@
     border: 0;
     padding: 2px 16px;
     border-radius: 3px;
-    font: 600 16px var(--f-ui);
+    font: 600 16px var(--f-page);
     white-space: nowrap;
     max-width: 44vw;
     overflow: hidden;
