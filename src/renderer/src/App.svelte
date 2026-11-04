@@ -1093,18 +1093,19 @@
       return r.vault
     })
     if (!opened) return
-    await showGettingStarted()
+    await openInLive('main.tex')
     if (changed) flash('This is your copy of the Getting-started vault, with your changes.', { label: 'Start over', run: () => void startGettingStartedOver() })
   }
 
   /** Replaces the student's Getting-started copy with a fresh one (the main process asks first). */
   async function startGettingStartedOver(): Promise<void> {
-    if (await switchVault(() => window.api.startGettingStartedOver())) await showGettingStarted()
+    if (await switchVault(() => window.api.startGettingStartedOver())) await openInLive('main.tex')
   }
 
-  async function showGettingStarted(): Promise<void> {
+  /** Opens `rel` of a vault just adopted in Live view, beside the PDF pane. */
+  async function openInLive(rel: string): Promise<void> {
     await tick() // the editor mounts once the vault is set
-    await go('main.tex')
+    await go(rel)
     editor?.setLiveMode(true)
     pdfOpen = true
   }
@@ -1117,10 +1118,11 @@
    * is named and given a starter (NewVaultDialog), then made by makeVault.
    */
   async function newVault(): Promise<void> {
-    if (vault && !(await settleUnsaved('opening another vault'))) return
-    const pick = await window.api.newVault().catch((e: Error) => (flash(remoteMessage(e)), null))
-    if (pick?.kind === 'opened') adopt(pick.vault)
-    else if (pick) vaultSetup = pick
+    await switchVault(async () => {
+      const pick = await window.api.newVault()
+      if (pick?.kind === 'setup') vaultSetup = pick
+      return pick?.kind === 'opened' ? pick.vault : null
+    })
   }
 
   /** Makes the vault being set up and opens its main.tex in Live view beside its PDF, building once. Resolves to an error to show, or null. */
@@ -1134,10 +1136,7 @@
     }
     vaultSetup = null
     adopt(made.vault)
-    await tick() // the editor mounts with the vault
-    await go(made.main)
-    editor?.setLiveMode(true)
-    pdfOpen = true
+    await openInLive(made.main)
     await compile(made.main) // without TeX it doesn't build, and the PDF pane shows what to install
     return null
   }
