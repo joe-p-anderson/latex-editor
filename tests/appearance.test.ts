@@ -7,13 +7,13 @@ import {
   appearanceTokens,
   DEFAULT_APP_APPEARANCE,
   defaultVaultAppearance,
-  mix,
   normalizeAppAppearance,
   normalizeVaultAppearance,
   PALETTES,
   plainTokens,
   type PaletteTheme,
 } from '../src/shared/appearance'
+import { mix } from '../src/shared/contrast'
 import { Vault } from '../src/main/vault'
 
 const THEMES = themes.themes as PaletteTheme[]
