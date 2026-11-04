@@ -12,7 +12,6 @@ export const liveTheme = EditorView.baseTheme({
     fontFamily: 'var(--f-page)',
     fontSize: 'var(--page-size)',
     lineHeight: '1.56',
-    textAlign: 'justify',
     hyphens: 'auto',
     fontKerning: 'normal',
   },
@@ -202,7 +201,8 @@ export const liveTheme = EditorView.baseTheme({
   '.cm-live-chip.missing': { color: 'var(--err)', background: 'color-mix(in srgb, var(--err) 12%, transparent)' },
 
   '.cm-live-sym.faint': { color: muted, opacity: '0.55' },
-  '.cm-live-sp': {
+  // Shown only when "Show spaces in Live view" is on (lib/appearance.ts sets data-spaces).
+  ':root[data-spaces] & .cm-live-sp': {
     backgroundImage: 'radial-gradient(circle, color-mix(in srgb, var(--ink-soft) 45%, transparent) 0.07em, transparent 0.09em)',
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'center',

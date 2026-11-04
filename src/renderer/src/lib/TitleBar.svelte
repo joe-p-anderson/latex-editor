@@ -6,6 +6,7 @@
    * window controls over the right-hand end.
    */
   import Icon from './Icon.svelte'
+  import { MENU_BAR } from '@shared/menu'
 
   export type BuildState = { kind: 'none' | 'ok' | 'busy' | 'err'; note: string; detail?: string }
 
@@ -45,7 +46,6 @@
     nav?: { canBack: boolean; canForward: boolean; onback: () => void; onforward: () => void } | null
   } = $props()
 
-  const MENUS = ['File', 'Edit', 'View', 'Build', 'Tools']
 
   function openMenu(label: string, e: MouseEvent): void {
     const box = (e.currentTarget as HTMLElement).getBoundingClientRect()
@@ -59,7 +59,7 @@
   <div class="left">
     {#if logo}<img class="logo" src={logo} alt="" />{/if}
     <nav class="menus">
-      {#each MENUS as label (label)}
+      {#each MENU_BAR as label (label)}
         <button onclick={(e) => openMenu(label, e)}>{label}</button>
       {/each}
     </nav>
@@ -100,6 +100,9 @@
     height: 36px;
     display: grid;
     grid-template-columns: 1fr auto 1fr;
+    /* One row the bar's height: the ribbon hangs below it, and mustn't grow
+       the row (that pushed everything down about 7px after the first build). */
+    grid-template-rows: 100%;
     align-items: center;
     background: var(--chrome);
     color: var(--chrome-ink);
@@ -161,7 +164,7 @@
     border: 0;
     padding: 2px 16px;
     border-radius: 3px;
-    font: 600 16px var(--f-page);
+    font: 600 16px var(--f-ui);
     white-space: nowrap;
     max-width: 44vw;
     overflow: hidden;

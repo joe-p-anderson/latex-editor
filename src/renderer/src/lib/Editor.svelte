@@ -12,7 +12,8 @@
   import { createRenderer, type MacroDefs } from '@shared/mathrender'
   import { mathPreview, refreshMath, type RenderFn } from './mathPreview'
   import { imageSupport, insertAt, type ImageHooks } from './imageSupport'
-  import { latexEditing, type EditingHooks } from './editing'
+  import { EDITS, latexEditing, type EditingHooks } from './editing'
+  import type { EditId } from './coreCommands'
   import { refreshSpelling, spellcheck, type SpellHooks } from './spellcheck'
   import { outline, type OutlineItem } from '@shared/latexedit'
   import { imageFolders, liveMode, isLive, liveFile, setLive, toggleLive, type LivePaper } from './live/live'
@@ -38,6 +39,7 @@
     livePaper,
     onextract,
     onfindstep,
+    onkey,
   }: {
     onsave: (rel: string, text: string) => void
     ondirtychange: (rel: string, dirty: boolean) => void
@@ -65,6 +67,8 @@
     onextract: (rel: string, what: { line: number } | { from: number; to: number }, title: string) => void
     /** F3 / Shift+F3: the next or previous match of the search sidebar's query. */
     onfindstep: (dir: 1 | -1) => void
+    /** A key in the editor, for the command registry's editor keys (ahead of the editor's own); true if it ran one. */
+    onkey: (e: KeyboardEvent) => boolean
   } = $props()
 
   let host: HTMLDivElement
@@ -104,7 +108,7 @@
     importFiles: (files) => imageHooks.importFiles(files),
     savePasted: (blob) => imageHooks.savePasted(blob),
   })
-  const editing = latexEditing({
+  const editHooks: Parameters<typeof latexEditing>[0] = {
     lists: () => editingHooks.lists(),
     commands: () => editingHooks.commands(),
     environments: () => editingHooks.environments(),
@@ -118,7 +122,8 @@
     showInPdf: () => onsyncforward(),
     extract: (what, title) => current && onextract(current, what, title),
     menuItems: (sel) => editingHooks.menuItems(sel),
-  })
+  }
+  const editing = latexEditing(editHooks)
   const spelling = spellcheck({
     // Documents only: not classes, packages or the vault's settings files.
     enabled: () => spellHooks.enabled() && !!current?.toLowerCase().endsWith('.tex'),
@@ -191,10 +196,10 @@
         spelling,
         live,
         EditorView.lineWrapping,
+        // The registry's editor keys (formatting, inserts, plugin commands), ahead of every keymap.
+        Prec.highest(EditorView.domEventHandlers({ keydown: (e) => onkey(e) })),
         Prec.highest(
           keymap.of([
-            { key: 'Mod-s', preventDefault: true, run: () => (save(), true) },
-            { key: 'Mod-Alt-j', preventDefault: true, run: () => (onsyncforward(), true) },
             // Find lives in the search sidebar (Ctrl+F, in App.svelte), in place of CodeMirror's own panel.
             { key: 'F3', preventDefault: true, run: () => (onfindstep(1), true), shift: () => (onfindstep(-1), true) },
             { key: 'Mod-g', preventDefault: true, run: () => (onfindstep(1), true), shift: () => (onfindstep(-1), true) },
@@ -336,6 +341,14 @@
   }
 
   /** Flips live mode for the open file. */
+  /** Runs a formatting or insert action on the open file, and gives the editor focus; false if it didn't apply. */
+  export function edit(id: EditId): boolean {
+    if (!current) return false
+    const done = EDITS[id](view, editHooks)
+    view.focus()
+    return done
+  }
+
   export function toggleLiveMode(): void {
     toggleLive(view)
     view.focus()

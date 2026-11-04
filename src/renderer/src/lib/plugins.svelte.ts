@@ -5,7 +5,7 @@
 // those lists and supplies the HostServices plugins act through.
 import type { Component } from 'svelte'
 import { StateEffect, StateField, type Extension, type EditorState, type Range } from '@codemirror/state'
-import { Decoration, EditorView, ViewPlugin, keymap, type DecorationSet } from '@codemirror/view'
+import { Decoration, EditorView, ViewPlugin, type DecorationSet } from '@codemirror/view'
 import type { VaultInfo } from '@shared/api'
 import type { MacroDefs } from '@shared/mathrender'
 import type { PackageSpec } from '@shared/packages'
@@ -13,6 +13,7 @@ import { whenHolds, type PluginManifest, type PluginState, type SettingValues } 
 import { RENDERER } from '../../../plugins/renderer'
 import { isLive, liveFile, setLive } from './live/live'
 import { refreshMath, type RenderFn } from './mathPreview'
+import type { CommandRegistry } from './commands'
 
 /** What the open editor can do for a plugin. Offsets count a line break as one character. */
 export interface EditorActions {
@@ -225,7 +226,7 @@ export class PluginRuntime {
   citeSources = $state.raw<CiteSource[]>([])
   /** Plugins' own content for the Plugins panel, by plugin id. */
   panels = $state.raw<{ plugin: string; component: Component<{ ctx: RendererContext }>; ctx: RendererContext }[]>([])
-  /** Every plugin's editor extensions (and the command keys), for Editor.svelte. */
+  /** Every plugin's editor extensions, for Editor.svelte. (Command keys are bound from the command registry.) */
   extensions = $state.raw<Extension[]>([])
   private menu: (Parameters<RendererContext['editor']['contextMenu']>[0] & { plugin: string })[] = []
 
@@ -233,7 +234,11 @@ export class PluginRuntime {
   private editorExts = new Map<string, Extension[]>()
   private statusSeq = 0
 
-  constructor(private readonly host: HostServices) {
+  /** Plugin commands also go in the app's command registry (palette, keys), under Tools. */
+  constructor(
+    private readonly host: HostServices,
+    private readonly registry: CommandRegistry,
+  ) {
     window.api.onPluginEvent((id, event, data) => {
       for (const cb of this.running.get(id)?.events.get(event) ?? []) cb(data)
     })
@@ -254,13 +259,11 @@ export class PluginRuntime {
       if (on && !this.running.has(id)) await this.start(s)
       else if (!on && this.running.has(id)) this.stop(id)
     }
-    this.publishMenu()
   }
 
   /** Stops every plugin (the vault closed). */
   stopAll(): void {
     for (const id of [...this.running.keys()]) this.stop(id)
-    this.publishMenu()
   }
 
   /** The views to show in the activity bar now: always-on ones, and contextual ones whose `when` holds. */
@@ -284,10 +287,6 @@ export class PluginRuntime {
     const c = this.commands.find((x) => x.id === id)
     if (!c) return this.host.notify(`No command ${id} (is its plugin switched on?)`)
     Promise.resolve(c.run()).catch((e) => this.host.notify(`${c.title}: ${e?.message ?? e}`))
-  }
-
-  private publishMenu(): void {
-    window.api.setPluginMenu(this.commands.map(({ id, title, plugin, key }) => ({ id, title, plugin, key: key && toAccelerator(key) })))
   }
 
   private async start(state: PluginState): Promise<void> {
@@ -339,12 +338,21 @@ export class PluginRuntime {
         add: (c) => {
           const cmd: PluginCommand = { ...c, id: c.id.includes(':') ? c.id : `${id}:${c.id}`, plugin: manifest.name }
           this.commands = [...this.commands, cmd]
-          if (c.key) this.refreshExtensions()
+          // Its key works while the editor has focus, as before the registry.
+          const unregister = this.registry.register({
+            id: cmd.id,
+            title: cmd.title,
+            category: 'Tools',
+            group: cmd.plugin,
+            key: cmd.key,
+            editorKey: true,
+            when: ['vault'],
+            run: () => this.runCommand(cmd.id),
+          })
           own(() => {
             this.commands = this.commands.filter((x) => x !== cmd)
-            if (c.key) this.refreshExtensions()
+            unregister()
           })
-          this.publishMenu()
         },
         run: (cid) => this.runCommand(cid.includes(':') ? cid : `${id}:${cid}`),
       },
@@ -404,20 +412,8 @@ export class PluginRuntime {
   }
 
   private refreshExtensions(): void {
-    const keyed = this.commands.filter((c) => c.key)
-    this.extensions = [
-      ...[...this.editorExts.values()].flat(),
-      ...(keyed.length ? [keymap.of(keyed.map((c) => ({ key: c.key!, preventDefault: true, run: () => (this.runCommand(c.id), true) })))] : []),
-    ]
+    this.extensions = [...this.editorExts.values()].flat()
   }
-}
-
-/** A CodeMirror key ("Mod-Shift-k") as an Electron accelerator ("CmdOrCtrl+Shift+K"), for the menu. */
-export function toAccelerator(key: string): string {
-  return key
-    .split('-')
-    .map((p) => (p === 'Mod' ? 'CmdOrCtrl' : p.length === 1 ? p.toUpperCase() : p))
-    .join('+')
 }
 
 /** Asks plugin live decorations to recompute. */

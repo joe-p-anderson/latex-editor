@@ -2,8 +2,8 @@
 //  - Ctrl+B / Ctrl+I / Ctrl+E toggle \textbf, \textit, \emph (\mathbf and
 //    \mathit inside math); Ctrl+M toggles $...$, Ctrl+Shift+M makes \[...\];
 //  - Ctrl+Shift+A / E put the selection in align / equation (Ctrl+Alt+A / E
-//    for align* / equation*); Ctrl+Shift+F / Ctrl+Alt+F insert a figure /
-//    figure* with its \includegraphics ready for an image path;
+//    for align* / equation*); Ctrl+Alt+F inserts a figure (figure*, from the
+//    Insert menu or the palette) with its \includegraphics ready for an image path;
 //  - Enter in a list starts the next item (\item, or the vault's own markers
 //    such as \question); Enter on an empty last item leaves the list;
 //    Shift+Enter is a plain new line;
@@ -50,6 +50,7 @@ import { clipboardGrid, tableRangeAt } from '@shared/tablemodel'
 import { latexPairs } from './pairs'
 import { mathShortcuts } from './mathShortcuts'
 import type { MathSnippet } from '@shared/mathsnippets'
+import type { EditId } from './coreCommands'
 
 export interface EditingHooks {
   /** List environment → item command, without the backslash. */
@@ -171,6 +172,28 @@ function contextMenu(hooks: ContextHooks): Extension {
   })
 }
 
+/**
+ * The editor's formatting and insert actions, by id, for the command
+ * registry's Insert commands. In math, bold is \boldsymbol (bold Greek too)
+ * and "italic" is upright \mathrm, math being italic already. Each also
+ * removes the older forms instead of nesting. False when it didn't apply.
+ */
+export const EDITS: Record<EditId, (view: EditorView, hooks: EditingHooks) => boolean> = {
+  bold: (v) => format(v, 'textbf', 'boldsymbol', ['mathbf', 'bm']),
+  italic: (v) => format(v, 'textit', 'mathrm', ['mathit', 'textrm']),
+  emph: (v) => format(v, 'emph', 'mathit'),
+  inlineMath: (v) => inlineMath(v),
+  displayMath: (v) => block(v, '\\[', '\\]'),
+  equation: (v) => environment(v, 'equation'),
+  'equation*': (v) => environment(v, 'equation*'),
+  align: (v) => environment(v, 'align'),
+  'align*': (v) => environment(v, 'align*'),
+  figure: (v) => figure(v, 'figure'),
+  'figure*': (v) => figure(v, 'figure*'),
+  table: (v, hooks) => (hooks.editTable(tableRangeAt(v.state.doc.toString(), v.state.selection.main.head), null), true),
+  renameLabel: (v, hooks) => renameKey(v, hooks),
+}
+
 export function latexEditing(hooks: EditingHooks & ContextHooks): Extension {
   const source = (ctx: CompletionContext) => complete(ctx, hooks)
   const languageData = [{ autocomplete: source, closeBrackets: { brackets: ['(', '[', '{'] } }]
@@ -179,25 +202,7 @@ export function latexEditing(hooks: EditingHooks & ContextHooks): Extension {
     Prec.low(contextMenu(hooks)),
     indentUnit.of('    '),
     EditorState.languageData.of(() => languageData),
-    Prec.highest(
-      keymap.of([
-        // In math, bold is \boldsymbol (bold Greek too) and "italic" is upright \mathrm,
-        // math being italic already. Each also removes the older forms instead of nesting.
-        { key: 'Mod-b', preventDefault: true, run: (v) => format(v, 'textbf', 'boldsymbol', ['mathbf', 'bm']) },
-        { key: 'Mod-i', preventDefault: true, run: (v) => format(v, 'textit', 'mathrm', ['mathit', 'textrm']) },
-        { key: 'Mod-e', preventDefault: true, run: (v) => format(v, 'emph', 'mathit') },
-        { key: 'Mod-m', preventDefault: true, run: inlineMath },
-        { key: 'Mod-Shift-m', preventDefault: true, run: (v) => block(v, '\\[', '\\]') },
-        { key: 'Mod-Shift-a', preventDefault: true, run: (v) => environment(v, 'align') },
-        { key: 'Mod-Alt-a', preventDefault: true, run: (v) => environment(v, 'align*') },
-        { key: 'Mod-Shift-e', preventDefault: true, run: (v) => environment(v, 'equation') },
-        { key: 'Mod-Alt-e', preventDefault: true, run: (v) => environment(v, 'equation*') },
-        { key: 'Mod-Shift-f', preventDefault: true, run: (v) => figure(v, 'figure') },
-        { key: 'Mod-Alt-f', preventDefault: true, run: (v) => figure(v, 'figure*') },
-        { key: 'F2', run: (v) => renameKey(v, hooks) },
-        { key: 'Mod-Alt-t', preventDefault: true, run: (v) => (hooks.editTable(tableRangeAt(v.state.doc.toString(), v.state.selection.main.head), null), true) },
-      ]),
-    ),
+    // The formatting and insert keys are bound from the command registry (coreCommands.ts), which runs EDITS.
     tablePaste(hooks),
     mathShortcuts(() => hooks.mathSnippets()),
     latexPairs(),

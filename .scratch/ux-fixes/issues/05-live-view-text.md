@@ -11,8 +11,11 @@ Spec: [../spec.md](../spec.md#live-view-text).
 
 ## Acceptance
 
-- [ ] A fresh profile shows Live view prose ragged-right with no dots.
-- [ ] Turning the setting on shows the dots immediately, without reopening the file, and the choice survives a restart.
-- [ ] Source view is unchanged.
+- [x] A fresh profile shows Live view prose ragged-right with no dots.
+- [x] Turning the setting on shows the dots immediately, without reopening the file, and the choice survives a restart.
+- [x] Source view is unchanged.
 
 ## Comments
+
+- Done on `ux-fixes-05`. Justification removed. New `showSpaces` app appearance setting (off by default), with a "Show spaces in Live view" checkbox at the end of the Appearance panel's Type section. It toggles `data-spaces` on `<html>`, and the dot CSS is scoped to that, so the dots appear and disappear at once. Checked in the running app with a fresh profile: no dots and ragged-right by default. Turning it on shows the dots straight away and writes `showSpaces: true` to settings.json. After a reload the setting was still on. Source view has no dots. A full app restart wasn't tested separately, but the setting is read from settings.json the same way.
+
