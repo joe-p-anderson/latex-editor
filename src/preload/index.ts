@@ -80,6 +80,9 @@ const api: Api = {
     return () => ipcRenderer.removeListener('tree-changed', listener)
   },
   getAppearance: () => ipcRenderer.invoke('appearance:get'),
+  dismissedHints: () => ipcRenderer.invoke('hints:dismissed'),
+  dismissHint: (id) => ipcRenderer.invoke('hints:dismiss', id),
+  clearDismissedHints: () => ipcRenderer.invoke('hints:clear'),
   setAppearance: (changes) => ipcRenderer.invoke('appearance:set', changes),
   setVaultAppearance: (changes) => ipcRenderer.invoke('appearance:set-vault', changes),
   setWindowChrome: (color, symbolColor) => ipcRenderer.invoke('window:chrome', color, symbolColor),

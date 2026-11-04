@@ -284,6 +284,12 @@ export interface Api {
   /** The user asked to close the window; the renderer decides, then calls closeWindow. */
   onCloseRequested(cb: () => void): () => void
   onTreeChanged(cb: (tree: TreeNode[]) => void): () => void
+  /** The first-time hints dismissed so far, from settings.json. */
+  dismissedHints(): Promise<string[]>
+  /** Stores a first-time hint as dismissed, so it never shows again. */
+  dismissHint(id: string): Promise<void>
+  /** Forgets every dismissed hint (Help → Show Hints Again). */
+  clearDismissedHints(): Promise<void>
   /** The global appearance (look, page, type), from settings.json. */
   getAppearance(): Promise<AppAppearance>
   /** Saves changes to the global appearance; returns the whole of it. */
