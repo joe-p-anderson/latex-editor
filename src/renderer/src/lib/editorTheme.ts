@@ -33,7 +33,7 @@ const page = EditorView.theme({
     backgroundColor: 'var(--paper)',
     padding: '60px var(--pad-r) 110px 0',
   },
-  '.cm-lineNumbers .cm-gutterElement': { font: 'italic 12px var(--f-page)', paddingRight: '6px' },
+  '.cm-lineNumbers .cm-gutterElement': { font: '12px var(--f-page)', paddingRight: '6px' },
   // Source mode: the same page, in the mono at 0.74 × the text size.
   '&:not(.cm-live) .cm-content': { fontFamily: 'var(--f-mono)', fontSize: 'calc(var(--page-size) * 0.74)', lineHeight: '1.62' },
   // Live: only the source block under the cursor is numbered.
