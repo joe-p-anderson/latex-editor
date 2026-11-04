@@ -79,6 +79,9 @@ describe('built-in starters', () => {
       'Article',
       'Handout',
       'Lab report (revtex)',
+      'Long lab report (revtex)',
+      'Presentation (beamer)',
+      'Problem set',
       'Section',
       'Standalone figure',
       'Bibliography',
@@ -86,6 +89,7 @@ describe('built-in starters', () => {
       'Plain text',
     ])
     expect(builtIn.find((s) => s.name === 'Section')?.description).toBe('A section to \\input into a larger document')
+    for (const s of builtIn) expect(s.description, s.name).toBeTruthy()
   })
 
   it('read their files afresh each time', async () => {
