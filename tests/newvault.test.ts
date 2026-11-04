@@ -47,7 +47,7 @@ describe('newVaultChoices', () => {
 })
 
 describe('makeVault', () => {
-  it('writes .vault.json and main.tex (with references.bib) from the lab report', async () => {
+  it('writes .vault.json, main.tex, references.bib and figures/ from the lab report', async () => {
     temp()
     const root = join(dir, 'lab')
     const global = join(dir, 'global')
@@ -55,11 +55,14 @@ describe('makeVault', () => {
     const lab = starters.find((s) => s.name === 'Lab report (revtex)')!
     const main = await makeVault(root, { name: 'Pendulum lab', starter: lab.id }, global)
     expect(main).toBe('main.tex')
-    expect(readdirSync(root).sort()).toEqual(['.vault.json', 'main.tex', 'references.bib'])
+    expect(readdirSync(root).sort()).toEqual(['.vault.json', 'figures', 'main.tex', 'references.bib'])
+    expect(readdirSync(join(root, 'figures'))).toEqual([])
     const tex = readFileSync(join(root, 'main.tex'), 'utf8')
     expect(tex).toContain('\\documentclass[reprint,aps]{revtex4-2}')
     expect(tex).toContain('\\title{Pendulum lab}')
     expect(tex).not.toContain('{{')
+    expect(tex).not.toContain('%% starter:')
+    expect(tex).toContain('{figures/plot.pdf}')
     const settings = JSON.parse(readFileSync(join(root, '.vault.json'), 'utf8'))
     expect(settings).toMatchObject({ name: 'Pendulum lab', defaultStarter: 'Lab report (revtex)' })
     expect(typeof settings.appearance?.palette).toBe('string')
@@ -88,6 +91,20 @@ describe('makeVault', () => {
     const { starters } = await newVaultChoices(root, null, 'Lab report (revtex)')
     await makeVault(root, { name: 'lab', starter: starters.find((s) => s.name === 'Lab report (revtex)')!.id }, null)
     expect(readFileSync(join(root, 'references.bib'), 'utf8')).toBe('mine')
+  })
+
+  it("opens a folder starter's entry file as main.tex, and fills a field in every file", async () => {
+    temp()
+    const root = join(dir, 'notes')
+    const global = join(dir, 'global')
+    mkdirSync(join(global, 'starters', 'Notes', 'parts'), { recursive: true })
+    writeFileSync(join(global, 'starters', 'Notes', 'notes.tex'), '%% starter: Notes\n\\title{{{Title}}}\n')
+    writeFileSync(join(global, 'starters', 'Notes', 'parts', 'one.tex'), '% part of {{Title}}, in {{filename}}\n')
+    const { starters } = await newVaultChoices(root, global, 'Notes')
+    await makeVault(root, { name: 'Optics', starter: starters.find((s) => s.name === 'Notes')!.id }, global)
+    expect(readFileSync(join(root, 'main.tex'), 'utf8')).toBe('\\title{Optics}\n')
+    expect(readFileSync(join(root, 'parts', 'one.tex'), 'utf8')).toBe('% part of Optics, in main.tex\n')
+    expect(existsSync(join(root, 'notes.tex'))).toBe(false)
   })
 
   it('refuses a starter it does not know', async () => {

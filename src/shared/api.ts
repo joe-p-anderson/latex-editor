@@ -248,6 +248,12 @@ export interface Api {
    * template folders, and the id of the default one to preselect.
    */
   listStarters(): Promise<{ starters: Starter[]; preselect: string | null }>
+  /**
+   * Makes `rel` from the starter with id `id`, its fields filled from `values`
+   * (a missing one takes its default), and a folder starter's other files
+   * relative to it, each only if missing. Fails, making nothing, if `rel` exists.
+   */
+  createFromStarter(id: string, rel: string, values: Record<string, string>): Promise<void>
   /** Names the starter New file preselects in this vault (null: the app-wide default), in .vault.json. */
   setVaultDefaultStarter(name: string | null): Promise<void>
   /** Opens the starters/ folder that starters from `source` live in (see startersFolder). */

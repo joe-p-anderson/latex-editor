@@ -1,2 +1,4 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+# Built-in starters write new files with LF breaks, as they did when they lived in code.
+resources/starters/** text eol=lf
