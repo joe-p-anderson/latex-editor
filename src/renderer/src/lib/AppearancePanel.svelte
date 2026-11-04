@@ -202,7 +202,7 @@
       </section>
 
       <section class="section" aria-label="Endpaper">
-        {@render heading('Endpaper', `This vault · ${vaultName}`, 'This vault’s marbled sheet, from its palette: it shows on the welcome screen and behind the PDF')}
+        {@render heading('Endpaper', `This vault · ${vaultName}`, 'This vault’s marbled endpaper and colours')}
         <div class="group">
           <div class="label">Marbling</div>
           <div class="swatches">
