@@ -7,7 +7,7 @@ export interface AboutInfo {
   chromium: string
   /** "Windows 10.0.19045 (x64)": the OS name, release and architecture only. */
   os: string
-  /** The TeX distribution found, e.g. "MiKTeX 24.1"; null when none is, "unknown" until it's checked. */
+  /** The TeX distribution found, e.g. "MiKTeX 24.1"; null when none is installed. */
   tex: string | null
 }
 
