@@ -10,6 +10,7 @@ import { bibInfo } from './bibliography'
 import { cacheDirFor, compile, compileDraft, compileSection, fullBuildReason, resolveRoot } from './compile'
 import { discoverPaperOf, paperInfo } from './project'
 import { importImage, saveImage } from './images'
+import { openCopy, replaceCopy } from './gettingStarted'
 import { editorContextFor, macrosFor } from './mathmacros'
 import { appAppearance, appDefaultStarter, dismissHint, globalSnippets, globalTemplatesDir, loadSettings, migrateSettings, saveAppAppearance, saveSettings } from './settings'
 import { searchVault } from './search'
@@ -120,6 +121,14 @@ async function newVault(): Promise<NewVaultPick | null> {
   return { kind: 'setup', root, ...(await newVaultChoices(root, await globalTemplatesDir(), await appDefaultStarter())) }
 }
 
+/** The bundled Getting-started vault, and where the student's copy of it goes. */
+function gettingStartedPaths(): { bundled: string; target: string } {
+  return {
+    bundled: join(app.getAppPath(), 'resources', 'getting-started'),
+    target: join(app.getPath('documents'), 'endleaf', 'Getting started'),
+  }
+}
+
 /**
  * Moves a vault file into the global template library, asking before
  * replacing a file of the same name there. Returns where it went, or null
@@ -206,6 +215,33 @@ ipcMain.handle('vault:new', () => newVault())
 ipcMain.handle('vault:make', async (_e, root: string, name: string, starter: string) => {
   const main = await makeVault(root, { name, starter }, await globalTemplatesDir())
   return { vault: await (await openVault(root)).info(), main }
+})
+ipcMain.handle('vault:getting-started', async () => {
+  const { bundled, target } = gettingStartedPaths()
+  const { changed } = await openCopy(bundled, target)
+  return { vault: await (await openVault(target)).info(), changed }
+})
+ipcMain.handle('vault:getting-started-over', async () => {
+  const { bundled, target } = gettingStartedPaths()
+  const r = await dialog.showMessageBox(win!, {
+    type: 'question',
+    message: 'Start the Getting-started vault over?',
+    detail: `Your copy, with your changes, goes to the ${process.platform === 'darwin' ? 'Trash' : 'Recycle Bin'}, and a fresh one takes its place.\n\n${target}`,
+    buttons: ['Start over', 'Cancel'],
+    defaultId: 0,
+    cancelId: 1,
+    noLink: true,
+  })
+  if (r.response !== 0) return null
+  await closeVault() // stops the watcher, so the folder can go
+  vault = null
+  try {
+    await replaceCopy(bundled, target, (abs) => shell.trashItem(abs))
+  } catch (e) {
+    await openVault(target) // the copy is still there: back to it, as the renderer still shows it
+    throw e
+  }
+  return (await openVault(target)).info()
 })
 ipcMain.handle('vault:close', async () => {
   await closeVault()

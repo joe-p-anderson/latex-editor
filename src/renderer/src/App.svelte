@@ -26,6 +26,7 @@
   import { issueUrl, type AboutInfo } from '@shared/about'
   import { CommandRegistry, type Command, type Context } from './lib/commands'
   import { coreCommands } from './lib/coreCommands'
+  import { gettingStartedCommand } from './lib/gettingStarted'
   import { menuBar } from './lib/menuBar'
   import { canBuild, checkTeX, tex } from './lib/tex.svelte'
   import type { EditingHooks } from './lib/editing'
@@ -314,6 +315,7 @@
       about: async () => void (about = await window.api.about()),
     }),
     showHintsAgainCommand(),
+    gettingStartedCommand(() => openGettingStarted()),
   )
   const plugins = new PluginRuntime(host, commands)
   // The menu bar comes from the registry too: sent again when a command comes or goes
@@ -1055,12 +1057,13 @@
 
   /**
    * Swaps in the vault `get` opens (after offering to save unsaved files);
-   * `get` returning null (a cancelled dialog) changes nothing.
+   * `get` returning null (a cancelled dialog) changes nothing. True if it switched.
    */
-  async function switchVault(get: () => Promise<VaultInfo | null>): Promise<void> {
-    if (vault && !(await settleUnsaved('opening another vault'))) return
+  async function switchVault(get: () => Promise<VaultInfo | null>): Promise<boolean> {
+    if (vault && !(await settleUnsaved('opening another vault'))) return false
     const v = await get().catch((e: Error) => (flash(remoteMessage(e)), null))
     if (v) adopt(v)
+    return !!v
   }
 
   const remoteMessage = (e: Error) => e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
@@ -1072,6 +1075,35 @@
     loadImages()
     loadSnippets()
     refreshBranch()
+  }
+
+  /**
+   * Help → Getting Started, and the welcome screen's button: the student's
+   * copy of the Getting-started vault, with main.tex in Live view beside the
+   * PDF pane. A copy that has changed since it was made offers Start over.
+   */
+  async function openGettingStarted(): Promise<void> {
+    let changed = false
+    const opened = await switchVault(async () => {
+      const r = await window.api.openGettingStarted()
+      changed = r.changed
+      return r.vault
+    })
+    if (!opened) return
+    await showGettingStarted()
+    if (changed) flash('This is your copy of the Getting-started vault, with your changes.', { label: 'Start over', run: () => void startGettingStartedOver() })
+  }
+
+  /** Replaces the student's Getting-started copy with a fresh one (the main process asks first). */
+  async function startGettingStartedOver(): Promise<void> {
+    if (await switchVault(() => window.api.startGettingStartedOver())) await showGettingStarted()
+  }
+
+  async function showGettingStarted(): Promise<void> {
+    await tick() // the editor mounts once the vault is set
+    await go('main.tex')
+    editor?.setLiveMode(true)
+    pdfOpen = true
   }
 
   /** The new vault being set up, once its folder is picked: its name and starter are asked next. */
@@ -2049,6 +2081,7 @@
       onopen={openVault}
       onopenat={(root) => switchVault(() => window.api.openVaultAt(root))}
       onnew={newVault}
+      ontry={openGettingStarted}
     />
     {#if note}<div class="note welcome-note">{note}</div>{/if}
   {:else}

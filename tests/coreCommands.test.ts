@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { CommandRegistry, paletteLabel, searchCommands, type Context } from '../src/renderer/src/lib/commands'
 import { coreCommands, type CoreActions } from '../src/renderer/src/lib/coreCommands'
 import { emptyPlateKeys } from '../src/renderer/src/lib/emptyPlate'
+import { gettingStartedCommand } from '../src/renderer/src/lib/gettingStarted'
 
 /** Actions that record what ran. */
 function recorder(): { actions: CoreActions; ran: string[] } {
@@ -157,6 +158,18 @@ describe('core commands', () => {
   it('hide Live View with no file open', () => {
     expect(labels({ vault: true, editor: false, tex: false, build: true })).not.toContain('View: Live View')
     expect(labels(BIB)).toContain('View: Live View')
+  })
+
+})
+
+describe('Help → Getting Started', () => {
+  it('opens the Getting-started vault, with or without a vault open', () => {
+    let opened = 0
+    const reg = new CommandRegistry()
+    reg.register(gettingStartedCommand(async () => void opened++))
+    for (const ctx of [NONE, TEX]) expect(reg.available(ctx).map(paletteLabel)).toContain('Help: Getting Started')
+    reg.run('help.gettingStarted', NONE)
+    expect(opened).toBe(1)
   })
 })
 

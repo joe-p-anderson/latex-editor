@@ -205,6 +205,13 @@ export interface Api {
   newVault(): Promise<NewVaultPick | null>
   /** Sets up a vault at `root` from a starter (by id) and opens it; resolves to the vault and main.tex's path. */
   makeVault(root: string, name: string, starter: string): Promise<{ vault: VaultInfo; main: string }>
+  /**
+   * Opens the student's copy of the Getting-started vault (Documents/endleaf/Getting started),
+   * copying the bundled one there first if it isn't there; `changed` says the copy differs from the bundle.
+   */
+  openGettingStarted(): Promise<{ vault: VaultInfo; changed: boolean }>
+  /** Asks, then trashes the Getting-started copy and opens a fresh one; null if the student said no. */
+  startGettingStartedOver(): Promise<VaultInfo | null>
   /** Closes the vault, back to the welcome screen. */
   closeVault(): Promise<void>
   /** Takes a vault off the welcome screen's recent list (the folder is left alone). */
