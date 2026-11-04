@@ -376,7 +376,8 @@ function citeWidget(cmd: string, keys: string[], cites: Citations | null): CiteW
 }
 
 // Each space gets a faint dot, like an editor's "render whitespace", so the
-// source's spacing stays visible in a proportional font.
+// source's spacing stays visible in a proportional font. The dots are drawn
+// only when the "Show spaces in Live view" setting is on (see theme.ts).
 const spaceMatcher = new MatchDecorator({ regexp: / /g, decoration: Decoration.mark({ class: 'cm-live-sp' }) })
 const spaces = ViewPlugin.fromClass(
   class {

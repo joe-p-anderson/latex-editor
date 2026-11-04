@@ -27,6 +27,8 @@ export interface AppAppearance {
   /** Text size in px. */
   textSize: number
   typeface: Typeface
+  /** A faint dot in each space of Live view prose. */
+  showSpaces: boolean
 }
 
 /** A vault's endpaper, in .vault.json. */
@@ -90,6 +92,7 @@ export const DEFAULT_APP_APPEARANCE: AppAppearance = {
   lineLength: 82,
   textSize: 19,
   typeface: 'Crimson Pro',
+  showSpaces: false,
 }
 
 /** A vault's default endpaper. The seed is fixed per vault: derived from its name until "Remarble" picks one. */
@@ -116,6 +119,7 @@ export function normalizeAppAppearance(raw: unknown): AppAppearance {
     lineLength: intIn(r.lineLength, LINE_LENGTH.min, LINE_LENGTH.max, d.lineLength),
     textSize: oneOf(r.textSize, TEXT_SIZES, d.textSize),
     typeface: oneOf(r.typeface, TYPEFACES, d.typeface),
+    showSpaces: typeof r.showSpaces === 'boolean' ? r.showSpaces : d.showSpaces,
   }
 }
 
