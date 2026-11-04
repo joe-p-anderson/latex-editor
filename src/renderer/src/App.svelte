@@ -324,6 +324,8 @@
   commands.subscribe(() => commandsChanged++)
   // The empty editor's keys and Help links, from the registry; a link shows once its command is registered.
   const plateKeys = $derived((void commandsChanged, emptyPlateKeys(commands, { build: canBuild() })))
+  // A command's key for people ("Ctrl+S"), following the registry.
+  const keyFor = $derived((void commandsChanged, (id: string) => commands.keyFor(id)))
   const plateLinks = $derived((void commandsChanged, EMPTY_PLATE_LINKS.filter((l) => commands.get(l.id))))
   $effect(() => {
     void [commandsChanged, vault, active, texDist.checked, texDist.info]
@@ -2072,7 +2074,7 @@
     ontogglepanel={() => togglePanel()}
     onribbon={() => togglePanel('problems')}
   />
-  <HintStrip />
+  <HintStrip {keyFor} />
 
   {#if !started}
     <div class="starting"></div>
@@ -2303,7 +2305,7 @@
           </section>
           <div class="splitter v" hidden={!showPdf} role="separator" aria-orientation="vertical" onpointerdown={startDrag}></div>
           <section class="pdf-pane" hidden={!showPdf}>
-            <PdfViewer bind:this={viewer} {pdf} version={pdfVersion} scope={pdfScope} canDrag={!!result && !result.draft && !result.section} onsyncclick={syncInverse} onclose={() => (pdfOpen = false)} onmessage={flash} />
+            <PdfViewer bind:this={viewer} {pdf} version={pdfVersion} scope={pdfScope} canDrag={!!result && !result.draft && !result.section} onsyncclick={syncInverse} onclose={() => (pdfOpen = false)} onmessage={flash} {keyFor} />
           </section>
         </div>
         <div class="splitter h" hidden={!panelOpen} role="separator" aria-orientation="horizontal" onpointerdown={dragPanel}></div>

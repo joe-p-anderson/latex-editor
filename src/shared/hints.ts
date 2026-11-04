@@ -3,18 +3,26 @@
 // most once. Dismissals are stored in settings.json (dismissedHints);
 // Help → Show Hints Again clears them. The spec caps the list at three:
 // don't add a fourth without revisiting it.
+//
+// A hint's keys are command ids in braces ({file.save}), named from the
+// command registry when shown (docs/adr/0001-one-command-registry.md).
 
 export const HINTS = [
   {
     id: 'live-source',
-    text: "You're in Live view: maths and formatting render as you type, and the line you're on shows its LaTeX. Switch to Source view for plain LaTeX (Ctrl+Shift+L).",
+    text: "You're in Live view: maths and formatting render as you type, and the line you're on shows its LaTeX. Switch to Source view for plain LaTeX ({view.toggleLive}).",
   },
-  { id: 'first-build', text: 'Saving built your PDF. Ctrl+S builds, and Ctrl+Shift+B rebuilds without saving.' },
+  { id: 'first-build', text: 'Saving built your PDF. {file.save} builds, and {build.recompile} rebuilds without saving.' },
   { id: 'first-error', text: "Click an error to jump to its line. TeX's raw output is folded under each one." },
 ] as const
 
 export type Hint = (typeof HINTS)[number]
 export type HintId = Hint['id']
+
+/** What `hint` says, its keys named by `keyFor` (a command id to "Ctrl+S", or null when it has none). */
+export function hintText(hint: Hint, keyFor: (commandId: string) => string | null): string {
+  return hint.text.replace(/\{([\w.:-]+)\}/g, (_, id: string) => keyFor(id) ?? 'its key')
+}
 
 /**
  * Which hint the strip shows, and the ones waiting behind it. Plain

@@ -104,6 +104,12 @@ export class CommandRegistry {
     return this.list
   }
 
+  /** The key that runs `id`, for people ("Ctrl+S"); null if it isn't registered or has no key. */
+  keyFor(id: string, mac?: boolean): string | null {
+    const key = this.get(id)?.key
+    return key ? keyLabel(key, mac) : null
+  }
+
   /** The commands that can run now, in registration order. */
   available(ctx: Context): Command[] {
     return this.list.filter((c) => holds(c, ctx))

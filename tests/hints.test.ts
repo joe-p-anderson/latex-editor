@@ -1,12 +1,21 @@
 // The first-time hints (.scratch/onboarding/spec.md, "First-time hints"):
 // one strip at a time, a queue behind it, and dismissals that stick.
 import { describe, expect, it } from 'vitest'
-import { HINTS, HintQueue } from '../src/shared/hints'
+import { HINTS, HintQueue, hintText } from '../src/shared/hints'
+
+const DEFAULT_KEYS: Record<string, string> = { 'file.save': 'Ctrl+S', 'build.recompile': 'Ctrl+Shift+B', 'view.toggleLive': 'Ctrl+Shift+L' }
+const hint = (id: string) => HINTS.find((h) => h.id === id)!
 
 describe('the hints', () => {
   it('are the three the spec lists, in its wording', () => {
     expect(HINTS.map((h) => h.id)).toEqual(['live-source', 'first-build', 'first-error'])
-    expect(HINTS.find((h) => h.id === 'first-build')?.text).toBe('Saving built your PDF. Ctrl+S builds, and Ctrl+Shift+B rebuilds without saving.')
+    expect(hintText(hint('first-build'), (id) => DEFAULT_KEYS[id] ?? null)).toBe('Saving built your PDF. Ctrl+S builds, and Ctrl+Shift+B rebuilds without saving.')
+    expect(hintText(hint('live-source'), (id) => DEFAULT_KEYS[id] ?? null)).toMatch(/Switch to Source view for plain LaTeX \(Ctrl\+Shift\+L\)\.$/)
+  })
+
+  it("name each command's key as the registry has it", () => {
+    const keys: Record<string, string> = { ...DEFAULT_KEYS, 'file.save': 'Ctrl+E' }
+    expect(hintText(hint('first-build'), (id) => keys[id] ?? null)).toBe('Saving built your PDF. Ctrl+E builds, and Ctrl+Shift+B rebuilds without saving.')
   })
 })
 

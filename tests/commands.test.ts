@@ -172,6 +172,14 @@ describe('key labels', () => {
     expect(keyLabel('Alt-ArrowLeft', false)).toBe('Alt+Left')
     expect(keyLabel('F2', false)).toBe('F2')
   })
+
+  it("gives a registered command's key by id, or null without one", () => {
+    const r = new CommandRegistry()
+    r.register(cmd({ id: 'file.save', key: 'Mod-s' }), cmd({ id: 'file.quiet' }))
+    expect(r.keyFor('file.save', false)).toBe('Ctrl+S')
+    expect(r.keyFor('file.quiet', false)).toBeNull()
+    expect(r.keyFor('file.missing', false)).toBeNull()
+  })
 })
 
 describe('palette', () => {
