@@ -4,10 +4,11 @@
    * the empty PDF pane): where to get one, and Check again, which looks again
    * without a restart.
    */
+  import { TEX_DOWNLOADS } from '@shared/about'
   import { checkTeX } from './texDist.svelte'
 
-  const MIKTEX_URL = 'https://miktex.org/download'
-  const TEXLIVE_URL = 'https://tug.org/texlive/'
+  const MIKTEX_URL = TEX_DOWNLOADS.miktex
+  const TEXLIVE_URL = TEX_DOWNLOADS.texLive
 
   let checking = $state(false)
   let stillMissing = $state(false)

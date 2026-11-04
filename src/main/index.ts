@@ -25,7 +25,7 @@ import { listStarters, startersFolder } from './starters'
 import { PluginHost } from './plugins'
 import { menuTemplate } from './menu'
 import type { MenuBarMenu } from '../shared/menu'
-import { ISSUES, type AboutInfo } from '../shared/about'
+import { ISSUES, TEX_DOWNLOADS, type AboutInfo } from '../shared/about'
 import type { SettingValues } from '../shared/plugin'
 import { isImage } from '../shared/images'
 import type { SearchOptions } from '../shared/search'
@@ -356,9 +356,14 @@ ipcMain.handle('images:list', async () => (await requireVault().files()).filter(
 ipcMain.handle('images:import', (_e, source: string) => importImage(requireVault(), source))
 ipcMain.handle('images:save', (_e, name: string, bytes: Uint8Array) => saveImage(requireVault(), name, bytes))
 ipcMain.handle('templates:move', (_e, rel: string) => moveToGlobalTemplates(rel))
-// Credit links (e.g. Detexify's) and Help → Report an Issue open in the browser; only these sites.
+// Credit links (e.g. Detexify's), the no-TeX card's downloads and Help → Report an Issue open in the browser; only these sites.
 ipcMain.handle('open-external', (_e, url: string) => {
-  if (/^https:\/\/(detexify\.kirelabs\.org|github\.com\/kirel\/detexify|miktex\.org\/download|tug\.org\/texlive)/.test(url) || url === ISSUES || url.startsWith(`${ISSUES}?`)) shell.openExternal(url)
+  const allowed =
+    /^https:\/\/(detexify\.kirelabs\.org|github\.com\/kirel\/detexify)/.test(url) ||
+    Object.values(TEX_DOWNLOADS).some((u) => url.startsWith(u)) ||
+    url === ISSUES ||
+    url.startsWith(`${ISSUES}?`)
+  if (allowed) shell.openExternal(url)
 })
 // Which TeX builds use (null without one): the renderer asks at launch and on Check again.
 ipcMain.handle('tex:detect', () => findTeX())
