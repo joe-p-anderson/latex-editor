@@ -1,11 +1,11 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_LISTS } from '../src/shared/latexedit'
+import { DEFAULT_LISTS, listEnter, outline } from '../src/shared/latexedit'
 import { inlineParts, liveModel, parseTabular, type LiveNode } from '../src/shared/livemodel'
 import { createRenderer } from '../src/shared/mathrender'
 
-const LISTS = { ...DEFAULT_LISTS, questions: 'question', parts: 'part', subparts: 'subpart', choices: 'choice', checkboxes: 'choice' }
+const LISTS = DEFAULT_LISTS
 
 const model = (text: string) => liveModel(text, LISTS)
 const of = <K extends LiveNode['kind']>(text: string, kind: K) =>
@@ -277,6 +277,41 @@ describe('liveModel', () => {
       const m = model(text)
       for (let i = 1; i < m.nodes.length; i++) expect(m.nodes[i].from).toBeGreaterThanOrEqual(m.nodes[i - 1].from)
     }
+  })
+})
+
+describe('exam-class lists by default', () => {
+  const items = (text: string) => liveModel(text, DEFAULT_LISTS).nodes.filter((n): n is Extract<LiveNode, { kind: 'item' }> => n.kind === 'item')
+
+  it('numbers questions, parts, subparts and subsubparts with no vault configuration', () => {
+    const text = [
+      '\\begin{questions}',
+      '\\question One',
+      '\\begin{parts}',
+      '\\part a',
+      '\\begin{subparts}\\subpart i\\begin{subsubparts}\\subsubpart A\\end{subsubparts}\\end{subparts}',
+      '\\part b',
+      '\\end{parts}',
+      '\\question Two',
+      '\\end{questions}',
+    ].join('\n')
+    expect(items(text).map((i) => i.label)).toEqual(['1.', '(a)', 'i.', 'A.', '(b)', '2.'])
+    const fences = liveModel(text, DEFAULT_LISTS).nodes.filter((n) => n.kind === 'fence') as Extract<LiveNode, { kind: 'fence' }>[]
+    expect(fences.filter((f) => f.begin).map((f) => f.env)).toEqual(['questions', 'parts', 'subparts', 'subsubparts'])
+  })
+
+  it('marks the correct choice in every choice environment', () => {
+    for (const env of ['choices', 'oneparchoices', 'checkboxes', 'oneparcheckboxes']) {
+      const got = items(`\\begin{${env}}\\choice a\\CorrectChoice b\\end{${env}}`)
+      expect(got.map((i) => i.correct), env).toEqual([false, true])
+    }
+  })
+
+  it('leaves a non-exam document alone: \\part outside parts is not an item', () => {
+    const text = '\\documentclass{book}\n\\begin{document}\n\\part{Beginnings}\n\\chapter{One}\n\\begin{itemize}\n\\item x\n\\end{itemize}\n\\end{document}'
+    expect(items(text).map((i) => i.label)).toEqual(['•'])
+    expect(listEnter(text, text.indexOf('\\part') + 5, DEFAULT_LISTS)).toBeNull()
+    expect(outline(text).map((o) => o.kind)).toEqual(['chapter'])
   })
 })
 
