@@ -9,6 +9,7 @@
 // line break), so callers pass state.doc.toString().
 import { blankComments, closingBrace, envTokens, matchEnd, type EnvToken } from './latexedit'
 import { findMathRegions } from './mathregions'
+import { codeSpans } from './codespans'
 import { graphicsPaths } from './images'
 
 export type ItemStyle = 'bullet' | 'number' | 'term' | 'box'
@@ -56,7 +57,10 @@ export type LiveNode =
   | { kind: 'math'; from: number; to: number; tex: string; display: boolean; env: string | null }
   | { kind: 'figure'; from: number; to: number; images: string[]; caption: string | null; number: string | null; labels: string[] }
   | { kind: 'table'; from: number; to: number; tabular: Tabular | null; caption: string | null; number: string | null; labels: string[] }
-  | { kind: 'verbatim'; from: number; to: number }
+  /** A code block (verbatim, minted, …): the whole environment, and its body between the egin's arguments and the \end. */
+  | { kind: 'verbatim'; from: number; to: number; bodyFrom: number; bodyTo: number }
+  /** Inline code (\verb|…|, \lstinline, \mintinline): the whole span, and its contents between the delimiters. */
+  | { kind: 'code'; from: number; to: number; bodyFrom: number; bodyTo: number }
   | { kind: 'image'; from: number; to: number; path: string }
   | { kind: 'format'; from: number; to: number; cmd: string; openTo: number; closeFrom: number }
   | { kind: 'label'; from: number; to: number; key: string }
@@ -66,6 +70,12 @@ export type LiveNode =
   | { kind: 'include'; from: number; to: number; cmd: string; dir: string; arg: string }
   /** A run of front-matter commands (\title, \author, \affiliation, …), shown as the title block they make. */
   | { kind: 'front'; from: number; to: number; parts: FrontPart[] }
+  /**
+   * \bibliography{a,b} or \printbibliography, with a \bibliographystyle on the
+   * line before or after it: the .bib files it reads (`.bib` added where the
+   * source leaves it off), from its argument or the \addbibresources.
+   */
+  | { kind: 'bibliography'; from: number; to: number; files: string[] }
 
 /** One front-matter command: \altaffiliation[Now at: ]{Elsewhere} is { cmd: 'altaffiliation', opt: 'Now at: ', arg: 'Elsewhere' }. */
 export interface FrontPart {
@@ -188,7 +198,7 @@ const INCLUDES = /^(input|include|subfile|import|subimport|inputfrom|includefrom
 /** The commands a title block is made of (revtex's and the standard classes'). */
 const FRONT = /^(title|author|affiliation|altaffiliation|address|email|homepage|thanks|date|preprint|keywords|collaboration|noaffiliation)$/
 /** Environments shown by a widget of their own; every other one gets a faint tag at its \begin and \end. */
-const untagged = (env: string) => VERBATIM.test(env) || FIGURES.test(env) || TABLES.test(env) || TABULARS.test(env)
+const untagged = (env: string) => FIGURES.test(env) || TABLES.test(env) || TABULARS.test(env)
 
 /**
  * Where the arguments after a \begin{name} that ends at `at` end: any `[…]`
@@ -278,6 +288,8 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
   }
   const math = findMathRegions(text)
   let mi = 0
+  const code = codeSpans(text)
+  let ci = 0
   // Math regions already turned into nodes (by offset).
   const made = new Set<number>()
 
@@ -314,6 +326,14 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
   re.lastIndex = start
   for (let m = re.exec(src); m; m = re.exec(src)) {
     const p = m.index
+    // Inline code: shown as code, never scanned inside.
+    while (ci < code.length && code[ci].to <= p) ci++
+    const span = code[ci]
+    if (span && span.from <= p && p < span.to) {
+      if (p === span.from) nodes.push({ kind: 'code', ...span })
+      re.lastIndex = span.to
+      continue
+    }
     // Math: rendered whole, never scanned inside.
     while (mi < math.length && math[mi].to <= p) mi++
     const region = math[mi]
@@ -363,6 +383,11 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
 
     if (FRONT.test(name)) {
       frontPart(name, p, end)
+      continue
+    }
+
+    if (name === 'bibliography' || name === 'printbibliography') {
+      bibliography(name, p, end)
       continue
     }
 
@@ -504,6 +529,38 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
     return { body: text.slice(open + 1, close), end: close + 1 }
   }
 
+  /** A bibliography card, taking in a \bibliographystyle on the line before or after. */
+  function bibliography(cmd: string, p: number, end: number): void {
+    let to = end
+    let names: string[]
+    if (cmd === 'bibliography') {
+      const g = group(end)
+      if (!g) return
+      names = g.body.split(',')
+      to = g.end
+    } else {
+      for (let o = optional(to); o; o = optional(to)) to = o.end
+      names = [...src.matchAll(/\\addbibresource\s*(?:\[[^\]]*\])?\s*\{([^}]*)\}/g)].map((m) => m[1])
+    }
+    const files = [...new Set(names.map((n) => n.trim()).filter(Boolean).map((n) => (/\.bib$/i.test(n) ? n : `${n}.bib`)))]
+    let from = p
+    const lineStart = src.lastIndexOf('\n', p - 1) + 1
+    const lineEnd = src.indexOf('\n', to) < 0 ? src.length : src.indexOf('\n', to)
+    const before = lineStart > 0 && !src.slice(lineStart, p).trim() ? styleLine(src.lastIndexOf('\n', lineStart - 2) + 1, lineStart - 1) : null
+    const after = !before && lineEnd < src.length && !src.slice(to, lineEnd).trim() ? styleLine(lineEnd + 1, src.indexOf('\n', lineEnd + 1) < 0 ? src.length : src.indexOf('\n', lineEnd + 1)) : null
+    if (before) from = before.from
+    if (after) to = after.to
+    nodes.push({ kind: 'bibliography', from, to, files })
+    re.lastIndex = to
+  }
+
+  /** The \bibliographystyle{…} on the line from..to, when it's all the line holds. */
+  function styleLine(from: number, to: number): { from: number; to: number } | null {
+    const line = src.slice(from, to)
+    const m = /^(\s*)\\bibliographystyle\s*\{[^}]*\}\s*$/.exec(line)
+    return m ? { from: from + m[1].length, to: from + line.trimEnd().length } : null
+  }
+
   /** A letter made by an accent or special-letter command; a bare {group} around it goes too. */
   function accentNode(from: number, to: number, glyph: string): void {
     if (src[from - 1] === '{' && src[to] === '}' && !/(?:\\[A-Za-z@]+\*?|[}\]])$/.test(src.slice(Math.max(0, from - 40), from - 1))) {
@@ -633,7 +690,11 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
       const close = matchEnd(tokens, tok)
       if (!close) return
       re.lastIndex = close.to
-      if (VERBATIM.test(env)) nodes.push({ kind: 'verbatim', from: tok.from, to: close.to })
+      if (VERBATIM.test(env)) {
+        // Its \end isn't reached by the scan, so its tag is made here.
+        nodes.push({ kind: 'verbatim', from: tok.from, to: close.to, bodyFrom: to, bodyTo: close.from })
+        nodes.push({ kind: 'fence', from: close.from, to: close.to, env, begin: false })
+      }
       else if (FIGURES.test(env)) figureNode(tok, close)
       else tableNode(tok, close)
     }

@@ -88,6 +88,29 @@ export const liveTheme = EditorView.baseTheme({
     cursor: 'pointer',
   },
   '.cm-live-preamble-title': { fontWeight: '600', color: 'var(--ink)' },
+  // \bibliography{…} or \printbibliography: its .bib files and how many keys the project cites.
+  '.cm-live-bib': {
+    display: 'flex',
+    alignItems: 'baseline',
+    flexWrap: 'wrap',
+    gap: '0 8px',
+    margin: '10px 0 4px',
+    padding: '4px 10px',
+    fontFamily: ui,
+    fontSize: 'calc(var(--page-size) * 0.7)',
+    color: muted,
+    background: 'var(--side)',
+    border: '1px solid var(--line)',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    textIndent: '0',
+  },
+  '.cm-live-bib:hover': { borderColor: 'var(--detail)' },
+  '.cm-live-bib-icon': { color: 'var(--detail)' },
+  '.cm-live-bib-file': { fontWeight: '600', color: 'var(--ink)', fontFamily: 'var(--f-mono)', fontSize: '0.95em' },
+  '.cm-live-bib-file:hover': { color: 'var(--detail)', textDecoration: 'underline' },
+  '.cm-live-bib-file.missing': { fontWeight: '400', color: muted, opacity: '0.7', textDecoration: 'line-through' },
+  '.cm-live-bib-file.missing:hover': { color: muted, textDecoration: 'line-through' },
   // Around each card (see spaced() in widgets.ts): holds its margins in.
   '.cm-live-box': { display: 'flow-root' },
 
@@ -169,7 +192,9 @@ export const liveTheme = EditorView.baseTheme({
   },
   // Wide tables and display math may run into the outer margin, up to 70 px.
   '&.cm-live .cm-live-math.block, &.cm-live .cm-live-table': { marginRight: 'calc(-1 * min(70px, var(--pad-r)))' },
-  '&.cm-live .cm-live-code': { fontFamily: mono, fontSize: '13.5px', backgroundColor: 'var(--srcbg)' },
+  // Code, inline (\verb|…| and friends) or a block's lines (verbatim, minted, …):
+  // in the mono, in the command colour, unshaded.
+  '&.cm-live .cm-live-code': { fontFamily: mono, fontSize: '0.9em', color: 'var(--detail)', backgroundColor: 'transparent' },
 
   // \textbf and friends.
   '.cm-live-textbf': { fontWeight: '700' },

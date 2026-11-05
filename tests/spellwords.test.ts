@@ -44,6 +44,14 @@ describe('proseWords', () => {
     expect(words(doc)).toEqual(['Hot', 'wheels', 'Body', 'text', 'here'])
   })
 
+  it('leaves out every form of inline code', () => {
+    expect(words('One \\lstinline!xyzzy! two \\mintinline{c}|qwrty| three \\verb*|zxcv| four')).toEqual(['One', 'two', 'three', 'four'])
+  })
+
+  it('checks a word after an unterminated \\verb', () => {
+    expect(words('\\verb|abc\nOne')).toEqual(['abc', 'One'])
+  })
+
   it('checks table cells but not the column spec', () => {
     expect(words('\\begin{tabular}{lcr}\nMass & Speed \\\\\n\\end{tabular}')).toEqual(['Mass', 'Speed'])
   })

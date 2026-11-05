@@ -6,6 +6,7 @@
 //  - " in text becomes `` or '' by position (smart quotes);
 //  - Backspace inside an empty pair removes both halves.
 // Also the \left/\right pairing used for highlighting and jumping.
+import { codeSpans } from './codespans'
 import { blankComments, envStackAt, envTokens } from './latexedit'
 import { findMathRegions, mathAtCursor } from './mathregions'
 
@@ -134,7 +135,8 @@ export function pairContext(text: string, pos: number): PairContext {
   const begin = /^[^%\n]*\\begin\s*\{document\}/m.exec(text)
   const preamble = begin ? pos < begin.index : /\\documentclass/.test(text.slice(0, pos))
   const verbatim = envStackAt(envTokens(text.slice(0, pos)), pos).some((t) => /^(verbatim|Verbatim|lstlisting|minted|comment)\*?$/.test(t.name))
-  return { math: false, text: !comment && !preamble && !verbatim && !inRawArg(text, pos) }
+  const code = codeSpans(text).some((s) => s.bodyFrom <= pos && pos <= s.bodyTo)
+  return { math: false, text: !comment && !preamble && !verbatim && !code && !inRawArg(text, pos) }
 }
 
 /** Inside the argument of \label, \url, \ref and the like. */

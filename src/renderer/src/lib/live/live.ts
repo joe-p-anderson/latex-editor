@@ -11,7 +11,7 @@ import { Facet, StateEffect, StateField, type EditorState, type Extension, type 
 import { Decoration, EditorView, GutterMarker, MatchDecorator, ViewPlugin, gutterLineClass, type DecorationSet, type ViewUpdate } from '@codemirror/view'
 import { RangeSet } from '@codemirror/state'
 import { citeLabels, isCite, liveModel, type LiveModel, type LiveOptions } from '@shared/livemodel'
-import { dirOf, parseIncludes } from '@shared/project'
+import { dirOf, joinRel, parseIncludes } from '@shared/project'
 import { entryText } from '@shared/bibtex'
 import type { Citations } from '../citations'
 import { graphicsFolders } from '@shared/images'
@@ -20,6 +20,8 @@ import { refreshMath, type RenderFn } from '../mathPreview'
 import { liveTheme } from './theme'
 import {
   BibitemWidget,
+  BibliographyWidget,
+  type BibCardFile,
   FenceWidget,
   FrontWidget,
   CiteWidget,
@@ -49,6 +51,8 @@ export interface LiveHooks {
   lists(): Record<string, string>
   /** The document's bibliography, for citation chips (null until loaded). */
   citations(): Citations | null
+  /** How many distinct keys the project cites (the root and every file it includes), for the bibliography card. */
+  cited(): number | null
   /** For a file of a multi-part paper: where it stands in the paper (null otherwise). */
   paper(rel: string | null): LivePaper | null
 }
@@ -299,9 +303,27 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
         widget(n.from, n.to, () => new TableWidget(n.tabular, text(n.from, n.to), n.caption, n.number, n.labels, render))
         break
       }
-      case 'verbatim':
-        tint(n.from, n.to, 'cm-live-code')
+      case 'verbatim': {
+        // The body's lines as code (not the \begin and \end lines, when they're
+        // on lines of their own); the line the cursor is on shows as source.
+        const a = doc.lineAt(n.bodyFrom)
+        const z = doc.lineAt(n.bodyTo)
+        const first = a.number + (text(n.bodyFrom, a.to).trim() ? 0 : 1)
+        const last = z.number - (text(z.from, n.bodyTo).trim() ? 0 : 1)
+        for (let l = first; l <= last; l++) {
+          const line = doc.line(l)
+          if (!touches(line.from, line.to)) lineClass(line.from, 'cm-live-code')
+        }
         break
+      }
+      case 'code': {
+        // \verb|…|: just the contents, as code. An empty one stays as source.
+        if (touches(n.from, n.to) || n.bodyFrom === n.bodyTo) break
+        hide(n.from, n.bodyFrom)
+        hide(n.bodyTo, n.to)
+        out.push(Decoration.mark({ class: 'cm-live-code' }).range(n.bodyFrom, n.bodyTo))
+        break
+      }
       case 'image': {
         if (touches(n.from, n.to)) break
         const rel = resolveImage(n.path, hooks.images(), hooks.dir(), imageDirs)
@@ -344,6 +366,12 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
         out.push(Decoration.replace({ widget: new SymbolWidget(n.text, n.faint) }).range(n.from, n.to))
         break
       }
+      case 'bibliography': {
+        if (touches(n.from, n.to)) break
+        const files = bibCardFiles(n.files, hooks.citations(), paper?.root ? dirOf(paper.root.rel) : hooks.dir())
+        widget(n.from, n.to, () => new BibliographyWidget(files, hooks.cited()))
+        break
+      }
     }
   }
   // In a file of a paper: the files before and after it, a click away.
@@ -358,6 +386,22 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
     }
   }
   return Decoration.set(out, true)
+}
+
+/**
+ * The .bib files a bibliography card names, as vault paths: the file the
+ * loaded bibliography found for each name (next to the root, or at the vault
+ * root), else the name relative to the root's folder `rootDir`. A name the
+ * bibliography couldn't find is missing.
+ */
+function bibCardFiles(names: string[], cites: Citations | null, rootDir: string): BibCardFile[] {
+  const bare = (n: string) => joinRel(/\.bib$/i.test(n) ? n : `${n}.bib`)
+  return names.map((name) => {
+    const want = bare(name)
+    const found = cites?.info.bibs.find((rel) => rel === joinRel(rootDir, want) || rel === want)
+    const missing = !!cites?.info.missing.some((m) => bare(m) === want)
+    return { name: name.split('/').pop()!, rel: found ?? joinRel(rootDir, want), missing: !found && missing }
+  })
 }
 
 /**

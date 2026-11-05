@@ -1,7 +1,8 @@
 // Finds the math in a LaTeX document: $...$, $$...$$, \(...\), \[...\] and
 // display environments (equation, align, gather, ...). Used by the editor to
 // know what to preview, and by the tests to render every equation in the
-// fixtures. Comments, escaped \$ and verbatim environments are skipped.
+// fixtures. Comments, escaped \$, verbatim environments and inline code are skipped.
+import { codeSpans } from './codespans'
 
 export interface MathRegion {
   /** Offsets into the document: the whole region, delimiters included. */
@@ -21,6 +22,8 @@ export function findMathRegions(text: string): MathRegion[] {
   const regions: MathRegion[] = []
   const n = text.length
   let i = 0
+  const code = codeSpans(text)
+  let ci = 0
 
   // Position of the next blank line (paragraph end) at or after `from`.
   const paragraphEnd = (from: number) => {
@@ -40,6 +43,12 @@ export function findMathRegions(text: string): MathRegion[] {
     }
 
     if (ch === '\\') {
+      // Inline code (\verb|$|) is never math.
+      while (ci < code.length && code[ci].to <= i) ci++
+      if (code[ci]?.from === i) {
+        i = code[ci].to
+        continue
+      }
       const next = text[i + 1]
       if (next === '(' || next === '[') {
         const close = next === '(' ? '\\)' : '\\]'
