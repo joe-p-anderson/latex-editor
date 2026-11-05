@@ -194,6 +194,8 @@ export const liveTheme = EditorView.baseTheme({
   // Wide tables and display math may run into the outer margin, up to 70 px.
   '&.cm-live .cm-live-math.block, &.cm-live .cm-live-table': { marginRight: 'calc(-1 * min(70px, var(--pad-r)))' },
   '&.cm-live .cm-live-code': { fontFamily: mono, fontSize: '13.5px', backgroundColor: 'var(--srcbg)' },
+  // Inline code (\verb|…| and friends): the contents in the mono, in the command colour.
+  '&.cm-live span.cm-live-code': { fontFamily: mono, fontSize: '0.9em', color: 'var(--detail)', backgroundColor: 'transparent' },
 
   // \textbf and friends.
   '.cm-live-textbf': { fontWeight: '700' },

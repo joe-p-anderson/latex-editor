@@ -300,6 +300,14 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
       case 'verbatim':
         tint(n.from, n.to, 'cm-live-code')
         break
+      case 'code': {
+        // \verb|…|: just the contents, as code. An empty one stays as source.
+        if (touches(n.from, n.to) || n.bodyFrom === n.bodyTo) break
+        hide(n.from, n.bodyFrom)
+        hide(n.bodyTo, n.to)
+        out.push(Decoration.mark({ class: 'cm-live-code' }).range(n.bodyFrom, n.bodyTo))
+        break
+      }
       case 'image': {
         if (touches(n.from, n.to)) break
         const rel = resolveImage(n.path, hooks.images(), hooks.dir(), imageDirs)
