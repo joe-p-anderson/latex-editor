@@ -2090,6 +2090,7 @@
     <div class="starting"></div>
   {:else if !vault}
     <Welcome
+      app={appearance}
       onopen={openVault}
       onopenat={(root) => switchVault(() => window.api.openVaultAt(root))}
       onnew={newVault}

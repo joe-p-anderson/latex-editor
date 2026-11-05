@@ -1,11 +1,11 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_LISTS } from '../src/shared/latexedit'
+import { DEFAULT_LISTS, listEnter, outline } from '../src/shared/latexedit'
 import { inlineParts, liveModel, parseTabular, type LiveNode } from '../src/shared/livemodel'
 import { createRenderer } from '../src/shared/mathrender'
 
-const LISTS = { ...DEFAULT_LISTS, questions: 'question', parts: 'part', subparts: 'subpart', choices: 'choice', checkboxes: 'choice' }
+const LISTS = DEFAULT_LISTS
 
 const model = (text: string) => liveModel(text, LISTS)
 const of = <K extends LiveNode['kind']>(text: string, kind: K) =>
@@ -208,6 +208,58 @@ describe('liveModel', () => {
     expect(of(text, 'math')[0].tex).toContain('\\tag{1b}')
   })
 
+  describe('fence tags', () => {
+    const fences = (text: string) => of(text, 'fence').map((f) => `${f.begin ? '+' : '-'}${f.env}`)
+
+    it('tags environments it knows nothing about, user-defined ones included', () => {
+      const text = [
+        '\\newenvironment{mybox}{}{}',
+        '\\begin{document}',
+        '\\begin{acknowledgments}',
+        'Thanks.',
+        '\\end{acknowledgments}',
+        '\\begin{center}x\\end{center}',
+        '\\begin{proof}y\\end{proof}',
+        '\\begin{mybox}z\\end{mybox}',
+        '\\end{document}',
+      ].join('\n')
+      expect(fences(text)).toEqual(['+acknowledgments', '-acknowledgments', '+center', '-center', '+proof', '-proof', '+mybox', '-mybox', '-document'])
+    })
+
+    it('hides the arguments after \\begin{name} with its tag', () => {
+      const text = '\\begin{minipage}[t]{0.5\\textwidth} Body\n\\end{minipage}\n\\begin{theorem}[Pythagoras \\cite{p}]\n$a^2$\n\\end{theorem}\n\\begin{center}\n[not an argument]\n\\end{center}'
+      const begins = of(text, 'fence').filter((f) => f.begin)
+      expect(begins.map((f) => [f.env, text.slice(f.from, f.to)])).toEqual([
+        ['minipage', '\\begin{minipage}[t]{0.5\\textwidth}'],
+        ['theorem', '\\begin{theorem}[Pythagoras \\cite{p}]'],
+        ['center', '\\begin{center}'],
+      ])
+      // Nothing inside the hidden arguments is shown as a construct of its own.
+      expect(of(text, 'ref')).toEqual([])
+      expect(of(text, 'math')).toHaveLength(1)
+    })
+
+    it('leaves environments with a widget of their own untagged', () => {
+      const text = [
+        '\\begin{equation}a\\end{equation}',
+        '\\begin{align*}b\\end{align*}',
+        '\\begin{figure}[h]\\includegraphics{x}\\end{figure}',
+        '\\begin{table}\\begin{tabular}{c}1\\end{tabular}\\end{table}',
+        '\\begin{tabular}{l}2\\end{tabular}',
+      ].join('\n')
+      expect(fences(text)).toEqual([])
+      expect(of(text, 'math')).toHaveLength(2)
+      expect(of(text, 'figure')).toHaveLength(1)
+      expect(of(text, 'table')).toHaveLength(2)
+    })
+
+    it('tags an unclosed \\begin, but not a stray \\end', () => {
+      expect(fences('Text\n\\end{foo}\nMore')).toEqual([])
+      expect(fences('\\begin{proof}\nStill typing')).toEqual(['+proof'])
+      expect(fences('\\begin{proof}a\\end{proof}\n\\end{proof}')).toEqual(['+proof', '-proof'])
+    })
+  })
+
   it('handles every fixture document without throwing, with sorted nodes', () => {
     const root = resolve(import.meta.dirname, '../fixtures')
     const files: string[] = []
@@ -225,6 +277,41 @@ describe('liveModel', () => {
       const m = model(text)
       for (let i = 1; i < m.nodes.length; i++) expect(m.nodes[i].from).toBeGreaterThanOrEqual(m.nodes[i - 1].from)
     }
+  })
+})
+
+describe('exam-class lists by default', () => {
+  const items = (text: string) => liveModel(text, DEFAULT_LISTS).nodes.filter((n): n is Extract<LiveNode, { kind: 'item' }> => n.kind === 'item')
+
+  it('numbers questions, parts, subparts and subsubparts with no vault configuration', () => {
+    const text = [
+      '\\begin{questions}',
+      '\\question One',
+      '\\begin{parts}',
+      '\\part a',
+      '\\begin{subparts}\\subpart i\\begin{subsubparts}\\subsubpart A\\end{subsubparts}\\end{subparts}',
+      '\\part b',
+      '\\end{parts}',
+      '\\question Two',
+      '\\end{questions}',
+    ].join('\n')
+    expect(items(text).map((i) => i.label)).toEqual(['1.', '(a)', 'i.', 'A.', '(b)', '2.'])
+    const fences = liveModel(text, DEFAULT_LISTS).nodes.filter((n) => n.kind === 'fence') as Extract<LiveNode, { kind: 'fence' }>[]
+    expect(fences.filter((f) => f.begin).map((f) => f.env)).toEqual(['questions', 'parts', 'subparts', 'subsubparts'])
+  })
+
+  it('marks the correct choice in every choice environment', () => {
+    for (const env of ['choices', 'oneparchoices', 'checkboxes', 'oneparcheckboxes']) {
+      const got = items(`\\begin{${env}}\\choice a\\CorrectChoice b\\end{${env}}`)
+      expect(got.map((i) => i.correct), env).toEqual([false, true])
+    }
+  })
+
+  it('leaves a non-exam document alone: \\part outside parts is not an item', () => {
+    const text = '\\documentclass{book}\n\\begin{document}\n\\part{Beginnings}\n\\chapter{One}\n\\begin{itemize}\n\\item x\n\\end{itemize}\n\\end{document}'
+    expect(items(text).map((i) => i.label)).toEqual(['•'])
+    expect(listEnter(text, text.indexOf('\\part') + 5, DEFAULT_LISTS)).toBeNull()
+    expect(outline(text).map((o) => o.kind)).toEqual(['chapter'])
   })
 })
 

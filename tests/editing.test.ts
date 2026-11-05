@@ -15,7 +15,7 @@ import {
   type Edit,
 } from '../src/shared/latexedit'
 
-const LISTS = { ...DEFAULT_LISTS, questions: 'question', parts: 'part' }
+const LISTS = DEFAULT_LISTS
 
 /** Applies an Edit to text with the cursor marked by |, returning text with the new cursor (and selection end) marked. */
 function run(marked: string, f: (text: string, from: number, to: number) => Edit | null): string | null {
