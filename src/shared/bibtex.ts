@@ -280,6 +280,31 @@ export function citedCount(texts: string[]): number {
   return keys.size
 }
 
+// --- The .bib files a document names -----------------------------------------
+
+/** A .bib name as LaTeX reads it: `refs` is refs.bib. */
+export const withBibExt = (name: string) => (/\.bib$/i.test(name) ? name : `${name}.bib`)
+
+/** The trimmed, non-empty names in a \bibliography{a, b} argument, with `.bib` added. */
+export const bibListNames = (arg: string) => arg.split(',').map((n) => n.trim()).filter(Boolean).map(withBibExt)
+
+const RESOURCE = /\\(?:addbibresource|addglobalbib|addsectionbib)\s*(?:\[[^\]]*\])?\s*\{([^}]*)\}/g
+
+/** The biblatex resources a document adds (\addbibresource and friends), with `.bib` added, in order, each once. Comments don't count. */
+export function bibResources(tex: string): string[] {
+  const names = [...blankComments(tex).matchAll(RESOURCE)].map((m) => m[1].trim()).filter(Boolean)
+  return [...new Set(names.map(withBibExt))]
+}
+
+/** The .bib names a document asks for, as written (with `.bib` added), in order: \bibliography's, then the biblatex resources. */
+export function bibNamesIn(tex: string): string[] {
+  const src = blankComments(tex)
+  const out: string[] = []
+  for (const m of src.matchAll(/\\bibliography\s*\{([^}]*)\}/g)) out.push(...bibListNames(m[1]))
+  for (const m of src.matchAll(RESOURCE)) if (m[1].trim()) out.push(withBibExt(m[1].trim()))
+  return out
+}
+
 /**
  * Entries matching `query`: each word must appear in the key, authors,
  * title, year, venue or tags; `#word` must match a tag. Best matches first:

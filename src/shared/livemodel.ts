@@ -11,6 +11,7 @@ import { blankComments, closingBrace, envTokens, matchEnd, type EnvToken } from 
 import { findMathRegions } from './mathregions'
 import { codeSpans } from './codespans'
 import { graphicsPaths } from './images'
+import { bibListNames, bibResources } from './bibtex'
 
 export type ItemStyle = 'bullet' | 'number' | 'term' | 'box'
 
@@ -73,9 +74,10 @@ export type LiveNode =
   /**
    * \bibliography{a,b} or \printbibliography, with a \bibliographystyle on the
    * line before or after it: the .bib files it reads (`.bib` added where the
-   * source leaves it off), from its argument or the \addbibresources.
+   * source leaves it off), from its argument or this text's \addbibresources.
+   * A \printbibliography in a file of a paper reads the root's instead.
    */
-  | { kind: 'bibliography'; from: number; to: number; files: string[] }
+  | { kind: 'bibliography'; from: number; to: number; cmd: 'bibliography' | 'printbibliography'; files: string[] }
 
 /** One front-matter command: \altaffiliation[Now at: ]{Elsewhere} is { cmd: 'altaffiliation', opt: 'Now at: ', arg: 'Elsewhere' }. */
 export interface FrontPart {
@@ -546,19 +548,18 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
   }
 
   /** A bibliography card, taking in a \bibliographystyle on the line before or after. */
-  function bibliography(cmd: string, p: number, end: number): void {
+  function bibliography(cmd: 'bibliography' | 'printbibliography', p: number, end: number): void {
     let to = end
-    let names: string[]
+    let files: string[]
     if (cmd === 'bibliography') {
       const g = group(end)
       if (!g) return
-      names = g.body.split(',')
+      files = [...new Set(bibListNames(g.body))]
       to = g.end
     } else {
       for (let o = optional(to); o; o = optional(to)) to = o.end
-      names = [...src.matchAll(/\\addbibresource\s*(?:\[[^\]]*\])?\s*\{([^}]*)\}/g)].map((m) => m[1])
+      files = bibResources(text)
     }
-    const files = [...new Set(names.map((n) => n.trim()).filter(Boolean).map((n) => (/\.bib$/i.test(n) ? n : `${n}.bib`)))]
     let from = p
     const lineStart = src.lastIndexOf('\n', p - 1) + 1
     const lineEnd = src.indexOf('\n', to) < 0 ? src.length : src.indexOf('\n', to)
@@ -566,7 +567,7 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
     const after = !before && lineEnd < src.length && !src.slice(to, lineEnd).trim() ? styleLine(lineEnd + 1, src.indexOf('\n', lineEnd + 1) < 0 ? src.length : src.indexOf('\n', lineEnd + 1)) : null
     if (before) from = before.from
     if (after) to = after.to
-    nodes.push({ kind: 'bibliography', from, to, files })
+    nodes.push({ kind: 'bibliography', from, to, cmd, files })
     re.lastIndex = to
   }
 

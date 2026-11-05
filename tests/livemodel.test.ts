@@ -477,4 +477,10 @@ describe('bibliography card', () => {
     expect(n.files).toEqual(['refs.bib', 'more.bib'])
     expect(text.slice(n.from, n.to)).toBe('\\printbibliography[heading=bibintoc]')
   })
+
+  it('marks a \\printbibliography card, so a file of a paper can take the root preamble files', () => {
+    const [n] = of('\\section{References}\n\\printbibliography', 'bibliography')
+    expect(n).toMatchObject({ cmd: 'printbibliography', files: [] })
+    expect(of('\\bibliography{refs}', 'bibliography')[0].cmd).toBe('bibliography')
+  })
 })

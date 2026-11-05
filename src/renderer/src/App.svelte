@@ -9,7 +9,7 @@
   import type { LivePaper } from './lib/live/live'
   import CitePicker from './lib/CitePicker.svelte'
   import { makeCitations, type Citations } from './lib/citations'
-  import { OPEN_CITE, citedCount } from '@shared/bibtex'
+  import { OPEN_CITE, bibResources, citedCount } from '@shared/bibtex'
   import FileTree from './lib/FileTree.svelte'
   import Editor from './lib/Editor.svelte'
   import PdfViewer from './lib/PdfViewer.svelte'
@@ -422,6 +422,18 @@
     const rels = p && active && p.files.some((f) => f.rel === active) ? p.files.filter((f) => !f.off).map((f) => f.rel) : active ? [active] : []
     const texts = rels.map((rel) => editor?.textOf(rel) ?? p?.texts[rel] ?? null).filter((t): t is string => t != null)
     return texts.length ? citedCount(texts) : null
+  }
+
+  /**
+   * The .bib files the open file's project root adds with \addbibresource, for
+   * a \printbibliography card in a file it includes (the root's unsaved text
+   * when it's open). Null when the open file is no part of a project.
+   */
+  function projectBibResources(): string[] | null {
+    const p = paper
+    if (!p || !active || !p.files.some((f) => f.rel === active)) return null
+    const root = editor?.textOf(p.root) ?? p.texts[p.root] ?? null
+    return root == null ? null : bibResources(root)
   }
 
   // The open paper's files, marked in the tabs. Kept while another file is
@@ -2294,6 +2306,7 @@
                 onedit={schedulePreview}
                 {livePaper}
                 citedCount={projectCitedCount}
+                bibResources={projectBibResources}
                 onextract={(rel, what, title) => askExtract(rel, what, title)}
                 onopenlocation={(loc) => go(loc.file, loc.line)}
                 onfindstep={findStep}
