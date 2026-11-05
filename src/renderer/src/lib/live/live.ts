@@ -10,7 +10,7 @@
 import { Facet, StateEffect, StateField, type EditorState, type Extension, type Range } from '@codemirror/state'
 import { Decoration, EditorView, GutterMarker, MatchDecorator, ViewPlugin, gutterLineClass, type DecorationSet, type ViewUpdate } from '@codemirror/view'
 import { RangeSet } from '@codemirror/state'
-import { isCite, liveModel, type LiveModel, type LiveOptions } from '@shared/livemodel'
+import { citeLabels, isCite, liveModel, type LiveModel, type LiveOptions } from '@shared/livemodel'
 import { dirOf, joinRel, parseIncludes } from '@shared/project'
 import { entryText } from '@shared/bibtex'
 import type { Citations } from '../citations'
@@ -19,6 +19,7 @@ import { resolveImage } from '../imageSupport'
 import { refreshMath, type RenderFn } from '../mathPreview'
 import { liveTheme } from './theme'
 import {
+  BibitemWidget,
   BibliographyWidget,
   type BibCardFile,
   FenceWidget,
@@ -215,7 +216,7 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
   for (const n of model.nodes) {
     const line = doc.lineAt(n.from)
     const firstOnLine = !text(line.from, n.from).trim()
-    if (n.kind === 'item' && firstOnLine) itemLines.add(line.number)
+    if ((n.kind === 'item' || n.kind === 'bibitem') && firstOnLine) itemLines.add(line.number)
     if (n.kind === 'fence' && firstOnLine && !text(n.to, line.to).trim()) fenceLines.add(line.number)
   }
   // An abstract's lines, set in from both sides (not its \begin and \end lines).
@@ -269,6 +270,11 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
       case 'item': {
         if (lineTouched(n.from)) break
         out.push(Decoration.replace({ widget: new MarkerWidget(n.label, n.style, n.points, n.correct) }).range(n.from, n.to))
+        break
+      }
+      case 'bibitem': {
+        if (lineTouched(n.from)) break
+        out.push(Decoration.replace({ widget: new BibitemWidget(n.label, n.key) }).range(n.from, n.to))
         break
       }
       case 'math': {
@@ -339,7 +345,8 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
       case 'ref': {
         if (touches(n.from, n.to)) break
         if (isCite(n.cmd)) {
-          out.push(Decoration.replace({ widget: citeWidget(n.cmd, n.keys, hooks.citations()) }).range(n.from, n.to))
+          const bibitem = (k: string) => model.bibitems.get(k) ?? paper?.options.bibitem?.(k)
+          out.push(Decoration.replace({ widget: citeWidget(n.cmd, n.keys, hooks.citations(), bibitem) }).range(n.from, n.to))
           break
         }
         const local = model.labels.get(n.keys[0])
@@ -399,15 +406,24 @@ function bibCardFiles(names: string[], cites: Citations | null, rootDir: string)
 
 /**
  * What a citation shows: the labels the last build gave its keys ([3, 12]),
- * with the authors for \citet / \textcite and alone for \citeauthor, or the
- * keys themselves until a build has numbered them.
+ * or their \bibitems' in a thebibliography until then, with the authors for
+ * \citet / \textcite and alone for \citeauthor; the keys themselves when
+ * neither has numbered them.
  */
-function citeWidget(cmd: string, keys: string[], cites: Citations | null): CiteWidget {
+function citeWidget(cmd: string, keys: string[], cites: Citations | null, bibitem: (key: string) => string | null | undefined): CiteWidget {
   const entries = keys.map((k) => cites?.byKey.get(k))
-  const labels = keys.map((k) => cites?.info.labels[k])
+  const labels = citeLabels(keys, cites?.info.labels, bibitem)
+  // A key with a \bibitem is in the bibliography, even with no .bib entry.
+  const listed = keys.map((k, i) => !!entries[i] || !!bibitem(k))
   // Only flagged once the bibliography has loaded (and has entries at all).
-  const missing = !!cites?.info.entries.length && entries.some((e) => !e)
-  const tooltip = keys.map((k, i) => (entries[i] ? `${labels[i] ? `[${labels[i]}] ` : ''}${entryText(entries[i]!)}` : `${k}: not in the bibliography`)).join('\n')
+  const missing = !!cites?.info.entries.length && listed.some((l) => !l)
+  const tooltip = keys
+    .map((k, i) => {
+      const at = labels[i] ? `[${labels[i]}] ` : ''
+      if (entries[i]) return `${at}${entryText(entries[i]!)}`
+      return listed[i] ? `${at}${k}` : `${k}: not in the bibliography`
+    })
+    .join('\n')
   const bracket = labels.every(Boolean) ? `[${labels.join(', ')}]` : `[${keys.join(', ')}]`
   let text = bracket
   const authors = entries.map((e, i) => e?.author || keys[i]).join(', ')

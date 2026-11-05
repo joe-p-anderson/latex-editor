@@ -52,6 +52,8 @@ export type LiveNode =
     }
   | { kind: 'fence'; from: number; to: number; env: string; begin: boolean }
   | { kind: 'item'; from: number; to: number; env: string; depth: number; label: string; style: ItemStyle; points: string | null; correct: boolean }
+  /** A \bibitem[label]{key} in a thebibliography: its hanging marker ([3] or [label]) and its key. */
+  | { kind: 'bibitem'; from: number; to: number; label: string; key: string }
   | { kind: 'math'; from: number; to: number; tex: string; display: boolean; env: string | null }
   | { kind: 'figure'; from: number; to: number; images: string[]; caption: string | null; number: string | null; labels: string[] }
   | { kind: 'table'; from: number; to: number; tabular: Tabular | null; caption: string | null; number: string | null; labels: string[] }
@@ -131,6 +133,8 @@ export interface LiveOptions {
   include?: (inc: { cmd: string; dir: string; arg: string }, at: Counters) => Counters | null
   /** A label defined elsewhere (another file of the paper), for refs this text doesn't define. */
   label?: (key: string) => LabelTarget | null
+  /** A \bibitem key defined elsewhere (a thebibliography in another file of the paper): what a citation of it shows. */
+  bibitem?: (key: string) => string | null
 }
 
 export interface LiveModel {
@@ -140,6 +144,8 @@ export interface LiveModel {
   /** Abstract bodies (between \begin and \end), set in from both sides. */
   insets: { from: number; to: number }[]
   labels: Map<string, LabelTarget>
+  /** Each thebibliography key, with what a citation of it shows: 3, or the \bibitem's own [label]. */
+  bibitems: Map<string, string>
   /** The counters at the end. */
   end: Counters
   /** The style used. */
@@ -153,6 +159,14 @@ const FORMAT = /^(textbf|textit|emph|underline|texttt|textsc|textsf|textsl|textu
 const REFS = /^(ref|eqref|cref|Cref|autoref|pageref|nameref|[Cc]ite[a-zA-Z]*|parencite|textcite|autocite|footcite|smartcite|supercite|nocite)$/
 /** Whether a ref-like command is a citation (its keys are bibliography keys, not labels). */
 export const isCite = (cmd: string) => /cite/i.test(cmd)
+
+/**
+ * What each cited key shows: the label the last build's .aux gave it
+ * (`compiled`), else its \bibitem's in a thebibliography (`bibitem`), else null.
+ */
+export function citeLabels(keys: string[], compiled: Record<string, string> | undefined, bibitem: (key: string) => string | null | undefined): (string | null)[] {
+  return keys.map((k) => compiled?.[k] || bibitem(k) || null)
+}
 const SIUNITX: Record<string, number> = { SI: 2, qty: 2, si: 1, unit: 1, num: 1, ang: 1, SIrange: 3, qtyrange: 3, numrange: 2 }
 const VERBATIM = /^(verbatim|Verbatim|lstlisting|minted|comment)\*?$/
 const FIGURES = /^(figure|wrapfigure|SCfigure)\*?$/
@@ -258,6 +272,7 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
   /** The title block being read, while front-matter commands keep coming. */
   let front = null as Extract<LiveNode, { kind: 'front' }> | null
   const labels = new Map<string, LabelTarget>()
+  const bibitems = new Map<string, string>()
   const tokens = envTokens(text)
   const tokenAt = new Map<number, EnvToken>(tokens.map((t) => [t.from, t]))
   // The \ends that close a \begin (by offset); a stray one gets no tag.
@@ -503,7 +518,7 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
   for (const h of headings) h.node.level = Math.min(3, h.level - topLevel + 1) as 1 | 2 | 3
 
   nodes.sort((a, b) => a.from - b.from)
-  return { nodes, lists: listBodies, insets, labels, end: c, style, graphicspath: graphicsPaths(text) }
+  return { nodes, lists: listBodies, insets, labels, bibitems, end: c, style, graphicspath: graphicsPaths(text) }
 
   function group(at: number): { body: string; end: number } | null {
     const ws = /^\s*/.exec(src.slice(at, at + 20))![0].length
@@ -657,7 +672,7 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
       current = { number, kind: 'equation' }
       return
     }
-    const marker = lists[env]
+    const marker = env === 'thebibliography' ? 'bibitem' : lists[env]
     if (marker) {
       const outer = stack[stack.length - 1]
       stack.push({
@@ -698,6 +713,17 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
 
   function item(list: OpenList, name: string, p: number, end: number): void {
     const o = optional(end)
+    if (list.marker === 'bibitem') {
+      const g = group(o ? o.end : end)
+      if (!g) return
+      const n = ++list.count
+      const label = o?.body.trim() || String(n)
+      const key = g.body.trim()
+      if (!bibitems.has(key)) bibitems.set(key, label)
+      nodes.push({ kind: 'bibitem', from: p, to: g.end, label: `[${label}]`, key })
+      re.lastIndex = g.end
+      return
+    }
     list.count++
     const n = list.count
     let label: string

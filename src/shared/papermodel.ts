@@ -34,6 +34,8 @@ export class PaperModel {
   readonly files = new Map<string, PaperFileModel>()
   /** Every label in the paper, with its file and line. The first definition wins. */
   readonly labels = new Map<string, LabelTarget>()
+  /** Every thebibliography key in the paper, with its file and what a citation of it shows. The first definition wins. */
+  readonly bibitems = new Map<string, { label: string; file: string }>()
   private readonly children = new Map<string, string>()
   private readonly ends = new Map<string, Counters>()
 
@@ -76,6 +78,10 @@ export class PaperModel {
       label: (key) => {
         const t = this.labels.get(key)
         return t && t.file !== rel ? t : null
+      },
+      bibitem: (key) => {
+        const b = this.bibitems.get(key)
+        return b && b.file !== rel ? b.label : null
       },
     }
   }
@@ -141,6 +147,9 @@ export class PaperModel {
     this.files.set(rel, { rel, start, end: m.end, headings })
     for (const [key, target] of m.labels) {
       if (!this.labels.has(key)) this.labels.set(key, { ...target, file: rel, line: lineOf(target.pos) })
+    }
+    for (const [key, label] of m.bibitems) {
+      if (!this.bibitems.has(key)) this.bibitems.set(key, { label, file: rel })
     }
     return m.end
   }

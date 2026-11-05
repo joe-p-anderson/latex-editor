@@ -50,8 +50,7 @@ export const liveTheme = EditorView.baseTheme({
   '.cm-live-marker.bullet .cm-live-marker-label': { color: muted },
   '.cm-live-marker.term': { minWidth: '0', textAlign: 'left' },
   '.cm-live-marker.term .cm-live-marker-label': { fontWeight: '700' },
-  '.cm-live-marker.correct .cm-live-marker-label': { color: 'var(--ok)' },
-  '.cm-live-points': {
+  '.cm-live-marker.correct .cm-live-marker-label': { color: 'var(--ok)' },  '.cm-live-points': {
     fontFamily: ui,
     fontSize: 'calc(var(--page-size) * 0.6)',
     color: muted,
