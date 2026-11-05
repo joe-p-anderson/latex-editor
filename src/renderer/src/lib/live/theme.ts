@@ -7,6 +7,16 @@ const ui = 'var(--f-ui)'
 const mono = 'var(--f-mono)'
 const { muted, accent } = liveColours
 
+/** What an \input card and a bibliography card share: a shaded, bordered box you can click. */
+const fileCard = {
+  fontFamily: ui,
+  color: muted,
+  background: 'var(--side)',
+  border: '1px solid var(--line)',
+  cursor: 'pointer',
+  textIndent: '0',
+}
+
 export const liveTheme = EditorView.baseTheme({
   '&.cm-live .cm-content': {
     fontFamily: 'var(--f-page)',
@@ -50,7 +60,8 @@ export const liveTheme = EditorView.baseTheme({
   '.cm-live-marker.bullet .cm-live-marker-label': { color: muted },
   '.cm-live-marker.term': { minWidth: '0', textAlign: 'left' },
   '.cm-live-marker.term .cm-live-marker-label': { fontWeight: '700' },
-  '.cm-live-marker.correct .cm-live-marker-label': { color: 'var(--ok)' },  '.cm-live-points': {
+  '.cm-live-marker.correct .cm-live-marker-label': { color: 'var(--ok)' },
+  '.cm-live-points': {
     fontFamily: ui,
     fontSize: 'calc(var(--page-size) * 0.6)',
     color: muted,
@@ -96,18 +107,10 @@ export const liveTheme = EditorView.baseTheme({
     gap: '0 8px',
     margin: '10px 0 4px',
     padding: '4px 10px',
-    fontFamily: ui,
+    ...fileCard,
     fontSize: 'calc(var(--page-size) * 0.7)',
-    color: muted,
-    background: 'var(--side)',
-    border: '1px solid var(--line)',
     borderRadius: '6px',
-    cursor: 'pointer',
-    textIndent: '0',
   },
-  '.cm-live-bib:hover': { borderColor: 'var(--detail)' },
-  '.cm-live-bib-icon': { color: 'var(--detail)' },
-  '.cm-live-bib-file': { fontWeight: '600', color: 'var(--ink)', fontFamily: 'var(--f-mono)', fontSize: '0.95em' },
   '.cm-live-bib-file:hover': { color: 'var(--detail)', textDecoration: 'underline' },
   '.cm-live-bib-file.missing': { fontWeight: '400', color: muted, opacity: '0.7', textDecoration: 'line-through' },
   '.cm-live-bib-file.missing:hover': { color: muted, textDecoration: 'line-through' },
@@ -130,18 +133,13 @@ export const liveTheme = EditorView.baseTheme({
   '.cm-live-include': {
     margin: '4px 0',
     padding: '5px 12px 6px',
-    fontFamily: ui,
+    ...fileCard,
     fontSize: 'calc(var(--page-size) * 0.76)',
     lineHeight: '1.5',
-    color: muted,
-    background: 'var(--side)',
-    border: '1px solid var(--line)',
     borderLeft: '3px solid var(--detail)',
     borderRadius: '4px',
-    cursor: 'pointer',
-    textIndent: '0',
   },
-  '.cm-live-include:hover': { borderColor: 'var(--detail)' },
+  '.cm-live-include:hover, .cm-live-bib:hover': { borderColor: 'var(--detail)' },
 
   // The paper's previous and next files, at a file's top and foot.
   '.cm-live-neighbour': {
@@ -164,8 +162,8 @@ export const liveTheme = EditorView.baseTheme({
   '.cm-live-include.off': { opacity: '0.55', borderLeftStyle: 'dashed' },
   '.cm-live-include.missing': { borderLeftColor: 'var(--err)' },
   '.cm-live-include-head': { display: 'flex', alignItems: 'baseline', gap: '8px' },
-  '.cm-live-include-icon': { color: 'var(--detail)' },
-  '.cm-live-include-file': { fontWeight: '600', color: 'var(--ink)', fontFamily: 'var(--f-mono)', fontSize: '0.95em' },
+  '.cm-live-include-icon, .cm-live-bib-icon': { color: 'var(--detail)' },
+  '.cm-live-include-file, .cm-live-bib-file': { fontWeight: '600', color: 'var(--ink)', fontFamily: mono, fontSize: '0.95em' },
   '.cm-live-include-note': { fontStyle: 'italic' },
   '.cm-live-include.missing .cm-live-include-note': { color: 'var(--err)' },
   '.cm-live-include-h': { display: 'flex', gap: '8px', paddingLeft: '20px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--ink)' },

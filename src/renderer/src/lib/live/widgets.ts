@@ -27,6 +27,21 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, text?: s
 }
 
 /**
+ * Makes `a` open the vault file `rel` (at its first line) on a left click,
+ * through the app. The click goes no further, so a card it sits in doesn't
+ * also show its source.
+ */
+function opensFile(a: HTMLElement, view: EditorView, rel: string): HTMLElement {
+  a.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    e.stopPropagation()
+    view.dom.dispatchEvent(new CustomEvent<OpenLocation>(OPEN_LOCATION_EVENT, { bubbles: true, detail: { file: rel, line: 1 } }))
+  })
+  return a
+}
+
+/**
  * A card's outer box. CodeMirror sizes a block widget by its border box, so
  * the card's own margins would go uncounted (and a run of cards leave the
  * page's inner margin short at the bottom). The box is its own formatting
@@ -377,15 +392,7 @@ export class BibliographyWidget extends WidgetType {
       if (i) names.append(', ')
       const a = el('span', `cm-live-bib-file${f.missing ? ' missing' : ''}`, f.name)
       a.title = f.missing ? `${f.rel} wasn't found` : `Open ${f.rel}`
-      if (!f.missing) {
-        a.addEventListener('mousedown', (e) => {
-          if (e.button !== 0) return
-          e.preventDefault()
-          e.stopPropagation()
-          view.dom.dispatchEvent(new CustomEvent<OpenLocation>(OPEN_LOCATION_EVENT, { bubbles: true, detail: { file: f.rel, line: 1 } }))
-        })
-      }
-      names.append(a)
+      names.append(f.missing ? a : opensFile(a, view, f.rel))
     })
     dom.append(names)
     if (this.cited !== null) dom.append(el('span', '', `· ${this.cited} cited`))
@@ -469,12 +476,7 @@ export class NeighbourWidget extends WidgetType {
       const a = el('span', cls)
       a.append(...kids)
       a.title = title
-      a.addEventListener('mousedown', (e) => {
-        if (e.button !== 0) return
-        e.preventDefault()
-        view.dom.dispatchEvent(new CustomEvent<OpenLocation>(OPEN_LOCATION_EVENT, { bubbles: true, detail: { file: rel, line: 1 } }))
-      })
-      return a
+      return opensFile(a, view, rel)
     }
     const kids: HTMLElement[] = []
     if (this.rel) {
