@@ -108,10 +108,23 @@ const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 /**
  * List environments and their item command (without the backslash), e.g.
- * { itemize: 'item', questions: 'question' }. The defaults; a vault adds its
- * own in .vault.json.
+ * { itemize: 'item', questions: 'question' }. The defaults, for every vault:
+ * the standard lists and the exam class's. A vault adds its own in
+ * .vault.json, and its entries win.
  */
-export const DEFAULT_LISTS: Record<string, string> = { itemize: 'item', enumerate: 'item', description: 'item' }
+export const DEFAULT_LISTS: Record<string, string> = {
+  itemize: 'item',
+  enumerate: 'item',
+  description: 'item',
+  questions: 'question',
+  parts: 'part',
+  subparts: 'subpart',
+  subsubparts: 'subsubpart',
+  choices: 'choice',
+  oneparchoices: 'choice',
+  checkboxes: 'choice',
+  oneparcheckboxes: 'choice',
+}
 
 /**
  * Enter inside a list. On a line with content, starts the next item at the
