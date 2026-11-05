@@ -113,21 +113,23 @@
     background-position: center;
     background-size: cover;
   }
-  /* The plate cross-fades to a hovered vault's colours. */
-  .plate,
-  .plate::before,
-  .lbl,
-  .btn,
-  .exl,
-  .brand p,
-  .what small,
-  .when,
-  .about {
-    transition:
-      background-color 200ms ease,
-      color 200ms ease,
-      border-color 200ms ease,
-      outline-color 200ms ease;
+  /* The plate cross-fades to a hovered vault's colours (and switches at once with reduced motion). */
+  @media (prefers-reduced-motion: no-preference) {
+    .plate,
+    .plate::before,
+    .lbl,
+    .btn,
+    .exl,
+    .brand p,
+    .what small,
+    .when,
+    .about {
+      transition:
+        background-color 200ms ease,
+        color 200ms ease,
+        border-color 200ms ease,
+        outline-color 200ms ease;
+    }
   }
   .plate {
     position: relative;
