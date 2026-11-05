@@ -2,6 +2,7 @@
 // cite picker, completion and hover cards), the labels LaTeX gives each
 // citation (from \bibcite in the .aux), and the messages in a .blg log.
 // Kept free of Node and the DOM so it can be unit tested and used anywhere.
+import { blankComments } from './latexedit'
 
 export interface BibEntry {
   /** Lower-case entry type: article, book, … */
@@ -267,6 +268,16 @@ export function citedKeys(text: string): string[] {
   const re = new RegExp(CITE_COMMAND.source + '([^}]*)\\}', 'g')
   for (const m of text.matchAll(re)) for (const k of m[1].split(',')) if (k.trim()) out.push(k.trim())
   return out
+}
+
+/**
+ * How many distinct keys a project's files cite, for the live view's
+ * bibliography card. Comments don't count, nor the `*` of \nocite{*}.
+ */
+export function citedCount(texts: string[]): number {
+  const keys = new Set<string>()
+  for (const t of texts) for (const k of citedKeys(blankComments(t))) if (k !== '*') keys.add(k)
+  return keys.size
 }
 
 /**

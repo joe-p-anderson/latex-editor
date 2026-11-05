@@ -375,3 +375,29 @@ describe('inline code', () => {
     expect(of(text, 'format').map((f) => f.cmd)).toEqual(['texttt', 'textbf'])
   })
 })
+
+describe('bibliography card', () => {
+  it('names the files of \\bibliography, with .bib added, and takes in the \\bibliographystyle line before it', () => {
+    const text = 'Text.\n\\bibliographystyle{plain}\n\\bibliography{refs, extra.bib}\nAfter.'
+    const nodes = of(text, 'bibliography')
+    expect(nodes).toHaveLength(1)
+    expect(nodes[0].files).toEqual(['refs.bib', 'extra.bib'])
+    expect(text.slice(nodes[0].from, nodes[0].to)).toBe('\\bibliographystyle{plain}\n\\bibliography{refs, extra.bib}')
+  })
+
+  it('takes in a \\bibliographystyle on the line after, but not one further away', () => {
+    const after = 'x\n\\bibliography{refs}\n\\bibliographystyle{unsrt}\ny'
+    const [a] = of(after, 'bibliography')
+    expect(after.slice(a.from, a.to)).toBe('\\bibliography{refs}\n\\bibliographystyle{unsrt}')
+    const apart = '\\bibliographystyle{plain}\n\n\\bibliography{refs}'
+    const [b] = of(apart, 'bibliography')
+    expect(apart.slice(b.from, b.to)).toBe('\\bibliography{refs}')
+  })
+
+  it('names the \\addbibresource files from the preamble for \\printbibliography', () => {
+    const text = '\\documentclass{article}\n\\usepackage{biblatex}\n\\addbibresource{refs.bib}\n\\addbibresource[location=local]{more}\n\\begin{document}\nHi.\n\\printbibliography[heading=bibintoc]\n\\end{document}'
+    const [n] = of(text, 'bibliography')
+    expect(n.files).toEqual(['refs.bib', 'more.bib'])
+    expect(text.slice(n.from, n.to)).toBe('\\printbibliography[heading=bibintoc]')
+  })
+})

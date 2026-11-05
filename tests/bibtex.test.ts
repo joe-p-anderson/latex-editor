@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { authorsShort, bibciteLabels, citedKeys, OPEN_CITE, parseBib, parseBlg, plainField, searchBib, summarize, surnames } from '../src/shared/bibtex'
+import { authorsShort, bibciteLabels, citedCount, citedKeys, OPEN_CITE, parseBib, parseBlg, plainField, searchBib, summarize, surnames } from '../src/shared/bibtex'
 import { bibNamesIn } from '../src/main/bibliography'
 
 const FIXTURE = resolve(import.meta.dirname, '../fixtures/vaults/AngStatsRevTex/AngStatsBib.bib')
@@ -66,6 +66,13 @@ describe('aux and source', () => {
     expect(citedKeys('see \\cite{a, b} and \\citep[p.~4]{c} and \\parencite*{d}')).toEqual(['a', 'b', 'c', 'd'])
     expect(OPEN_CITE.exec('text \\citet[see][]{a,kock')?.[1]).toBe('a,kock')
     expect(OPEN_CITE.exec('text \\ref{eq')).toBeNull()
+  })
+
+  it('counts the distinct keys a project cites, across its files, leaving out \\nocite{*} and comments', () => {
+    const root = '\\cite{a,b}\n\\nocite{*}\n% \\cite{hidden}\n\\input{sec}'
+    const sec = '\\citep[p.~2]{b, c}\n\\textcite{a}'
+    expect(citedCount([root, sec])).toBe(3)
+    expect(citedCount([])).toBe(0)
   })
 
   it('finds the .bib files a document names', () => {
