@@ -364,3 +364,15 @@ export function pageFontStack(face: Typeface): string {
   const family = face === 'Crimson Pro' || face === 'EB Garamond' ? `${face} Variable` : face
   return `'${family}', Georgia, 'Times New Roman', serif`
 }
+
+/** The tokens the welcome screen's bookplate reads (Welcome.svelte, and the buttons and cards on it). */
+const PLATE_TOKENS = ['paper', 'ink', 'ink-soft', 'pencil', 'detail', 'line', 'sel'] as const
+
+/**
+ * The bookplate's colours for a vault: what the app would apply on opening it,
+ * under the user's current look and page, cut down to the tokens the plate reads.
+ */
+export function plateTokens(app: AppAppearance, endpaper: VaultAppearance, theme: PaletteTheme): Record<string, string> {
+  const all = appearanceTokens(app, endpaper, theme)
+  return Object.fromEntries(PLATE_TOKENS.map((k) => [k, all[k]]))
+}
