@@ -111,7 +111,8 @@
   async function create() {
     if (!chosen || problem || busy) return
     busy = true
-    error = await oncreate(rel, chosen, values)
+    // A plain copy: the values go over IPC, which can't clone a $state proxy.
+    error = await oncreate(rel, chosen, $state.snapshot(values))
     busy = false
   }
 
