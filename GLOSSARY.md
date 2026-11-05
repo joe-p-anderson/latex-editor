@@ -47,7 +47,7 @@ A named action the user can run, with an id, title, category, optional default k
 The Ctrl+Shift+P list of every command that can run right now.
 
 **First-time hint**
-A dismissible strip that explains one thing the first time the student meets it (Live/Source, first build, first error). There are at most three, shown one at a time. Help → Show Hints Again brings them back.
+A toast, closed with Got it, that explains one thing the first time the student meets it (Live/Source, first build, first error). There are at most three, shown one at a time. Help → Show Hints Again brings them back.
 
 ## Appearance
 

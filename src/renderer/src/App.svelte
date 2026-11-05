@@ -14,8 +14,8 @@
   import Editor from './lib/Editor.svelte'
   import PdfViewer from './lib/PdfViewer.svelte'
   import ProblemsPanel from './lib/ProblemsPanel.svelte'
-  import HintStrip from './lib/HintStrip.svelte'
-  import { showHintsAgainCommand, triggerHint } from './lib/hints.svelte'
+  import { hintText } from '@shared/hints'
+  import { currentHint, dismissHint, showHintsAgainCommand, triggerHint } from './lib/hints.svelte'
   import ImagePicker from './lib/ImagePicker.svelte'
   import Outline from './lib/Outline.svelte'
   import TabBar from './lib/TabBar.svelte'
@@ -117,6 +117,9 @@
       expired?.onExpire?.()
     }, action ? 6000 : 3500)
   }
+  // The first-time hint showing, if any (src/shared/hints.ts): it takes the
+  // toast's place while no note is up, and stays until its Got it.
+  const hint = $derived(currentHint())
   function runNoteAction(): void {
     const action = noteAction
     clearTimeout(noteTimer)
@@ -2096,7 +2099,6 @@
     ontogglepanel={() => togglePanel()}
     onribbon={() => togglePanel('problems')}
   />
-  <HintStrip {keyFor} />
 
   {#if !started}
     <div class="starting"></div>
@@ -2325,6 +2327,11 @@
             {#if note}
               <div class="note" class:acts={!!noteAction}>
                 {note}{#if noteAction}<button onclick={runNoteAction} title={noteAction.label === 'Undo' ? 'Undo (Ctrl+Z)' : undefined}>{noteAction.label}</button>{/if}
+              </div>
+            {:else if hint}
+              <!-- A first-time hint waits in the toast's place until closed; a passing note shows over it. -->
+              <div class="note acts hint" role="status">
+                {hintText(hint, keyFor)}<button onclick={dismissHint} title="Don't show this again">Got it</button>
               </div>
             {/if}
           </section>
@@ -2793,6 +2800,11 @@
   .note button {
     padding: 1px 10px;
     font-weight: 600;
+    flex-shrink: 0;
+  }
+  .note.hint {
+    width: max-content;
+    max-width: min(560px, calc(100% - 32px));
   }
   .banner {
     display: flex;
