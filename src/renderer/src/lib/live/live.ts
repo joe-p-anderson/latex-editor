@@ -10,9 +10,9 @@
 import { Facet, StateEffect, StateField, type EditorState, type Extension, type Range } from '@codemirror/state'
 import { Decoration, EditorView, GutterMarker, MatchDecorator, ViewPlugin, gutterLineClass, type DecorationSet, type ViewUpdate } from '@codemirror/view'
 import { RangeSet } from '@codemirror/state'
-import { citeLabels, isCite, liveModel, type LiveModel, type LiveOptions } from '@shared/livemodel'
+import { isCite, liveModel, type LiveModel, type LiveOptions } from '@shared/livemodel'
 import { dirOf, joinRel, parseIncludes } from '@shared/project'
-import { entryText } from '@shared/bibtex'
+import { citeLabels, entryText, withBibExt } from '@shared/bibtex'
 import type { Citations } from '../citations'
 import { graphicsFolders } from '@shared/images'
 import { resolveImage } from '../imageSupport'
@@ -53,6 +53,12 @@ export interface LiveHooks {
   citations(): Citations | null
   /** How many distinct keys the project cites (the root and every file it includes), for the bibliography card. */
   cited(): number | null
+  /**
+   * The .bib files the project's root adds with \addbibresource (`.bib`
+   * added), for a \printbibliography card in a file it includes; null when
+   * the open file isn't part of a project, so the card reads its own.
+   */
+  bibResources(): string[] | null
   /** For a file of a multi-part paper: where it stands in the paper (null otherwise). */
   paper(rel: string | null): LivePaper | null
 }
@@ -368,7 +374,11 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
       }
       case 'bibliography': {
         if (touches(n.from, n.to)) break
-        const files = bibCardFiles(n.files, hooks.citations(), paper?.root ? dirOf(paper.root.rel) : hooks.dir())
+        // A \printbibliography reads the root's \addbibresources (this file's
+        // own when it's no part of a project, or the root adds none).
+        const project = n.cmd === 'printbibliography' ? hooks.bibResources() : null
+        const names = project?.length ? project : n.files
+        const files = bibCardFiles(names, hooks.citations(), paper?.root ? dirOf(paper.root.rel) : hooks.dir())
         widget(n.from, n.to, () => new BibliographyWidget(files, hooks.cited()))
         break
       }
@@ -395,7 +405,7 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
  * bibliography couldn't find is missing.
  */
 function bibCardFiles(names: string[], cites: Citations | null, rootDir: string): BibCardFile[] {
-  const bare = (n: string) => joinRel(/\.bib$/i.test(n) ? n : `${n}.bib`)
+  const bare = (n: string) => joinRel(withBibExt(n))
   return names.map((name) => {
     const want = bare(name)
     const found = cites?.info.bibs.find((rel) => rel === joinRel(rootDir, want) || rel === want)
