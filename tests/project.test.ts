@@ -142,6 +142,19 @@ describe('PaperModel', () => {
     expect(root.nodes.filter((n) => n.kind === 'include')).toHaveLength(7)
     expect(root.end.sec[1]).toBe(m.files.get('A_Appendices.tex')!.end.sec[1])
   })
+
+  it('knows the \\bibitem keys of a thebibliography in another file of the paper', async () => {
+    const texts: Record<string, string> = {
+      'main.tex': '\\begin{document}\nAs \\cite{b} shows.\n\\input{refs}\n\\end{document}',
+      'refs.tex': '\\begin{thebibliography}{9}\n\\bibitem{a} A.\n\\bibitem{b} B.\n\\bibitem[Lab]{c} C.\n\\end{thebibliography}',
+    }
+    const { files } = await paperFiles('main.tex', async (rel) => texts[rel], (rel) => rel in texts)
+    const m = new PaperModel('main.tex', files, (rel) => texts[rel] ?? null, DEFAULT_LISTS)
+    const opts = m.options('main.tex')
+    expect(['b', 'c', 'zz'].map((k) => opts.bibitem?.(k) ?? null)).toEqual(['2', 'Lab', null])
+    // Not echoed back to the file that defines them (its own model has them).
+    expect(m.options('refs.tex').bibitem?.('a') ?? null).toBeNull()
+  })
 })
 
 describe('sectionDocument', () => {

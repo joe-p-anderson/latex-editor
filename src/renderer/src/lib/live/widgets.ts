@@ -217,6 +217,29 @@ export class MarkerWidget extends WidgetType {
   }
 }
 
+/** A thebibliography entry's \bibitem: its hanging [n] (or [label]) and its key as a chip. */
+export class BibitemWidget extends WidgetType {
+  constructor(
+    readonly label: string,
+    readonly key: string,
+  ) {
+    super()
+  }
+  eq(o: BibitemWidget): boolean {
+    return o.label === this.label && o.key === this.key
+  }
+  toDOM(view: EditorView): HTMLElement {
+    const dom = el('span', 'cm-live-bibitem')
+    const marker = el('span', 'cm-live-marker number bib')
+    marker.append(el('span', 'cm-live-marker-label', this.label))
+    const chip = el('span', 'cm-live-chip cite', this.key)
+    chip.title = `\\bibitem{${this.key}}`
+    dom.append(marker, chip)
+    revealOnClick(dom, view)
+    return dom
+  }
+}
+
 export class LabelWidget extends WidgetType {
   constructor(readonly key: string) {
     super()

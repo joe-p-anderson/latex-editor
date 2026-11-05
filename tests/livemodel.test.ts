@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_LISTS, listEnter, outline } from '../src/shared/latexedit'
-import { inlineParts, liveModel, parseTabular, type LiveNode } from '../src/shared/livemodel'
+import { citeLabels, inlineParts, liveModel, parseTabular, type LiveNode } from '../src/shared/livemodel'
 import { createRenderer } from '../src/shared/mathrender'
 
 const LISTS = DEFAULT_LISTS
@@ -326,5 +326,41 @@ describe('citations', () => {
       ['citeauthor', ['e']],
     ])
     expect(text.slice(refs[1].from, refs[1].to)).toBe('\\citep[see][p.~4]{b, c}')
+  })
+})
+
+describe('thebibliography', () => {
+  const BIB = '\\begin{document}\n\\begin{thebibliography}{99}\n\\bibitem{knuth} D. Knuth, The TeXbook.\n\\bibitem[Smith99]{smith} J. Smith,\n  A paper.\n\\bibitem{lamport} L. Lamport.\n\\end{thebibliography}\n\\end{document}'
+
+  it('numbers each \\bibitem, or uses its optional label, with the key as a chip', () => {
+    const items = of(BIB, 'bibitem')
+    expect(items.map((i) => [i.label, i.key])).toEqual([
+      ['[1]', 'knuth'],
+      ['[Smith99]', 'smith'],
+      ['[3]', 'lamport'],
+    ])
+    expect(BIB.slice(items[1].from, items[1].to)).toBe('\\bibitem[Smith99]{smith}')
+  })
+
+  it('indents the entries like a list body, under a thebibliography tag with {99} hidden', () => {
+    const m = model(BIB)
+    const fence = m.nodes.find((n) => n.kind === 'fence' && n.env === 'thebibliography' && n.begin)!
+    expect(BIB.slice(fence.from, fence.to)).toBe('\\begin{thebibliography}{99}')
+    expect(m.lists).toEqual([{ from: fence.to, to: BIB.indexOf('\\end{thebibliography}'), depth: 1 }])
+  })
+
+  it('gives each key its label, for citations', () => {
+    expect([...model(BIB).bibitems]).toEqual([
+      ['knuth', '1'],
+      ['smith', 'Smith99'],
+      ['lamport', '3'],
+    ])
+  })
+
+  it("labels a citation by its \\bibitem before a compile, and by the compiled .aux's label after", () => {
+    const bib = model(BIB).bibitems
+    const lookup = (k: string) => bib.get(k)
+    expect(citeLabels(['smith', 'lamport', 'nowhere'], undefined, lookup)).toEqual(['Smith99', '3', null])
+    expect(citeLabels(['smith', 'lamport'], { lamport: '7' }, lookup)).toEqual(['Smith99', '7'])
   })
 })
