@@ -27,6 +27,21 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, text?: s
 }
 
 /**
+ * Makes `a` open the vault file `rel` (at its first line) on a left click,
+ * through the app. The click goes no further, so a card it sits in doesn't
+ * also show its source.
+ */
+function opensFile(a: HTMLElement, view: EditorView, rel: string): HTMLElement {
+  a.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    e.stopPropagation()
+    view.dom.dispatchEvent(new CustomEvent<OpenLocation>(OPEN_LOCATION_EVENT, { bubbles: true, detail: { file: rel, line: 1 } }))
+  })
+  return a
+}
+
+/**
  * A card's outer box. CodeMirror sizes a block widget by its border box, so
  * the card's own margins would go uncounted (and a run of cards leave the
  * page's inner margin short at the bottom). The box is its own formatting
@@ -217,6 +232,29 @@ export class MarkerWidget extends WidgetType {
   }
 }
 
+/** A thebibliography entry's \bibitem: its hanging [n] (or [label]) and its key as a chip. */
+export class BibitemWidget extends WidgetType {
+  constructor(
+    readonly label: string,
+    readonly key: string,
+  ) {
+    super()
+  }
+  eq(o: BibitemWidget): boolean {
+    return o.label === this.label && o.key === this.key
+  }
+  toDOM(view: EditorView): HTMLElement {
+    const dom = el('span', 'cm-live-bibitem')
+    const marker = el('span', 'cm-live-marker number bib')
+    marker.append(el('span', 'cm-live-marker-label', this.label))
+    const chip = el('span', 'cm-live-chip cite', this.key)
+    chip.title = `\\bibitem{${this.key}}`
+    dom.append(marker, chip)
+    revealOnClick(dom, view)
+    return dom
+  }
+}
+
 export class LabelWidget extends WidgetType {
   constructor(readonly key: string) {
     super()
@@ -323,6 +361,46 @@ export class CiteWidget extends WidgetType {
   }
 }
 
+/** A .bib file a bibliography card names: as the card shows it, and where it is (vault-relative). */
+export interface BibCardFile {
+  name: string
+  rel: string
+  missing: boolean
+}
+
+/**
+ * \bibliography{…} or \printbibliography: a one-line card naming the .bib
+ * files and how many keys the project cites. Clicking a file name opens it;
+ * clicking elsewhere shows the source.
+ */
+export class BibliographyWidget extends WidgetType {
+  constructor(
+    readonly files: BibCardFile[],
+    readonly cited: number | null,
+  ) {
+    super()
+  }
+  eq(o: BibliographyWidget): boolean {
+    return o.cited === this.cited && JSON.stringify(o.files) === JSON.stringify(this.files)
+  }
+  toDOM(view: EditorView): HTMLElement {
+    const dom = el('div', 'cm-live-bib')
+    dom.append(el('span', 'cm-live-bib-icon', '❦'))
+    const names = el('span', 'cm-live-bib-files')
+    if (!this.files.length) names.append(el('span', 'cm-live-bib-file missing', 'no .bib file'))
+    this.files.forEach((f, i) => {
+      if (i) names.append(', ')
+      const a = el('span', `cm-live-bib-file${f.missing ? ' missing' : ''}`, f.name)
+      a.title = f.missing ? `${f.rel} wasn't found` : `Open ${f.rel}`
+      names.append(f.missing ? a : opensFile(a, view, f.rel))
+    })
+    dom.append(names)
+    if (this.cited !== null) dom.append(el('span', '', `· ${this.cited} cited`))
+    revealOnClick(dom, view)
+    return spaced(dom)
+  }
+}
+
 /** What an \input card shows: the file and the numbered headings in it. */
 export interface IncludeCard {
   /** The file it brings in, vault-relative (or the argument, when it can't be resolved). */
@@ -398,12 +476,7 @@ export class NeighbourWidget extends WidgetType {
       const a = el('span', cls)
       a.append(...kids)
       a.title = title
-      a.addEventListener('mousedown', (e) => {
-        if (e.button !== 0) return
-        e.preventDefault()
-        view.dom.dispatchEvent(new CustomEvent<OpenLocation>(OPEN_LOCATION_EVENT, { bubbles: true, detail: { file: rel, line: 1 } }))
-      })
-      return a
+      return opensFile(a, view, rel)
     }
     const kids: HTMLElement[] = []
     if (this.rel) {

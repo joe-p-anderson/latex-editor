@@ -11,14 +11,17 @@ import { Facet, StateEffect, StateField, type EditorState, type Extension, type 
 import { Decoration, EditorView, GutterMarker, MatchDecorator, ViewPlugin, gutterLineClass, type DecorationSet, type ViewUpdate } from '@codemirror/view'
 import { RangeSet } from '@codemirror/state'
 import { isCite, liveModel, type LiveModel, type LiveOptions } from '@shared/livemodel'
-import { dirOf, parseIncludes } from '@shared/project'
-import { entryText } from '@shared/bibtex'
+import { dirOf, joinRel, parseIncludes } from '@shared/project'
+import { citeLabels, entryText, withBibExt } from '@shared/bibtex'
 import type { Citations } from '../citations'
 import { graphicsFolders } from '@shared/images'
 import { resolveImage } from '../imageSupport'
 import { refreshMath, type RenderFn } from '../mathPreview'
 import { liveTheme } from './theme'
 import {
+  BibitemWidget,
+  BibliographyWidget,
+  type BibCardFile,
   FenceWidget,
   FrontWidget,
   CiteWidget,
@@ -48,6 +51,14 @@ export interface LiveHooks {
   lists(): Record<string, string>
   /** The document's bibliography, for citation chips (null until loaded). */
   citations(): Citations | null
+  /** How many distinct keys the project cites (the root and every file it includes), for the bibliography card. */
+  cited(): number | null
+  /**
+   * The .bib files the project's root adds with \addbibresource (`.bib`
+   * added), for a \printbibliography card in a file it includes; null when
+   * the open file isn't part of a project, so the card reads its own.
+   */
+  bibResources(): string[] | null
   /** For a file of a multi-part paper: where it stands in the paper (null otherwise). */
   paper(rel: string | null): LivePaper | null
 }
@@ -211,7 +222,7 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
   for (const n of model.nodes) {
     const line = doc.lineAt(n.from)
     const firstOnLine = !text(line.from, n.from).trim()
-    if (n.kind === 'item' && firstOnLine) itemLines.add(line.number)
+    if ((n.kind === 'item' || n.kind === 'bibitem') && firstOnLine) itemLines.add(line.number)
     if (n.kind === 'fence' && firstOnLine && !text(n.to, line.to).trim()) fenceLines.add(line.number)
   }
   // An abstract's lines, set in from both sides (not its \begin and \end lines).
@@ -267,6 +278,11 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
         out.push(Decoration.replace({ widget: new MarkerWidget(n.label, n.style, n.points, n.correct) }).range(n.from, n.to))
         break
       }
+      case 'bibitem': {
+        if (lineTouched(n.from)) break
+        out.push(Decoration.replace({ widget: new BibitemWidget(n.label, n.key) }).range(n.from, n.to))
+        break
+      }
       case 'math': {
         if (touches(n.from, n.to)) {
           if (n.display && wholeLines(n.from, n.to)) tint(n.from, n.to, 'cm-live-src')
@@ -293,9 +309,27 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
         widget(n.from, n.to, () => new TableWidget(n.tabular, text(n.from, n.to), n.caption, n.number, n.labels, render))
         break
       }
-      case 'verbatim':
-        tint(n.from, n.to, 'cm-live-code')
+      case 'verbatim': {
+        // The body's lines as code (not the \begin and \end lines, when they're
+        // on lines of their own); the line the cursor is on shows as source.
+        const a = doc.lineAt(n.bodyFrom)
+        const z = doc.lineAt(n.bodyTo)
+        const first = a.number + (text(n.bodyFrom, a.to).trim() ? 0 : 1)
+        const last = z.number - (text(z.from, n.bodyTo).trim() ? 0 : 1)
+        for (let l = first; l <= last; l++) {
+          const line = doc.line(l)
+          if (!touches(line.from, line.to)) lineClass(line.from, 'cm-live-code')
+        }
         break
+      }
+      case 'code': {
+        // \verb|…|: just the contents, as code. An empty one stays as source.
+        if (touches(n.from, n.to) || n.bodyFrom === n.bodyTo) break
+        hide(n.from, n.bodyFrom)
+        hide(n.bodyTo, n.to)
+        out.push(Decoration.mark({ class: 'cm-live-code' }).range(n.bodyFrom, n.bodyTo))
+        break
+      }
       case 'image': {
         if (touches(n.from, n.to)) break
         const rel = resolveImage(n.path, hooks.images(), hooks.dir(), imageDirs)
@@ -317,7 +351,8 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
       case 'ref': {
         if (touches(n.from, n.to)) break
         if (isCite(n.cmd)) {
-          out.push(Decoration.replace({ widget: citeWidget(n.cmd, n.keys, hooks.citations()) }).range(n.from, n.to))
+          const bibitem = (k: string) => model.bibitems.get(k) ?? paper?.options.bibitem?.(k)
+          out.push(Decoration.replace({ widget: citeWidget(n.cmd, n.keys, hooks.citations(), bibitem) }).range(n.from, n.to))
           break
         }
         const local = model.labels.get(n.keys[0])
@@ -337,6 +372,16 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
         out.push(Decoration.replace({ widget: new SymbolWidget(n.text, n.faint) }).range(n.from, n.to))
         break
       }
+      case 'bibliography': {
+        if (touches(n.from, n.to)) break
+        // A \printbibliography reads the root's \addbibresources (this file's
+        // own when it's no part of a project, or the root adds none).
+        const project = n.cmd === 'printbibliography' ? hooks.bibResources() : null
+        const names = project?.length ? project : n.files
+        const files = bibCardFiles(names, hooks.citations(), paper?.root ? dirOf(paper.root.rel) : hooks.dir())
+        widget(n.from, n.to, () => new BibliographyWidget(files, hooks.cited()))
+        break
+      }
     }
   }
   // In a file of a paper: the files before and after it, a click away.
@@ -354,16 +399,41 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
 }
 
 /**
- * What a citation shows: the labels the last build gave its keys ([3, 12]),
- * with the authors for \citet / \textcite and alone for \citeauthor, or the
- * keys themselves until a build has numbered them.
+ * The .bib files a bibliography card names, as vault paths: the file the
+ * loaded bibliography found for each name (next to the root, or at the vault
+ * root), else the name relative to the root's folder `rootDir`. A name the
+ * bibliography couldn't find is missing.
  */
-function citeWidget(cmd: string, keys: string[], cites: Citations | null): CiteWidget {
+function bibCardFiles(names: string[], cites: Citations | null, rootDir: string): BibCardFile[] {
+  const bare = (n: string) => joinRel(withBibExt(n))
+  return names.map((name) => {
+    const want = bare(name)
+    const found = cites?.info.bibs.find((rel) => rel === joinRel(rootDir, want) || rel === want)
+    const missing = !!cites?.info.missing.some((m) => bare(m) === want)
+    return { name: name.split('/').pop()!, rel: found ?? joinRel(rootDir, want), missing: !found && missing }
+  })
+}
+
+/**
+ * What a citation shows: the labels the last build gave its keys ([3, 12]),
+ * or their \bibitems' in a thebibliography until then, with the authors for
+ * \citet / \textcite and alone for \citeauthor; the keys themselves when
+ * neither has numbered them.
+ */
+function citeWidget(cmd: string, keys: string[], cites: Citations | null, bibitem: (key: string) => string | null | undefined): CiteWidget {
   const entries = keys.map((k) => cites?.byKey.get(k))
-  const labels = keys.map((k) => cites?.info.labels[k])
+  const labels = citeLabels(keys, cites?.info.labels, bibitem)
+  // A key with a \bibitem is in the bibliography, even with no .bib entry.
+  const listed = keys.map((k, i) => !!entries[i] || !!bibitem(k))
   // Only flagged once the bibliography has loaded (and has entries at all).
-  const missing = !!cites?.info.entries.length && entries.some((e) => !e)
-  const tooltip = keys.map((k, i) => (entries[i] ? `${labels[i] ? `[${labels[i]}] ` : ''}${entryText(entries[i]!)}` : `${k}: not in the bibliography`)).join('\n')
+  const missing = !!cites?.info.entries.length && listed.some((l) => !l)
+  const tooltip = keys
+    .map((k, i) => {
+      const at = labels[i] ? `[${labels[i]}] ` : ''
+      if (entries[i]) return `${at}${entryText(entries[i]!)}`
+      return listed[i] ? `${at}${k}` : `${k}: not in the bibliography`
+    })
+    .join('\n')
   const bracket = labels.every(Boolean) ? `[${labels.join(', ')}]` : `[${keys.join(', ')}]`
   let text = bracket
   const authors = entries.map((e, i) => e?.author || keys[i]).join(', ')

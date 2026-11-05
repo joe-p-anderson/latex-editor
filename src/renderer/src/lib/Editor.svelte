@@ -36,6 +36,8 @@
     onedit,
     onopenlocation,
     livePaper,
+    citedCount,
+    bibResources,
     onextract,
     onfindstep,
     onkey,
@@ -62,6 +64,10 @@
     onopenlocation: (loc: OpenLocation) => void
     /** A file's place in its multi-part paper, for the live view's numbers and cards. */
     livePaper: (rel: string | null) => LivePaper | null
+    /** How many distinct keys the open file's project cites, for the live view's bibliography card. */
+    citedCount: () => number | null
+    /** The .bib files the open file's project root adds with \addbibresource, for the live view's bibliography card (null outside a project). */
+    bibResources: () => string[] | null
     /** Right-click, "Move to a file of its own": a section by its heading's line, or a range of the text. */
     onextract: (rel: string, what: { line: number } | { from: number; to: number }, title: string) => void
     /** F3 / Shift+F3: the next or previous match of the search sidebar's query. */
@@ -146,6 +152,8 @@
       dir: () => dirOfCurrent(),
       lists: () => editingHooks.lists(),
       citations: () => editingHooks.citations(),
+      cited: () => citedCount(),
+      bibResources: () => bibResources(),
       paper: (rel) => livePaper(rel),
     },
     liveDefault,

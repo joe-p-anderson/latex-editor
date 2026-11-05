@@ -9,6 +9,7 @@
 // entry. A key list in the cache folder would be lost with it and could
 // disagree with the file. Anything without the marker is never touched.
 import { blankComments } from '../../shared/latexedit'
+import { bibNamesIn } from '../../shared/bibtex'
 
 /** One @type{…} block in a .bib file. */
 export interface BibSpan {
@@ -199,18 +200,8 @@ export function appendFor(text: string, items: BibItem[]): string {
 
 // --- Finding the document's .bib ---------------------------------------------
 
-/** The .bib names a document asks for, as written (with `.bib` added), in order. */
-export function bibNamesIn(tex: string): string[] {
-  const src = blankComments(tex)
-  const out: string[] = []
-  const add = (name: string) => {
-    const n = name.trim()
-    if (n) out.push(/\.bib$/i.test(n) ? n : `${n}.bib`)
-  }
-  for (const m of src.matchAll(/\\bibliography\s*\{([^}]*)\}/g)) m[1].split(',').forEach(add)
-  for (const m of src.matchAll(/\\(?:addbibresource|addglobalbib|addsectionbib)\s*(?:\[[^\]]*\])?\s*\{([^}]*)\}/g)) add(m[1])
-  return out
-}
+// The .bib names a document asks for live in shared code, for the live view too.
+export { bibNamesIn }
 
 /** Whether the document is set up for biblatex rather than BibTeX. */
 export const usesBiblatex = (tex: string) => /\\usepackage\s*(?:\[[^\]]*\])?\s*\{[^}]*\bbiblatex\b[^}]*\}/.test(blankComments(tex))

@@ -2,6 +2,7 @@
 // cite picker, completion and hover cards), the labels LaTeX gives each
 // citation (from \bibcite in the .aux), and the messages in a .blg log.
 // Kept free of Node and the DOM so it can be unit tested and used anywhere.
+import { blankComments } from './latexedit'
 
 export interface BibEntry {
   /** Lower-case entry type: article, book, … */
@@ -266,6 +267,49 @@ export function citedKeys(text: string): string[] {
   const out: string[] = []
   const re = new RegExp(CITE_COMMAND.source + '([^}]*)\\}', 'g')
   for (const m of text.matchAll(re)) for (const k of m[1].split(',')) if (k.trim()) out.push(k.trim())
+  return out
+}
+
+/**
+ * How many distinct keys a project's files cite, for the live view's
+ * bibliography card. Comments don't count, nor the `*` of \nocite{*}.
+ */
+export function citedCount(texts: string[]): number {
+  const keys = new Set<string>()
+  for (const t of texts) for (const k of citedKeys(blankComments(t))) if (k !== '*') keys.add(k)
+  return keys.size
+}
+
+/**
+ * What each cited key shows: the label the last build's .aux gave it
+ * (`compiled`), else its \bibitem's in a thebibliography (`bibitem`), else null.
+ */
+export function citeLabels(keys: string[], compiled: Record<string, string> | undefined, bibitem: (key: string) => string | null | undefined): (string | null)[] {
+  return keys.map((k) => compiled?.[k] || bibitem(k) || null)
+}
+
+// --- The .bib files a document names -----------------------------------------
+
+/** A .bib name as LaTeX reads it: `refs` is refs.bib. */
+export const withBibExt = (name: string) => (/\.bib$/i.test(name) ? name : `${name}.bib`)
+
+/** The trimmed, non-empty names in a \bibliography{a, b} argument, with `.bib` added. */
+export const bibListNames = (arg: string) => arg.split(',').map((n) => n.trim()).filter(Boolean).map(withBibExt)
+
+const RESOURCE = /\\(?:addbibresource|addglobalbib|addsectionbib)\s*(?:\[[^\]]*\])?\s*\{([^}]*)\}/g
+
+/** The biblatex resources a document adds (\addbibresource and friends), with `.bib` added, in order, each once. Comments don't count. */
+export function bibResources(tex: string): string[] {
+  const names = [...blankComments(tex).matchAll(RESOURCE)].map((m) => m[1].trim()).filter(Boolean)
+  return [...new Set(names.map(withBibExt))]
+}
+
+/** The .bib names a document asks for, as written (with `.bib` added), in order: \bibliography's, then the biblatex resources. */
+export function bibNamesIn(tex: string): string[] {
+  const src = blankComments(tex)
+  const out: string[] = []
+  for (const m of src.matchAll(/\\bibliography\s*\{([^}]*)\}/g)) out.push(...bibListNames(m[1]))
+  for (const m of src.matchAll(RESOURCE)) if (m[1].trim()) out.push(withBibExt(m[1].trim()))
   return out
 }
 

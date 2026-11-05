@@ -1,11 +1,13 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_LISTS } from '../src/shared/latexedit'
+import { DEFAULT_LISTS, envTokens, listEnter, outline } from '../src/shared/latexedit'
+import { findMathRegions } from '../src/shared/mathregions'
 import { inlineParts, liveModel, parseTabular, type LiveNode } from '../src/shared/livemodel'
+import { citeLabels } from '../src/shared/bibtex'
 import { createRenderer } from '../src/shared/mathrender'
 
-const LISTS = { ...DEFAULT_LISTS, questions: 'question', parts: 'part', subparts: 'subpart', choices: 'choice', checkboxes: 'choice' }
+const LISTS = DEFAULT_LISTS
 
 const model = (text: string) => liveModel(text, LISTS)
 const of = <K extends LiveNode['kind']>(text: string, kind: K) =>
@@ -124,9 +126,36 @@ describe('liveModel', () => {
     ])
   })
 
-  it('leaves verbatim alone', () => {
-    const text = '\\begin{verbatim}\n\\section{no} $x$ --\n\\end{verbatim}'
-    expect(model(text).nodes.map((n) => n.kind)).toEqual(['verbatim'])
+  describe('code blocks', () => {
+    const blocks = (text: string) => of(text, 'verbatim').map((v) => text.slice(v.bodyFrom, v.bodyTo))
+    const fences = (text: string) => of(text, 'fence').map((f) => [(f.begin ? '+' : '-') + f.env, text.slice(f.from, f.to)])
+
+    it('leaves the body unscanned and fences the block', () => {
+      const text = '\\begin{verbatim}\n\\section{no} $x$ --\n\\end{verbatim}'
+      expect(model(text).nodes.map((n) => n.kind)).toEqual(['fence', 'verbatim', 'fence'])
+      expect(blocks(text)).toEqual(['\n\\section{no} $x$ --\n'])
+      expect(fences(text)).toEqual([
+        ['+verbatim', '\\begin{verbatim}'],
+        ['-verbatim', '\\end{verbatim}'],
+      ])
+    })
+
+    it("hides minted's language and lstlisting's options with the tag", () => {
+      const text = '\\begin{minted}{python}\nprint(1)\n\\end{minted}\n\\begin{lstlisting}[language=C]\nint x;\n\\end{lstlisting}'
+      expect(fences(text)).toEqual([
+        ['+minted', '\\begin{minted}{python}'],
+        ['-minted', '\\end{minted}'],
+        ['+lstlisting', '\\begin{lstlisting}[language=C]'],
+        ['-lstlisting', '\\end{lstlisting}'],
+      ])
+      expect(blocks(text)).toEqual(['\nprint(1)\n', '\nint x;\n'])
+    })
+
+    it('treats Verbatim and comment, starred or not, as code', () => {
+      const text = '\\begin{Verbatim*}\n\\input{a}\n\\end{Verbatim*}\n\\begin{comment}\n\\section{b}\n\\end{comment}'
+      expect(model(text).nodes.map((n) => n.kind)).toEqual(['fence', 'verbatim', 'fence', 'fence', 'verbatim', 'fence'])
+      expect(fences(text).map(([e]) => e)).toEqual(['+Verbatim*', '-Verbatim*', '+comment', '-comment'])
+    })
   })
 
   it('parses tables with rules, alignment and multicolumn', () => {
@@ -208,6 +237,72 @@ describe('liveModel', () => {
     expect(of(text, 'math')[0].tex).toContain('\\tag{1b}')
   })
 
+  describe('fence tags', () => {
+    const fences = (text: string) => of(text, 'fence').map((f) => `${f.begin ? '+' : '-'}${f.env}`)
+
+    it('tags environments it knows nothing about, user-defined ones included', () => {
+      const text = [
+        '\\newenvironment{mybox}{}{}',
+        '\\begin{document}',
+        '\\begin{acknowledgments}',
+        'Thanks.',
+        '\\end{acknowledgments}',
+        '\\begin{center}x\\end{center}',
+        '\\begin{proof}y\\end{proof}',
+        '\\begin{mybox}z\\end{mybox}',
+        '\\end{document}',
+      ].join('\n')
+      expect(fences(text)).toEqual(['+acknowledgments', '-acknowledgments', '+center', '-center', '+proof', '-proof', '+mybox', '-mybox', '-document'])
+    })
+
+    it('hides the arguments after \\begin{name} with its tag', () => {
+      const text = '\\begin{minipage}[t]{0.5\\textwidth} Body\n\\end{minipage}\n\\begin{theorem}[Pythagoras \\cite{p}]\n$a^2$\n\\end{theorem}\n\\begin{center}\n[not an argument]\n\\end{center}'
+      const begins = of(text, 'fence').filter((f) => f.begin)
+      expect(begins.map((f) => [f.env, text.slice(f.from, f.to)])).toEqual([
+        ['minipage', '\\begin{minipage}[t]{0.5\\textwidth}'],
+        ['theorem', '\\begin{theorem}[Pythagoras \\cite{p}]'],
+        ['center', '\\begin{center}'],
+      ])
+      // Nothing inside the hidden arguments is shown as a construct of its own.
+      expect(of(text, 'ref')).toEqual([])
+      expect(of(text, 'math')).toHaveLength(1)
+    })
+
+    it('leaves a group after a space as body text, shown and scanned', () => {
+      const text = '\\begin{center} {\\textbf{Title}}\n\\end{center}\n\\begin{proof} [Sketch]\n\\end{proof}'
+      const begins = of(text, 'fence').filter((f) => f.begin)
+      expect(begins.map((f) => text.slice(f.from, f.to))).toEqual(['\\begin{center}', '\\begin{proof}'])
+      expect(of(text, 'format').map((f) => f.cmd)).toEqual(['textbf'])
+    })
+
+    it('leaves environments with a widget of their own untagged', () => {
+      const text = [
+        '\\begin{equation}a\\end{equation}',
+        '\\begin{align*}b\\end{align*}',
+        '\\begin{figure}[h]\\includegraphics{x}\\end{figure}',
+        '\\begin{table}\\begin{tabular}{c}1\\end{tabular}\\end{table}',
+        '\\begin{tabular}{l}2\\end{tabular}',
+      ].join('\n')
+      expect(fences(text)).toEqual([])
+      expect(of(text, 'math')).toHaveLength(2)
+      expect(of(text, 'figure')).toHaveLength(1)
+      expect(of(text, 'table')).toHaveLength(2)
+    })
+
+    it('tags an unclosed \\begin, but not a stray \\end', () => {
+      expect(fences('Text\n\\end{foo}\nMore')).toEqual([])
+      expect(fences('\\begin{proof}\nStill typing')).toEqual(['+proof'])
+      expect(fences('\\begin{proof}a\\end{proof}\n\\end{proof}')).toEqual(['+proof', '-proof'])
+    })
+
+    it('counts no \\begin inside code towards closing a stray \\end', () => {
+      const block = '\\begin{verbatim}\n\\begin{itemize}\n\\end{verbatim}\n\\end{itemize}'
+      expect(fences(block)).toEqual(['+verbatim', '-verbatim'])
+      const inline = 'Type \\verb|\\begin{proof}| here.\n\\end{proof}'
+      expect(fences(inline)).toEqual([])
+    })
+  })
+
   it('handles every fixture document without throwing, with sorted nodes', () => {
     const root = resolve(import.meta.dirname, '../fixtures')
     const files: string[] = []
@@ -228,6 +323,41 @@ describe('liveModel', () => {
   })
 })
 
+describe('exam-class lists by default', () => {
+  const items = (text: string) => liveModel(text, DEFAULT_LISTS).nodes.filter((n): n is Extract<LiveNode, { kind: 'item' }> => n.kind === 'item')
+
+  it('numbers questions, parts, subparts and subsubparts with no vault configuration', () => {
+    const text = [
+      '\\begin{questions}',
+      '\\question One',
+      '\\begin{parts}',
+      '\\part a',
+      '\\begin{subparts}\\subpart i\\begin{subsubparts}\\subsubpart A\\end{subsubparts}\\end{subparts}',
+      '\\part b',
+      '\\end{parts}',
+      '\\question Two',
+      '\\end{questions}',
+    ].join('\n')
+    expect(items(text).map((i) => i.label)).toEqual(['1.', '(a)', 'i.', 'A.', '(b)', '2.'])
+    const fences = liveModel(text, DEFAULT_LISTS).nodes.filter((n) => n.kind === 'fence') as Extract<LiveNode, { kind: 'fence' }>[]
+    expect(fences.filter((f) => f.begin).map((f) => f.env)).toEqual(['questions', 'parts', 'subparts', 'subsubparts'])
+  })
+
+  it('marks the correct choice in every choice environment', () => {
+    for (const env of ['choices', 'oneparchoices', 'checkboxes', 'oneparcheckboxes']) {
+      const got = items(`\\begin{${env}}\\choice a\\CorrectChoice b\\end{${env}}`)
+      expect(got.map((i) => i.correct), env).toEqual([false, true])
+    }
+  })
+
+  it('leaves a non-exam document alone: \\part outside parts is not an item', () => {
+    const text = '\\documentclass{book}\n\\begin{document}\n\\part{Beginnings}\n\\chapter{One}\n\\begin{itemize}\n\\item x\n\\end{itemize}\n\\end{document}'
+    expect(items(text).map((i) => i.label)).toEqual(['•'])
+    expect(listEnter(text, text.indexOf('\\part') + 5, DEFAULT_LISTS)).toBeNull()
+    expect(outline(text).map((o) => o.kind)).toEqual(['chapter'])
+  })
+})
+
 describe('citations', () => {
   it('finds every cite variant, with optional arguments and stars', () => {
     const text = '\\begin{document}\nA \\cite{a} B \\citep[see][p.~4]{b, c} C \\parencite*{d} D \\citeauthor{e}\n\\end{document}'
@@ -239,5 +369,119 @@ describe('citations', () => {
       ['citeauthor', ['e']],
     ])
     expect(text.slice(refs[1].from, refs[1].to)).toBe('\\citep[see][p.~4]{b, c}')
+  })
+})
+
+describe('thebibliography', () => {
+  const BIB = '\\begin{document}\n\\begin{thebibliography}{99}\n\\bibitem{knuth} D. Knuth, The TeXbook.\n\\bibitem[Smith99]{smith} J. Smith,\n  A paper.\n\\bibitem{lamport} L. Lamport.\n\\end{thebibliography}\n\\end{document}'
+
+  it('numbers each \\bibitem, or uses its optional label, with the key as a chip', () => {
+    const items = of(BIB, 'bibitem')
+    expect(items.map((i) => [i.label, i.key])).toEqual([
+      ['[1]', 'knuth'],
+      ['[Smith99]', 'smith'],
+      ['[3]', 'lamport'],
+    ])
+    expect(BIB.slice(items[1].from, items[1].to)).toBe('\\bibitem[Smith99]{smith}')
+  })
+
+  it('indents the entries like a list body, under a thebibliography tag with {99} hidden', () => {
+    const m = model(BIB)
+    const fence = m.nodes.find((n) => n.kind === 'fence' && n.env === 'thebibliography' && n.begin)!
+    expect(BIB.slice(fence.from, fence.to)).toBe('\\begin{thebibliography}{99}')
+    expect(m.lists).toEqual([{ from: fence.to, to: BIB.indexOf('\\end{thebibliography}'), depth: 1 }])
+  })
+
+  it('gives each key its label, for citations', () => {
+    expect([...model(BIB).bibitems]).toEqual([
+      ['knuth', '1'],
+      ['smith', 'Smith99'],
+      ['lamport', '3'],
+    ])
+  })
+
+  it("labels a citation by its \\bibitem before a compile, and by the compiled .aux's label after", () => {
+    const bib = model(BIB).bibitems
+    const lookup = (k: string) => bib.get(k)
+    expect(citeLabels(['smith', 'lamport', 'nowhere'], undefined, lookup)).toEqual(['Smith99', '3', null])
+    expect(citeLabels(['smith', 'lamport'], { lamport: '7' }, lookup)).toEqual(['Smith99', '7'])
+  })
+})
+
+describe('inline code', () => {
+  it('shows \\verb contents as code and finds no heading or input card in them', () => {
+    const text = 'See \\verb|\\section{x}| and \\verb!\\input{a}!.'
+    const m = model(text)
+    expect(m.nodes.map((n) => n.kind)).toEqual(['code', 'code'])
+    const [a, b] = of(text, 'code')
+    expect(text.slice(a.from, a.to)).toBe('\\verb|\\section{x}|')
+    expect(text.slice(a.bodyFrom, a.bodyTo)).toBe('\\section{x}')
+    expect(text.slice(b.bodyFrom, b.bodyTo)).toBe('\\input{a}')
+  })
+
+  it('opens no environment for a \\begin inside \\verb', () => {
+    const text = 'Type \\verb|\\begin{itemize}| then\n\\item no list here'
+    expect(envTokens(text)).toEqual([])
+    expect(model(text).nodes.map((n) => n.kind)).toEqual(['code'])
+    const real = '\\verb|\\end{itemize}|\n\\begin{itemize}\n\\item a\n\\end{itemize}'
+    expect(envTokens(real).map((t) => t.kind)).toEqual(['begin', 'end'])
+  })
+
+  it('starts no math at a $ inside \\verb', () => {
+    const text = 'Costs \\verb|$| and $x$ and \\lstinline{$$}'
+    expect(findMathRegions(text).map((r) => r.tex)).toEqual(['x'])
+    expect(model(text).nodes.map((n) => n.kind)).toEqual(['code', 'math', 'code'])
+  })
+
+  it('renders every inline code form the same way', () => {
+    const text = '\\lstinline{a} \\lstinline!b! \\mintinline{python}{c} \\verb*|d|'
+    expect(of(text, 'code').map((c) => text.slice(c.bodyFrom, c.bodyTo))).toEqual(['a', 'b', 'c', 'd'])
+  })
+
+  it('leaves an unterminated \\verb as source, still scanning the rest of the line', () => {
+    const text = '\\verb|abc \\textbf{x} $y$'
+    expect(model(text).nodes.map((n) => n.kind)).toEqual(['format', 'math'])
+  })
+
+  it('keeps a % inside \\verb from commenting out the rest of the line', () => {
+    const text = '\\verb|50%| then \\textbf{x}'
+    expect(model(text).nodes.map((n) => n.kind)).toEqual(['code', 'format'])
+  })
+
+  it('still scans \\texttt, so formatting inside it renders', () => {
+    const text = '\\texttt{\\textbf{x}}'
+    expect(of(text, 'format').map((f) => f.cmd)).toEqual(['texttt', 'textbf'])
+  })
+})
+
+describe('bibliography card', () => {
+  it('names the files of \\bibliography, with .bib added, and takes in the \\bibliographystyle line before it', () => {
+    const text = 'Text.\n\\bibliographystyle{plain}\n\\bibliography{refs, extra.bib}\nAfter.'
+    const nodes = of(text, 'bibliography')
+    expect(nodes).toHaveLength(1)
+    expect(nodes[0].files).toEqual(['refs.bib', 'extra.bib'])
+    expect(text.slice(nodes[0].from, nodes[0].to)).toBe('\\bibliographystyle{plain}\n\\bibliography{refs, extra.bib}')
+  })
+
+  it('takes in a \\bibliographystyle on the line after, but not one further away', () => {
+    const after = 'x\n\\bibliography{refs}\n\\bibliographystyle{unsrt}\ny'
+    const [a] = of(after, 'bibliography')
+    expect(after.slice(a.from, a.to)).toBe('\\bibliography{refs}\n\\bibliographystyle{unsrt}')
+    const apart = '\\bibliographystyle{plain}\n\n\\bibliography{refs}'
+    const [b] = of(apart, 'bibliography')
+    expect(apart.slice(b.from, b.to)).toBe('\\bibliography{refs}')
+  })
+
+  it('names the \\addbibresource files from the preamble for \\printbibliography', () => {
+    const text = '\\documentclass{article}\n\\usepackage{biblatex}\n\\addbibresource{refs.bib}\n\\addbibresource[location=local]{more}\n\\begin{document}\nHi.\n\\printbibliography[heading=bibintoc]\n\\end{document}'
+    const [n] = of(text, 'bibliography')
+    expect(n.files).toEqual(['refs.bib', 'more.bib'])
+    expect(text.slice(n.from, n.to)).toBe('\\printbibliography[heading=bibintoc]')
+  })
+
+  it('marks a \\printbibliography card, so a file of a paper can take the root preamble files', () => {
+    const [n] = of('\\section{References}\n\\printbibliography', 'bibliography')
+    expect(n).toMatchObject({ cmd: 'printbibliography', files: [] })
+    expect(of('\\bibliography{refs}', 'bibliography')[0].cmd).toBe('bibliography')
   })
 })

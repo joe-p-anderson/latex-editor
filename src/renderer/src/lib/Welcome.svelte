@@ -1,22 +1,26 @@
 <script lang="ts">
   /**
    * The welcome screen: the front endpaper filling the window, with a
-   * bookplate listing the recent vaults. Hovering a vault shows its endpaper.
+   * bookplate listing the recent vaults. Hovering a vault shows its endpaper,
+   * and the bookplate takes that vault's colours.
    */
   import { onMount } from 'svelte'
   import type { RecentVault } from '@shared/api'
-  import { defaultVaultAppearance, type VaultAppearance } from '@shared/appearance'
-  import { logoUrl } from './appearance'
+  import { defaultVaultAppearance, plateTokens, type AppAppearance, type VaultAppearance } from '@shared/appearance'
+  import { logoUrl, paletteTheme } from './appearance'
   import { marbleCss } from './marbles.svelte'
   import NoTexCard from './NoTexCard.svelte'
   import { texMissing } from './texDist.svelte'
 
   let {
+    app,
     onopen,
     onopenat,
     onnew,
     ontry,
   }: {
+    /** The user's app appearance (look, page), which the bookplate's colours follow. */
+    app: AppAppearance
     /** Open a folder with the system picker. */
     onopen: () => void
     onopenat: (root: string) => void
@@ -38,6 +42,12 @@
   }
 
   const shown = $derived(preview ?? recent[0]?.appearance ?? defaultVaultAppearance('endleaf'))
+  // The shown vault's colours, set on the plate alone so the rest of the page keeps the app's.
+  const plateStyle = $derived(
+    Object.entries(plateTokens(app, shown, paletteTheme(shown.palette)))
+      .map(([k, v]) => `--${k}: ${v}`)
+      .join('; '),
+  )
 
   // Hover lingers a moment before the endpaper changes, so sweeping across the list doesn't flicker.
   let hoverTimer: ReturnType<typeof setTimeout> | undefined
@@ -57,7 +67,7 @@
 </script>
 
 <div class="threshold" style:background-image={marbleCss(shown)}>
-  <div class="plate">
+  <div class="plate" style={plateStyle}>
     <p class="exl">EX · LIBRIS</p>
     <div class="brand">
       <img class="logo" src={logoUrl(shown.palette, 'full')} alt="" />
@@ -102,6 +112,24 @@
     background-color: var(--desk);
     background-position: center;
     background-size: cover;
+  }
+  /* The plate cross-fades to a hovered vault's colours (and switches at once with reduced motion). */
+  @media (prefers-reduced-motion: no-preference) {
+    .plate,
+    .plate::before,
+    .lbl,
+    .btn,
+    .exl,
+    .brand p,
+    .what small,
+    .when,
+    .about {
+      transition:
+        background-color 200ms ease,
+        color 200ms ease,
+        border-color 200ms ease,
+        outline-color 200ms ease;
+    }
   }
   .plate {
     position: relative;

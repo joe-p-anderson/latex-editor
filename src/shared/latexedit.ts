@@ -5,10 +5,26 @@
 //
 // Offsets are into the document text as CodeMirror sees it (one character per
 // line break), so callers pass state.doc.toString().
+import { codeSpans, inSpan, spanCursor } from './codespans'
 
-/** Replaces % comments with spaces, keeping every offset where it was. */
+/** Replaces % comments with spaces, keeping every offset where it was. A % inside inline code (\verb|50%|) is not a comment. */
 export function blankComments(text: string): string {
-  return text.replace(/(?<!\\)%.*$/gm, (m) => ' '.repeat(m.length))
+  const spans = codeSpans(text)
+  if (!spans.length) return text.replace(/(?<!\\)%.*$/gm, (m) => ' '.repeat(m.length))
+  let out = ''
+  let last = 0
+  const codeAt = spanCursor(spans)
+  const comment = /(?<!\\)%/g
+  for (let m = comment.exec(text); m; m = comment.exec(text)) {
+    const p = m.index
+    if (codeAt(p)) continue
+    const nl = text.indexOf('\n', p)
+    const end = nl < 0 ? text.length : nl
+    out += text.slice(last, p) + ' '.repeat(end - p)
+    last = end
+    comment.lastIndex = end
+  }
+  return out + text.slice(last)
 }
 
 export interface EnvToken {
@@ -22,10 +38,12 @@ export interface EnvToken {
   nameTo: number
 }
 
-/** Every \begin{...} and \end{...} outside comments, in order. Empty names count, so renaming can pass through one. */
+/** Every \begin{...} and \end{...} outside comments and inline code, in order. Empty names count, so renaming can pass through one. */
 export function envTokens(text: string): EnvToken[] {
   const out: EnvToken[] = []
+  const spans = codeSpans(text)
   for (const m of blankComments(text).matchAll(/\\(begin|end)\s*\{([^}\s\\]*)\}/g)) {
+    if (spans.length && inSpan(spans, m.index!)) continue
     const nameFrom = m.index! + m[0].indexOf('{') + 1
     out.push({ kind: m[1] as 'begin' | 'end', name: m[2], from: m.index!, to: m.index! + m[0].length, nameFrom, nameTo: nameFrom + m[2].length })
   }
@@ -88,10 +106,23 @@ const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 /**
  * List environments and their item command (without the backslash), e.g.
- * { itemize: 'item', questions: 'question' }. The defaults; a vault adds its
- * own in .vault.json.
+ * { itemize: 'item', questions: 'question' }. The defaults, for every vault:
+ * the standard lists and the exam class's. A vault adds its own in
+ * .vault.json, and its entries win.
  */
-export const DEFAULT_LISTS: Record<string, string> = { itemize: 'item', enumerate: 'item', description: 'item' }
+export const DEFAULT_LISTS: Record<string, string> = {
+  itemize: 'item',
+  enumerate: 'item',
+  description: 'item',
+  questions: 'question',
+  parts: 'part',
+  subparts: 'subpart',
+  subsubparts: 'subsubpart',
+  choices: 'choice',
+  oneparchoices: 'choice',
+  checkboxes: 'choice',
+  oneparcheckboxes: 'choice',
+}
 
 /**
  * Enter inside a list. On a line with content, starts the next item at the

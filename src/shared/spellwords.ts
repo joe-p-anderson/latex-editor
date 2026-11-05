@@ -1,6 +1,6 @@
 // The words a spellchecker should look at in a LaTeX document: the prose,
 // and nothing else. Left out:
-//  - math, comments, verbatim-like environments and TikZ pictures;
+//  - math, comments, inline code, verbatim-like environments and TikZ pictures;
 //  - the preamble, except the arguments of \title, \author and \date;
 //  - command names, optional [...] arguments, and the arguments of commands
 //    whose arguments aren't prose (\label, \ref, \cite, \includegraphics,
@@ -9,6 +9,7 @@
 //    up to five letters (acronyms such as NASA).
 // The arguments of everything else (\textbf, \emph, \section, \caption, the
 // user's own macros) are prose and are checked.
+import { codeSpans } from './codespans'
 import { blankComments, closingBrace } from './latexedit'
 import { findMathRegions } from './mathregions'
 
@@ -45,6 +46,7 @@ export function proseWords(text: string): ProseWord[] {
   }
 
   for (const r of findMathRegions(text)) blank(r.from, r.to)
+  for (const s of codeSpans(text)) blank(s.from, s.to)
 
   for (const m of text.matchAll(/\\begin\s*\{([^}]+)\}/g)) {
     const name = m[1].trim()
@@ -78,12 +80,6 @@ export function proseWords(text: string): ProseWord[] {
     blank(start, i)
     const name = m[1]
     if (!name) continue
-    if (name === 'verb') {
-      const delim = src[i]
-      const end = delim ? src.indexOf(delim, i + 1) : -1
-      blank(i, end < 0 ? i + 1 : end + 1)
-      continue
-    }
     if (name === 'def') {
       // \def\name#1{body}: all of it.
       const open = src.indexOf('{', i)

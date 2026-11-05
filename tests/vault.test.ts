@@ -46,6 +46,39 @@ describe('.vault.json', () => {
   })
 })
 
+describe('list environments', () => {
+  let dir: string
+  afterEach(() => rmSync(dir, { recursive: true, force: true }))
+
+  it('has the standard and exam-class lists when .vault.json names none', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'vault-'))
+    const vault = new Vault(dir, null)
+    await vault.load()
+    expect((await vault.info()).lists).toEqual({
+      itemize: 'item',
+      enumerate: 'item',
+      description: 'item',
+      questions: 'question',
+      parts: 'part',
+      subparts: 'subpart',
+      subsubparts: 'subsubpart',
+      choices: 'choice',
+      oneparchoices: 'choice',
+      checkboxes: 'choice',
+      oneparcheckboxes: 'choice',
+    })
+  })
+
+  it("adds the vault's own lists to the defaults, and its entries win", async () => {
+    dir = mkdtempSync(join(tmpdir(), 'vault-'))
+    writeFileSync(join(dir, '.vault.json'), JSON.stringify({ lists: { tasks: '\\task', questions: 'titledquestion' } }))
+    const vault = new Vault(dir, null)
+    await vault.load()
+    const { lists } = await vault.info()
+    expect(lists).toMatchObject({ tasks: 'task', questions: 'titledquestion', parts: 'part', itemize: 'item' })
+  })
+})
+
 describe('the vault root', () => {
   // The temp folder is in short form (C:\Users\JANDER~1\...) on machines
   // whose user folder has an 8.3 name; elsewhere there's nothing to expand.

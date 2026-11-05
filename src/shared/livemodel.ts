@@ -9,7 +9,9 @@
 // line break), so callers pass state.doc.toString().
 import { blankComments, closingBrace, envTokens, matchEnd, type EnvToken } from './latexedit'
 import { findMathRegions } from './mathregions'
+import { codeSpans, spanCursor } from './codespans'
 import { graphicsPaths } from './images'
+import { bibListNames, bibResources } from './bibtex'
 
 export type ItemStyle = 'bullet' | 'number' | 'term' | 'box'
 
@@ -51,10 +53,15 @@ export type LiveNode =
     }
   | { kind: 'fence'; from: number; to: number; env: string; begin: boolean }
   | { kind: 'item'; from: number; to: number; env: string; depth: number; label: string; style: ItemStyle; points: string | null; correct: boolean }
+  /** A \bibitem[label]{key} in a thebibliography: its hanging marker ([3] or [label]) and its key. */
+  | { kind: 'bibitem'; from: number; to: number; label: string; key: string }
   | { kind: 'math'; from: number; to: number; tex: string; display: boolean; env: string | null }
   | { kind: 'figure'; from: number; to: number; images: string[]; caption: string | null; number: string | null; labels: string[] }
   | { kind: 'table'; from: number; to: number; tabular: Tabular | null; caption: string | null; number: string | null; labels: string[] }
-  | { kind: 'verbatim'; from: number; to: number }
+  /** A code block (verbatim, minted, …): the whole environment, and its body between the \begin's arguments and the \end. */
+  | { kind: 'verbatim'; from: number; to: number; bodyFrom: number; bodyTo: number }
+  /** Inline code (\verb|…|, \lstinline, \mintinline): the whole span, and its contents between the delimiters. */
+  | { kind: 'code'; from: number; to: number; bodyFrom: number; bodyTo: number }
   | { kind: 'image'; from: number; to: number; path: string }
   | { kind: 'format'; from: number; to: number; cmd: string; openTo: number; closeFrom: number }
   | { kind: 'label'; from: number; to: number; key: string }
@@ -64,6 +71,13 @@ export type LiveNode =
   | { kind: 'include'; from: number; to: number; cmd: string; dir: string; arg: string }
   /** A run of front-matter commands (\title, \author, \affiliation, …), shown as the title block they make. */
   | { kind: 'front'; from: number; to: number; parts: FrontPart[] }
+  /**
+   * \bibliography{a,b} or \printbibliography, with a \bibliographystyle on the
+   * line before or after it: the .bib files it reads (`.bib` added where the
+   * source leaves it off), from its argument or this text's \addbibresources.
+   * A \printbibliography in a file of a paper reads the root's instead.
+   */
+  | { kind: 'bibliography'; from: number; to: number; cmd: 'bibliography' | 'printbibliography'; files: string[] }
 
 /** One front-matter command: \altaffiliation[Now at: ]{Elsewhere} is { cmd: 'altaffiliation', opt: 'Now at: ', arg: 'Elsewhere' }. */
 export interface FrontPart {
@@ -121,6 +135,8 @@ export interface LiveOptions {
   include?: (inc: { cmd: string; dir: string; arg: string }, at: Counters) => Counters | null
   /** A label defined elsewhere (another file of the paper), for refs this text doesn't define. */
   label?: (key: string) => LabelTarget | null
+  /** A \bibitem key defined elsewhere (a thebibliography in another file of the paper): what a citation of it shows. */
+  bibitem?: (key: string) => string | null
 }
 
 export interface LiveModel {
@@ -130,6 +146,8 @@ export interface LiveModel {
   /** Abstract bodies (between \begin and \end), set in from both sides. */
   insets: { from: number; to: number }[]
   labels: Map<string, LabelTarget>
+  /** Each thebibliography key, with what a citation of it shows: 3, or the \bibitem's own [label]. */
+  bibitems: Map<string, string>
   /** The counters at the end. */
   end: Counters
   /** The style used. */
@@ -173,8 +191,54 @@ const roman = (n: number) => {
 const INCLUDES = /^(input|include|subfile|import|subimport|inputfrom|includefrom|subinputfrom|subincludefrom)$/
 /** The commands a title block is made of (revtex's and the standard classes'). */
 const FRONT = /^(title|author|affiliation|altaffiliation|address|email|homepage|thanks|date|preprint|keywords|collaboration|noaffiliation)$/
-/** Environments shown with a faint tag at \begin and \end, like lists. */
-const TAGGED = /^(abstract|subequations|document)$/
+/** Environments shown by a widget of their own; every other one gets a faint tag at its \begin and \end. */
+const hasOwnWidget = (env: string) => FIGURES.test(env) || TABLES.test(env) || TABULARS.test(env)
+
+/**
+ * `tokens` without those inside a code block's body: verbatim's contents are
+ * text, so a \begin{itemize} there opens nothing and closes no stray \end.
+ */
+function codeBlockFree(tokens: EnvToken[]): EnvToken[] {
+  const out: EnvToken[] = []
+  let block: string | null = null
+  for (const t of tokens) {
+    if (block !== null) {
+      if (t.kind !== 'end' || t.name !== block) continue
+      block = null
+    } else if (t.kind === 'begin' && VERBATIM.test(t.name)) block = t.name
+    out.push(t)
+  }
+  return out
+}
+
+/**
+ * Where the arguments after a \begin{name} that ends at `at` end: any `[…]`
+ * and `{…}` groups that follow right after it (no space before each), each
+ * closing on the same line. A group after a space (\begin{center} {\Large T})
+ * is body text. `at` itself when there are none.
+ */
+function envArgsEnd(src: string, at: number): number {
+  for (let i = at; ; ) {
+    let close = -1
+    if (src[i] === '[') {
+      // Braces inside an optional argument can hold a ]: [see \cite{a]b}].
+      for (let j = i + 1, depth = 0; j < src.length && src[j] !== '\n'; j++) {
+        if (src[j] === '\\') j++
+        else if (src[j] === '{') depth++
+        else if (src[j] === '}') depth--
+        else if (src[j] === ']' && depth <= 0) {
+          close = j
+          break
+        }
+      }
+    } else if (src[i] === '{') {
+      close = closingBrace(src, i)
+      if (close >= 0 && src.slice(i, close).includes('\n')) close = -1
+    }
+    if (close < 0) return i
+    i = close + 1
+  }
+}
 
 /**
  * A heading's numbers under `style`: what its title shows (`display`) and
@@ -218,10 +282,23 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
   /** The title block being read, while front-matter commands keep coming. */
   let front = null as Extract<LiveNode, { kind: 'front' }> | null
   const labels = new Map<string, LabelTarget>()
-  const tokens = envTokens(text)
+  const bibitems = new Map<string, string>()
+  const tokens = codeBlockFree(envTokens(text))
   const tokenAt = new Map<number, EnvToken>(tokens.map((t) => [t.from, t]))
+  // The \ends that close a \begin (by offset); a stray one gets no tag.
+  const closing = new Set<number>()
+  const open = new Map<string, number>()
+  for (const t of tokens) {
+    const n = open.get(t.name) ?? 0
+    if (t.kind === 'begin') open.set(t.name, n + 1)
+    else if (n > 0) {
+      open.set(t.name, n - 1)
+      closing.add(t.from)
+    }
+  }
   const math = findMathRegions(text)
   let mi = 0
+  const codeAt = spanCursor(codeSpans(text))
   // Math regions already turned into nodes (by offset).
   const made = new Set<number>()
 
@@ -258,6 +335,13 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
   re.lastIndex = start
   for (let m = re.exec(src); m; m = re.exec(src)) {
     const p = m.index
+    // Inline code: shown as code, never scanned inside.
+    const span = codeAt(p)
+    if (span) {
+      if (p === span.from) nodes.push({ kind: 'code', ...span })
+      re.lastIndex = span.to
+      continue
+    }
     // Math: rendered whole, never scanned inside.
     while (mi < math.length && math[mi].to <= p) mi++
     const region = math[mi]
@@ -307,6 +391,11 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
 
     if (FRONT.test(name)) {
       frontPart(name, p, end)
+      continue
+    }
+
+    if (name === 'bibliography' || name === 'printbibliography') {
+      bibliography(name, p, end)
       continue
     }
 
@@ -437,7 +526,7 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
   for (const h of headings) h.node.level = Math.min(3, h.level - topLevel + 1) as 1 | 2 | 3
 
   nodes.sort((a, b) => a.from - b.from)
-  return { nodes, lists: listBodies, insets, labels, end: c, style, graphicspath: graphicsPaths(text) }
+  return { nodes, lists: listBodies, insets, labels, bibitems, end: c, style, graphicspath: graphicsPaths(text) }
 
   function group(at: number): { body: string; end: number } | null {
     const ws = /^\s*/.exec(src.slice(at, at + 20))![0].length
@@ -446,6 +535,37 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
     const close = closingBrace(src, open)
     if (close < 0) return null
     return { body: text.slice(open + 1, close), end: close + 1 }
+  }
+
+  /** A bibliography card, taking in a \bibliographystyle on the line before or after. */
+  function bibliography(cmd: 'bibliography' | 'printbibliography', p: number, end: number): void {
+    let to = end
+    let files: string[]
+    if (cmd === 'bibliography') {
+      const g = group(end)
+      if (!g) return
+      files = [...new Set(bibListNames(g.body))]
+      to = g.end
+    } else {
+      for (let o = optional(to); o; o = optional(to)) to = o.end
+      files = bibResources(text)
+    }
+    let from = p
+    const lineStart = src.lastIndexOf('\n', p - 1) + 1
+    const lineEnd = src.indexOf('\n', to) < 0 ? src.length : src.indexOf('\n', to)
+    const before = lineStart > 0 && !src.slice(lineStart, p).trim() ? styleLine(src.lastIndexOf('\n', lineStart - 2) + 1, lineStart - 1) : null
+    const after = !before && lineEnd < src.length && !src.slice(to, lineEnd).trim() ? styleLine(lineEnd + 1, src.indexOf('\n', lineEnd + 1) < 0 ? src.length : src.indexOf('\n', lineEnd + 1)) : null
+    if (before) from = before.from
+    if (after) to = after.to
+    nodes.push({ kind: 'bibliography', from, to, cmd, files })
+    re.lastIndex = to
+  }
+
+  /** The \bibliographystyle{…} on the line from..to, when it's all the line holds. */
+  function styleLine(from: number, to: number): { from: number; to: number } | null {
+    const line = src.slice(from, to)
+    const m = /^(\s*)\\bibliographystyle\s*\{[^}]*\}\s*$/.exec(line)
+    return m ? { from: from + m[1].length, to: from + line.trimEnd().length } : null
   }
 
   /** A letter made by an accent or special-letter command; a bare {group} around it goes too. */
@@ -539,7 +659,13 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
 
   function beginEnv(tok: EnvToken): void {
     const env = tok.name
-    if (TAGGED.test(env)) nodes.push({ kind: 'fence', from: tok.from, to: tok.to, env, begin: true })
+    // The tag covers the arguments too, hidden with it; they aren't scanned.
+    const tagged = !hasOwnWidget(env)
+    const to = tagged ? envArgsEnd(src, tok.to) : tok.to
+    if (tagged) {
+      nodes.push({ kind: 'fence', from: tok.from, to, env, begin: true })
+      re.lastIndex = to
+    }
     if (env === 'abstract') {
       const close = matchEnd(tokens, tok)
       if (close) insets.push({ from: tok.to, to: close.from })
@@ -553,7 +679,7 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
       current = { number, kind: 'equation' }
       return
     }
-    const marker = lists[env]
+    const marker = env === 'thebibliography' ? 'bibitem' : lists[env]
     if (marker) {
       const outer = stack[stack.length - 1]
       stack.push({
@@ -563,36 +689,48 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
         depth: (outer?.depth ?? 0) + 1,
         enumDepth: stack.filter((l) => l.env === 'enumerate').length + (env === 'enumerate' ? 1 : 0),
         itemDepth: stack.filter((l) => l.marker === 'item' && l.env !== 'enumerate').length + (marker === 'item' && env !== 'enumerate' ? 1 : 0),
-        bodyFrom: tok.to,
+        bodyFrom: to,
       })
-      nodes.push({ kind: 'fence', from: tok.from, to: tok.to, env, begin: true })
       return
     }
     if (VERBATIM.test(env) || FIGURES.test(env) || TABLES.test(env) || TABULARS.test(env)) {
       const close = matchEnd(tokens, tok)
       if (!close) return
       re.lastIndex = close.to
-      if (VERBATIM.test(env)) nodes.push({ kind: 'verbatim', from: tok.from, to: close.to })
+      if (VERBATIM.test(env)) {
+        // Its \end isn't reached by the scan, so its tag is made here.
+        nodes.push({ kind: 'verbatim', from: tok.from, to: close.to, bodyFrom: to, bodyTo: close.from })
+        nodes.push({ kind: 'fence', from: close.from, to: close.to, env, begin: false })
+      }
       else if (FIGURES.test(env)) figureNode(tok, close)
       else tableNode(tok, close)
     }
   }
 
   function endEnv(tok: EnvToken): void {
-    if (TAGGED.test(tok.name)) {
-      nodes.push({ kind: 'fence', from: tok.from, to: tok.to, env: tok.name, begin: false })
-      return
-    }
     const i = stack.findLastIndex((l) => l.env === tok.name)
-    if (i < 0) return
-    const list = stack[i]
-    listBodies.push({ from: list.bodyFrom, to: tok.from, depth: list.depth })
-    stack.length = i
+    if (i >= 0) {
+      const list = stack[i]
+      listBodies.push({ from: list.bodyFrom, to: tok.from, depth: list.depth })
+      stack.length = i
+    }
+    if (hasOwnWidget(tok.name) || !closing.has(tok.from)) return
     nodes.push({ kind: 'fence', from: tok.from, to: tok.to, env: tok.name, begin: false })
   }
 
   function item(list: OpenList, name: string, p: number, end: number): void {
     const o = optional(end)
+    if (list.marker === 'bibitem') {
+      const g = group(o ? o.end : end)
+      if (!g) return
+      const n = ++list.count
+      const label = o?.body.trim() || String(n)
+      const key = g.body.trim()
+      if (!bibitems.has(key)) bibitems.set(key, label)
+      nodes.push({ kind: 'bibitem', from: p, to: g.end, label: `[${label}]`, key })
+      re.lastIndex = g.end
+      return
+    }
     list.count++
     const n = list.count
     let label: string

@@ -7,6 +7,16 @@ const ui = 'var(--f-ui)'
 const mono = 'var(--f-mono)'
 const { muted, accent } = liveColours
 
+/** What an \input card and a bibliography card share: a shaded, bordered box you can click. */
+const fileCard = {
+  fontFamily: ui,
+  color: muted,
+  background: 'var(--side)',
+  border: '1px solid var(--line)',
+  cursor: 'pointer',
+  textIndent: '0',
+}
+
 export const liveTheme = EditorView.baseTheme({
   '&.cm-live .cm-content': {
     fontFamily: 'var(--f-page)',
@@ -89,6 +99,21 @@ export const liveTheme = EditorView.baseTheme({
     cursor: 'pointer',
   },
   '.cm-live-preamble-title': { fontWeight: '600', color: 'var(--ink)' },
+  // \bibliography{…} or \printbibliography: its .bib files and how many keys the project cites.
+  '.cm-live-bib': {
+    display: 'flex',
+    alignItems: 'baseline',
+    flexWrap: 'wrap',
+    gap: '0 8px',
+    margin: '10px 0 4px',
+    padding: '4px 10px',
+    ...fileCard,
+    fontSize: 'calc(var(--page-size) * 0.7)',
+    borderRadius: '6px',
+  },
+  '.cm-live-bib-file:hover': { color: 'var(--detail)', textDecoration: 'underline' },
+  '.cm-live-bib-file.missing': { fontWeight: '400', color: muted, opacity: '0.7', textDecoration: 'line-through' },
+  '.cm-live-bib-file.missing:hover': { color: muted, textDecoration: 'line-through' },
   // Around each card (see spaced() in widgets.ts): holds its margins in.
   '.cm-live-box': { display: 'flow-root' },
 
@@ -108,18 +133,13 @@ export const liveTheme = EditorView.baseTheme({
   '.cm-live-include': {
     margin: '4px 0',
     padding: '5px 12px 6px',
-    fontFamily: ui,
+    ...fileCard,
     fontSize: 'calc(var(--page-size) * 0.76)',
     lineHeight: '1.5',
-    color: muted,
-    background: 'var(--side)',
-    border: '1px solid var(--line)',
     borderLeft: '3px solid var(--detail)',
     borderRadius: '4px',
-    cursor: 'pointer',
-    textIndent: '0',
   },
-  '.cm-live-include:hover': { borderColor: 'var(--detail)' },
+  '.cm-live-include:hover, .cm-live-bib:hover': { borderColor: 'var(--detail)' },
 
   // The paper's previous and next files, at a file's top and foot.
   '.cm-live-neighbour': {
@@ -142,8 +162,8 @@ export const liveTheme = EditorView.baseTheme({
   '.cm-live-include.off': { opacity: '0.55', borderLeftStyle: 'dashed' },
   '.cm-live-include.missing': { borderLeftColor: 'var(--err)' },
   '.cm-live-include-head': { display: 'flex', alignItems: 'baseline', gap: '8px' },
-  '.cm-live-include-icon': { color: 'var(--detail)' },
-  '.cm-live-include-file': { fontWeight: '600', color: 'var(--ink)', fontFamily: 'var(--f-mono)', fontSize: '0.95em' },
+  '.cm-live-include-icon, .cm-live-bib-icon': { color: 'var(--detail)' },
+  '.cm-live-include-file, .cm-live-bib-file': { fontWeight: '600', color: 'var(--ink)', fontFamily: mono, fontSize: '0.95em' },
   '.cm-live-include-note': { fontStyle: 'italic' },
   '.cm-live-include.missing .cm-live-include-note': { color: 'var(--err)' },
   '.cm-live-include-h': { display: 'flex', gap: '8px', paddingLeft: '20px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--ink)' },
@@ -170,7 +190,9 @@ export const liveTheme = EditorView.baseTheme({
   },
   // Wide tables and display math may run into the outer margin, up to 70 px.
   '&.cm-live .cm-live-math.block, &.cm-live .cm-live-table': { marginRight: 'calc(-1 * min(70px, var(--pad-r)))' },
-  '&.cm-live .cm-live-code': { fontFamily: mono, fontSize: '13.5px', backgroundColor: 'var(--srcbg)' },
+  // Code, inline (\verb|…| and friends) or a block's lines (verbatim, minted, …):
+  // in the mono, in the command colour, unshaded.
+  '&.cm-live .cm-live-code': { fontFamily: mono, fontSize: '0.9em', color: 'var(--detail)', backgroundColor: 'transparent' },
 
   // \textbf and friends.
   '.cm-live-textbf': { fontWeight: '700' },

@@ -93,6 +93,12 @@ describe('pairContext', () => {
     expect(at('{a}').text).toBe(false) // preamble
     expect(at('v\n').text).toBe(false) // verbatim
   })
+  it('treats inline code as code, not prose', () => {
+    const src = 'a \\lstinline!x y! and \\mintinline{c}{p q} b'
+    expect(pairContext(src, src.indexOf('x y') + 1).text).toBe(false)
+    expect(pairContext(src, src.indexOf('p q') + 1).text).toBe(false)
+    expect(pairContext(src, src.indexOf(' b') + 1)).toEqual({ math: false, text: true })
+  })
   it('treats the rest of a paragraph after an open $ as math, and the next paragraph as text', () => {
     const src = 'a $x + \n\nb'
     expect(pairContext(src, 'a $x + '.length).math).toBe(true)
