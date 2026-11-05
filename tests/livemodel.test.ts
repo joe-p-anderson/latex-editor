@@ -125,9 +125,36 @@ describe('liveModel', () => {
     ])
   })
 
-  it('leaves verbatim alone', () => {
-    const text = '\\begin{verbatim}\n\\section{no} $x$ --\n\\end{verbatim}'
-    expect(model(text).nodes.map((n) => n.kind)).toEqual(['verbatim'])
+  describe('code blocks', () => {
+    const blocks = (text: string) => of(text, 'verbatim').map((v) => text.slice(v.bodyFrom, v.bodyTo))
+    const fences = (text: string) => of(text, 'fence').map((f) => [(f.begin ? '+' : '-') + f.env, text.slice(f.from, f.to)])
+
+    it('leaves the body unscanned and fences the block', () => {
+      const text = '\\begin{verbatim}\n\\section{no} $x$ --\n\\end{verbatim}'
+      expect(model(text).nodes.map((n) => n.kind)).toEqual(['fence', 'verbatim', 'fence'])
+      expect(blocks(text)).toEqual(['\n\\section{no} $x$ --\n'])
+      expect(fences(text)).toEqual([
+        ['+verbatim', '\\begin{verbatim}'],
+        ['-verbatim', '\\end{verbatim}'],
+      ])
+    })
+
+    it("hides minted's language and lstlisting's options with the tag", () => {
+      const text = '\\begin{minted}{python}\nprint(1)\n\\end{minted}\n\\begin{lstlisting}[language=C]\nint x;\n\\end{lstlisting}'
+      expect(fences(text)).toEqual([
+        ['+minted', '\\begin{minted}{python}'],
+        ['-minted', '\\end{minted}'],
+        ['+lstlisting', '\\begin{lstlisting}[language=C]'],
+        ['-lstlisting', '\\end{lstlisting}'],
+      ])
+      expect(blocks(text)).toEqual(['\nprint(1)\n', '\nint x;\n'])
+    })
+
+    it('treats Verbatim and comment, starred or not, as code', () => {
+      const text = '\\begin{Verbatim*}\n\\input{a}\n\\end{Verbatim*}\n\\begin{comment}\n\\section{b}\n\\end{comment}'
+      expect(model(text).nodes.map((n) => n.kind)).toEqual(['fence', 'verbatim', 'fence', 'fence', 'verbatim', 'fence'])
+      expect(fences(text).map(([e]) => e)).toEqual(['+Verbatim*', '-Verbatim*', '+comment', '-comment'])
+    })
   })
 
   it('parses tables with rules, alignment and multicolumn', () => {

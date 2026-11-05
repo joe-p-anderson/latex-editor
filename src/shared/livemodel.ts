@@ -55,7 +55,8 @@ export type LiveNode =
   | { kind: 'math'; from: number; to: number; tex: string; display: boolean; env: string | null }
   | { kind: 'figure'; from: number; to: number; images: string[]; caption: string | null; number: string | null; labels: string[] }
   | { kind: 'table'; from: number; to: number; tabular: Tabular | null; caption: string | null; number: string | null; labels: string[] }
-  | { kind: 'verbatim'; from: number; to: number }
+  /** A code block (verbatim, minted, …): the whole environment, and its body between the egin's arguments and the \end. */
+  | { kind: 'verbatim'; from: number; to: number; bodyFrom: number; bodyTo: number }
   /** Inline code (\verb|…|, \lstinline, \mintinline): the whole span, and its contents between the delimiters. */
   | { kind: 'code'; from: number; to: number; bodyFrom: number; bodyTo: number }
   | { kind: 'image'; from: number; to: number; path: string }
@@ -183,7 +184,7 @@ const INCLUDES = /^(input|include|subfile|import|subimport|inputfrom|includefrom
 /** The commands a title block is made of (revtex's and the standard classes'). */
 const FRONT = /^(title|author|affiliation|altaffiliation|address|email|homepage|thanks|date|preprint|keywords|collaboration|noaffiliation)$/
 /** Environments shown by a widget of their own; every other one gets a faint tag at its \begin and \end. */
-const untagged = (env: string) => VERBATIM.test(env) || FIGURES.test(env) || TABLES.test(env) || TABULARS.test(env)
+const untagged = (env: string) => FIGURES.test(env) || TABLES.test(env) || TABULARS.test(env)
 
 /**
  * Where the arguments after a \begin{name} that ends at `at` end: any `[…]`
@@ -674,7 +675,11 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
       const close = matchEnd(tokens, tok)
       if (!close) return
       re.lastIndex = close.to
-      if (VERBATIM.test(env)) nodes.push({ kind: 'verbatim', from: tok.from, to: close.to })
+      if (VERBATIM.test(env)) {
+        // Its \end isn't reached by the scan, so its tag is made here.
+        nodes.push({ kind: 'verbatim', from: tok.from, to: close.to, bodyFrom: to, bodyTo: close.from })
+        nodes.push({ kind: 'fence', from: close.from, to: close.to, env, begin: false })
+      }
       else if (FIGURES.test(env)) figureNode(tok, close)
       else tableNode(tok, close)
     }

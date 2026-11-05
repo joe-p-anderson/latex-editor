@@ -297,9 +297,19 @@ function build(state: EditorState, model: LiveModel | null, hooks: LiveHooks): D
         widget(n.from, n.to, () => new TableWidget(n.tabular, text(n.from, n.to), n.caption, n.number, n.labels, render))
         break
       }
-      case 'verbatim':
-        tint(n.from, n.to, 'cm-live-code')
+      case 'verbatim': {
+        // The body's lines as code (not the \begin and \end lines, when they're
+        // on lines of their own); the line the cursor is on shows as source.
+        const a = doc.lineAt(n.bodyFrom)
+        const z = doc.lineAt(n.bodyTo)
+        const first = a.number + (text(n.bodyFrom, a.to).trim() ? 0 : 1)
+        const last = z.number - (text(z.from, n.bodyTo).trim() ? 0 : 1)
+        for (let l = first; l <= last; l++) {
+          const line = doc.line(l)
+          if (!touches(line.from, line.to)) lineClass(line.from, 'cm-live-code')
+        }
         break
+      }
       case 'code': {
         // \verb|…|: just the contents, as code. An empty one stays as source.
         if (touches(n.from, n.to) || n.bodyFrom === n.bodyTo) break
