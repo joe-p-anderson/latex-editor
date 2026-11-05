@@ -13,6 +13,12 @@ describe('scanBraces', () => {
   it('skips verbatim environments', () => {
     expect(scanBraces('\\begin{verbatim}\n{{{\n\\end{verbatim}\n').unclosed).toEqual([])
   })
+  it('skips inline code', () => {
+    const r = scanBraces('Open with \\verb|{| and close with \\lstinline!}!.\n\\textbf{x')
+    expect(r.unclosed).toEqual([{ line: 2, col: 7 }])
+    expect(r.extra).toEqual([])
+    expect(scanParagraphBraces('Type \\verb|{| here.\n\nNext.')).toEqual([])
+  })
 })
 
 describe('scanParagraphBraces', () => {
@@ -29,6 +35,9 @@ describe('scanEnvironments', () => {
   it('reports unclosed environments', () => {
     expect(scanEnvironments('\\begin{center}\ntext')).toMatchObject([{ kind: 'unclosed', name: 'center' }])
   })
+  it('opens no environment for a \\begin inside inline code', () => {
+    expect(scanEnvironments('Write \\verb|\\begin{itemize}| to start a list.')).toEqual([])
+  })
 })
 
 describe('scanMath', () => {
@@ -40,5 +49,8 @@ describe('scanMath', () => {
   })
   it('ignores escaped dollars', () => {
     expect(scanMath('costs \\$5 and \\$6')).toEqual([])
+  })
+  it('ignores dollars inside inline code', () => {
+    expect(scanMath('Math starts with \\verb|$|.\n\nThen $x$ and $y')).toEqual([{ line: 3, col: 13 }])
   })
 })

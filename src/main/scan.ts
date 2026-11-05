@@ -3,7 +3,9 @@
 // blank line. Scanning the source finds where the problem actually starts.
 //
 // These are deliberately simple (no macro expansion): comments, escaped
-// characters (\{ \} \$ \%) and verbatim-like environments are skipped.
+// characters (\{ \} \$ \%), verbatim-like environments and inline code
+// (\verb|{|, \lstinline!$!) are skipped.
+import { codeSpans } from '../shared/codespans'
 
 export interface SourcePos {
   line: number // 1-based
@@ -30,7 +32,14 @@ function* codeChars(text: string): Generator<{ ch: string; i: number; line: numb
       offset += l.length + 1
       continue
     }
+    // Inline code lies on one line: skip each span whole.
+    const code = codeSpans(l)
+    let ci = 0
     for (let c = 0; c < l.length; c++) {
+      if (code[ci]?.from === c) {
+        c = code[ci++].to - 1
+        continue
+      }
       const ch = l[c]
       if (ch === '\\') {
         // A control sequence or escaped character: report it as one unit.
