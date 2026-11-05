@@ -1,6 +1,6 @@
 # thebibliography as a list
 
-Status: ready-for-agent
+Status: resolved
 
 Blocked by: 03
 
@@ -24,3 +24,5 @@ A hand-written `thebibliography` renders as a numbered list, and citations to it
 - [ ] Unit tests cover the markers and the cite labels.
 
 ## Comments
+
+Built and merged on branch `live-view-fixes` (2026-11-04). Duplicate keys: the first `\bibitem` wins. A cite with a `\bibitem` but no `.bib` entry is not flagged missing. Bibitems count across the paper. Not yet checked in the running app.

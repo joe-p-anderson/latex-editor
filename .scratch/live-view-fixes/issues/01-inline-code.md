@@ -1,6 +1,6 @@
 # Inline code spans
 
-Status: ready-for-agent
+Status: resolved
 
 Spec: [../spec.md](../spec.md#inline-code).
 
@@ -24,3 +24,5 @@ Inline code (`\verb`, `\verb*`, `\lstinline`, `\mintinline`) is never scanned fo
 - [ ] Unit tests cover the helper's forms and the model's skipping.
 
 ## Comments
+
+Built and merged on branch `live-view-fixes` (2026-11-04). A `%` inside inline code is no longer a comment anywhere, and an empty `\verb||` stays as source. Not yet checked in the running app.

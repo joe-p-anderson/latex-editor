@@ -1,6 +1,6 @@
 # Bookplate takes the hovered palette
 
-Status: ready-for-agent
+Status: resolved
 
 Spec: [../spec.md](../spec.md#vault-switcher-bookplate).
 
@@ -21,3 +21,5 @@ On the welcome screen (`src/renderer/src/lib/Welcome.svelte`), the bookplate pre
 - [ ] The rest of the app's colours are unchanged after opening a vault from the list.
 
 ## Comments
+
+Built and merged on branch `live-view-fixes` (2026-11-04). Checked in the app by the implementer (all four acceptance items). The primary button follows the hovered palette's ink and paper, which the maintainer confirmed is intended. The cross-fade is skipped under reduced motion. Not yet checked in the running app.

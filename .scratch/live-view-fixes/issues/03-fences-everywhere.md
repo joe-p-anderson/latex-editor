@@ -1,6 +1,6 @@
 # Fence tags on every environment
 
-Status: ready-for-agent
+Status: resolved
 
 Spec: [../spec.md](../spec.md#fence-tags-on-every-environment).
 
@@ -23,3 +23,5 @@ Every environment's `\begin` and `\end` gets a fence tag in the live view, excep
 - [ ] Unit tests cover fences for unknown environments, argument ranges and the exclusions.
 
 ## Comments
+
+Built and merged on branch `live-view-fixes` (2026-11-04). Only arguments directly adjacent to `\begin{name}` on the same line are hidden; list arguments are hidden too. Tokens inside code blocks never pair with a stray `\end`. Not yet checked in the running app.

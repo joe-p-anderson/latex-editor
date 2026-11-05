@@ -1,6 +1,6 @@
 # Bibliography card
 
-Status: ready-for-agent
+Status: resolved
 
 Spec: [../spec.md](../spec.md#bibliography).
 
@@ -22,3 +22,5 @@ Spec: [../spec.md](../spec.md#bibliography).
 - [ ] Unit tests cover file names from both forms and the count.
 
 ## Comments
+
+Built and merged on branch `live-view-fixes` (2026-11-04). An included file's `\printbibliography` takes the root's `\addbibresource` files. Extras: missing `.bib` struck through, "no .bib file" placeholder, every name clickable. Not yet checked in the running app.

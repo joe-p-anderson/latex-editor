@@ -1,6 +1,6 @@
 # Exam-class lists by default
 
-Status: ready-for-agent
+Status: resolved
 
 Spec: [../spec.md](../spec.md#exam-class-lists-by-default).
 
@@ -20,3 +20,5 @@ The exam-class list environments are built-in defaults, so every vault numbers q
 - [ ] Unit tests cover the defaults and the merge.
 
 ## Comments
+
+Built and merged on branch `live-view-fixes` (2026-11-04). The new item commands also appear as "list item" completions in every vault; the maintainer said to leave that for now. Not yet checked in the running app.

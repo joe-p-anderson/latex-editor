@@ -1,6 +1,6 @@
 # Code block styling
 
-Status: ready-for-agent
+Status: resolved
 
 Blocked by: 01, 03
 
@@ -22,3 +22,5 @@ The bodies of `verbatim`, `Verbatim`, `lstlisting`, `minted` and `comment` (with
 - [ ] The cursor inside a code block shows plain source on that line; other lines stay styled.
 
 ## Comments
+
+Built and merged on branch `live-view-fixes` (2026-11-04). The cursor line inside a block shows plain source (prose font). An unclosed block gets its tag but its body is still scanned. Not yet checked in the running app.
