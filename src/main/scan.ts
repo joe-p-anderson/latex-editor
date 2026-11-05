@@ -5,7 +5,7 @@
 // These are deliberately simple (no macro expansion): comments, escaped
 // characters (\{ \} \$ \%), verbatim-like environments and inline code
 // (\verb|{|, \lstinline!$!) are skipped.
-import { codeSpans } from '../shared/codespans'
+import { codeSpans, spanCursor } from '../shared/codespans'
 
 export interface SourcePos {
   line: number // 1-based
@@ -33,11 +33,11 @@ function* codeChars(text: string): Generator<{ ch: string; i: number; line: numb
       continue
     }
     // Inline code lies on one line: skip each span whole.
-    const code = codeSpans(l)
-    let ci = 0
+    const codeAt = spanCursor(codeSpans(l))
     for (let c = 0; c < l.length; c++) {
-      if (code[ci]?.from === c) {
-        c = code[ci++].to - 1
+      const span = codeAt(c)
+      if (span) {
+        c = span.to - 1
         continue
       }
       const ch = l[c]

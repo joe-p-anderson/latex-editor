@@ -56,6 +56,19 @@ export function inSpan(spans: readonly CodeSpan[], pos: number): boolean {
   return false
 }
 
+/**
+ * A forward cursor over `spans` (sorted): called with positions that never
+ * go back, it returns the span each lies in, or null. For a single pass over
+ * the text, where inSpan's search each time would be wasted.
+ */
+export function spanCursor(spans: readonly CodeSpan[]): (pos: number) => CodeSpan | null {
+  let i = 0
+  return (pos) => {
+    while (i < spans.length && spans[i].to <= pos) i++
+    return i < spans.length && spans[i].from <= pos ? spans[i] : null
+  }
+}
+
 function spanAt(text: string, from: number, cmd: string, at: number): CodeSpan | null {
   let j = at
   const lineEnd = text.indexOf('\n', at) < 0 ? text.length : text.indexOf('\n', at)

@@ -5,7 +5,7 @@
 //
 // Offsets are into the document text as CodeMirror sees it (one character per
 // line break), so callers pass state.doc.toString().
-import { codeSpans, inSpan } from './codespans'
+import { codeSpans, inSpan, spanCursor } from './codespans'
 
 /** Replaces % comments with spaces, keeping every offset where it was. A % inside inline code (\verb|50%|) is not a comment. */
 export function blankComments(text: string): string {
@@ -13,12 +13,11 @@ export function blankComments(text: string): string {
   if (!spans.length) return text.replace(/(?<!\\)%.*$/gm, (m) => ' '.repeat(m.length))
   let out = ''
   let last = 0
-  let si = 0
+  const codeAt = spanCursor(spans)
   const comment = /(?<!\\)%/g
   for (let m = comment.exec(text); m; m = comment.exec(text)) {
     const p = m.index
-    while (si < spans.length && spans[si].to <= p) si++
-    if (spans[si] && spans[si].from <= p) continue
+    if (codeAt(p)) continue
     const nl = text.indexOf('\n', p)
     const end = nl < 0 ? text.length : nl
     out += text.slice(last, p) + ' '.repeat(end - p)
@@ -27,7 +26,6 @@ export function blankComments(text: string): string {
   }
   return out + text.slice(last)
 }
-
 
 export interface EnvToken {
   kind: 'begin' | 'end'

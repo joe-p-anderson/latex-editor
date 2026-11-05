@@ -2,7 +2,7 @@
 // display environments (equation, align, gather, ...). Used by the editor to
 // know what to preview, and by the tests to render every equation in the
 // fixtures. Comments, escaped \$, verbatim environments and inline code are skipped.
-import { codeSpans } from './codespans'
+import { codeSpans, spanCursor } from './codespans'
 
 export interface MathRegion {
   /** Offsets into the document: the whole region, delimiters included. */
@@ -22,8 +22,7 @@ export function findMathRegions(text: string): MathRegion[] {
   const regions: MathRegion[] = []
   const n = text.length
   let i = 0
-  const code = codeSpans(text)
-  let ci = 0
+  const codeAt = spanCursor(codeSpans(text))
 
   // Position of the next blank line (paragraph end) at or after `from`.
   const paragraphEnd = (from: number) => {
@@ -44,9 +43,9 @@ export function findMathRegions(text: string): MathRegion[] {
 
     if (ch === '\\') {
       // Inline code (\verb|$|) is never math.
-      while (ci < code.length && code[ci].to <= i) ci++
-      if (code[ci]?.from === i) {
-        i = code[ci].to
+      const span = codeAt(i)
+      if (span?.from === i) {
+        i = span.to
         continue
       }
       const next = text[i + 1]

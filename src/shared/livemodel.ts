@@ -9,7 +9,7 @@
 // line break), so callers pass state.doc.toString().
 import { blankComments, closingBrace, envTokens, matchEnd, type EnvToken } from './latexedit'
 import { findMathRegions } from './mathregions'
-import { codeSpans } from './codespans'
+import { codeSpans, spanCursor } from './codespans'
 import { graphicsPaths } from './images'
 import { bibListNames, bibResources } from './bibtex'
 
@@ -298,8 +298,7 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
   }
   const math = findMathRegions(text)
   let mi = 0
-  const code = codeSpans(text)
-  let ci = 0
+  const codeAt = spanCursor(codeSpans(text))
   // Math regions already turned into nodes (by offset).
   const made = new Set<number>()
 
@@ -337,9 +336,8 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
   for (let m = re.exec(src); m; m = re.exec(src)) {
     const p = m.index
     // Inline code: shown as code, never scanned inside.
-    while (ci < code.length && code[ci].to <= p) ci++
-    const span = code[ci]
-    if (span && span.from <= p && p < span.to) {
+    const span = codeAt(p)
+    if (span) {
       if (p === span.from) nodes.push({ kind: 'code', ...span })
       re.lastIndex = span.to
       continue
