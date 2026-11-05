@@ -9,7 +9,7 @@
   import type { LivePaper } from './lib/live/live'
   import CitePicker from './lib/CitePicker.svelte'
   import { makeCitations, type Citations } from './lib/citations'
-  import { OPEN_CITE } from '@shared/bibtex'
+  import { OPEN_CITE, citedCount } from '@shared/bibtex'
   import FileTree from './lib/FileTree.svelte'
   import Editor from './lib/Editor.svelte'
   import PdfViewer from './lib/PdfViewer.svelte'
@@ -411,6 +411,17 @@
         return { rel: child ?? inc.arg, exists: !!file?.exists, off: off || !!file?.off, headings }
       },
     }
+  }
+
+  /**
+   * How many distinct keys the open file's project cites: the root and every
+   * file it includes (not ones switched off), open files with their unsaved text.
+   */
+  function projectCitedCount(): number | null {
+    const p = paper
+    const rels = p && active && p.files.some((f) => f.rel === active) ? p.files.filter((f) => !f.off).map((f) => f.rel) : active ? [active] : []
+    const texts = rels.map((rel) => editor?.textOf(rel) ?? p?.texts[rel] ?? null).filter((t): t is string => t != null)
+    return texts.length ? citedCount(texts) : null
   }
 
   // The open paper's files, marked in the tabs. Kept while another file is
@@ -2281,6 +2292,7 @@
                 onlivechange={(on) => (live = on)}
                 onedit={schedulePreview}
                 {livePaper}
+                citedCount={projectCitedCount}
                 onextract={(rel, what, title) => askExtract(rel, what, title)}
                 onopenlocation={(loc) => go(loc.file, loc.line)}
                 onfindstep={findStep}
