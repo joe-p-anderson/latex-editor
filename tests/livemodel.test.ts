@@ -267,6 +267,13 @@ describe('liveModel', () => {
       expect(of(text, 'math')).toHaveLength(1)
     })
 
+    it('leaves a group after a space as body text, shown and scanned', () => {
+      const text = '\\begin{center} {\\textbf{Title}}\n\\end{center}\n\\begin{proof} [Sketch]\n\\end{proof}'
+      const begins = of(text, 'fence').filter((f) => f.begin)
+      expect(begins.map((f) => text.slice(f.from, f.to))).toEqual(['\\begin{center}', '\\begin{proof}'])
+      expect(of(text, 'format').map((f) => f.cmd)).toEqual(['textbf'])
+    })
+
     it('leaves environments with a widget of their own untagged', () => {
       const text = [
         '\\begin{equation}a\\end{equation}',
@@ -285,6 +292,13 @@ describe('liveModel', () => {
       expect(fences('Text\n\\end{foo}\nMore')).toEqual([])
       expect(fences('\\begin{proof}\nStill typing')).toEqual(['+proof'])
       expect(fences('\\begin{proof}a\\end{proof}\n\\end{proof}')).toEqual(['+proof', '-proof'])
+    })
+
+    it('counts no \\begin inside code towards closing a stray \\end', () => {
+      const block = '\\begin{verbatim}\n\\begin{itemize}\n\\end{verbatim}\n\\end{itemize}'
+      expect(fences(block)).toEqual(['+verbatim', '-verbatim'])
+      const inline = 'Type \\verb|\\begin{proof}| here.\n\\end{proof}'
+      expect(fences(inline)).toEqual([])
     })
   })
 

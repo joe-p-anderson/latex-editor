@@ -201,14 +201,30 @@ const FRONT = /^(title|author|affiliation|altaffiliation|address|email|homepage|
 const untagged = (env: string) => FIGURES.test(env) || TABLES.test(env) || TABULARS.test(env)
 
 /**
+ * `tokens` without those inside a code block's body: verbatim's contents are
+ * text, so a \begin{itemize} there opens nothing and closes no stray \end.
+ */
+function codeBlockFree(tokens: EnvToken[]): EnvToken[] {
+  const out: EnvToken[] = []
+  let block: string | null = null
+  for (const t of tokens) {
+    if (block !== null) {
+      if (t.kind !== 'end' || t.name !== block) continue
+      block = null
+    } else if (t.kind === 'begin' && VERBATIM.test(t.name)) block = t.name
+    out.push(t)
+  }
+  return out
+}
+
+/**
  * Where the arguments after a \begin{name} that ends at `at` end: any `[…]`
- * and `{…}` groups that follow on the same line, each closing on it too.
- * `at` itself when there are none.
+ * and `{…}` groups that follow right after it (no space before each), each
+ * closing on the same line. A group after a space (\begin{center} {\Large T})
+ * is body text. `at` itself when there are none.
  */
 function envArgsEnd(src: string, at: number): number {
-  let end = at
   for (let i = at; ; ) {
-    while (src[i] === ' ' || src[i] === '\t') i++
     let close = -1
     if (src[i] === '[') {
       // Braces inside an optional argument can hold a ]: [see \cite{a]b}].
@@ -225,8 +241,8 @@ function envArgsEnd(src: string, at: number): number {
       close = closingBrace(src, i)
       if (close >= 0 && src.slice(i, close).includes('\n')) close = -1
     }
-    if (close < 0) return end
-    end = i = close + 1
+    if (close < 0) return i
+    i = close + 1
   }
 }
 
@@ -273,7 +289,7 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
   let front = null as Extract<LiveNode, { kind: 'front' }> | null
   const labels = new Map<string, LabelTarget>()
   const bibitems = new Map<string, string>()
-  const tokens = envTokens(text)
+  const tokens = codeBlockFree(envTokens(text))
   const tokenAt = new Map<number, EnvToken>(tokens.map((t) => [t.from, t]))
   // The \ends that close a \begin (by offset); a stray one gets no tag.
   const closing = new Set<number>()
