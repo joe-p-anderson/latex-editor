@@ -3,7 +3,8 @@ import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_LISTS, envTokens, listEnter, outline } from '../src/shared/latexedit'
 import { findMathRegions } from '../src/shared/mathregions'
-import { citeLabels, inlineParts, liveModel, parseTabular, type LiveNode } from '../src/shared/livemodel'
+import { inlineParts, liveModel, parseTabular, type LiveNode } from '../src/shared/livemodel'
+import { citeLabels } from '../src/shared/bibtex'
 import { createRenderer } from '../src/shared/mathrender'
 
 const LISTS = DEFAULT_LISTS

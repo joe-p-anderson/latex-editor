@@ -58,7 +58,7 @@ export type LiveNode =
   | { kind: 'math'; from: number; to: number; tex: string; display: boolean; env: string | null }
   | { kind: 'figure'; from: number; to: number; images: string[]; caption: string | null; number: string | null; labels: string[] }
   | { kind: 'table'; from: number; to: number; tabular: Tabular | null; caption: string | null; number: string | null; labels: string[] }
-  /** A code block (verbatim, minted, …): the whole environment, and its body between the egin's arguments and the \end. */
+  /** A code block (verbatim, minted, …): the whole environment, and its body between the \begin's arguments and the \end. */
   | { kind: 'verbatim'; from: number; to: number; bodyFrom: number; bodyTo: number }
   /** Inline code (\verb|…|, \lstinline, \mintinline): the whole span, and its contents between the delimiters. */
   | { kind: 'code'; from: number; to: number; bodyFrom: number; bodyTo: number }
@@ -161,14 +161,6 @@ const FORMAT = /^(textbf|textit|emph|underline|texttt|textsc|textsf|textsl|textu
 const REFS = /^(ref|eqref|cref|Cref|autoref|pageref|nameref|[Cc]ite[a-zA-Z]*|parencite|textcite|autocite|footcite|smartcite|supercite|nocite)$/
 /** Whether a ref-like command is a citation (its keys are bibliography keys, not labels). */
 export const isCite = (cmd: string) => /cite/i.test(cmd)
-
-/**
- * What each cited key shows: the label the last build's .aux gave it
- * (`compiled`), else its \bibitem's in a thebibliography (`bibitem`), else null.
- */
-export function citeLabels(keys: string[], compiled: Record<string, string> | undefined, bibitem: (key: string) => string | null | undefined): (string | null)[] {
-  return keys.map((k) => compiled?.[k] || bibitem(k) || null)
-}
 const SIUNITX: Record<string, number> = { SI: 2, qty: 2, si: 1, unit: 1, num: 1, ang: 1, SIrange: 3, qtyrange: 3, numrange: 2 }
 const VERBATIM = /^(verbatim|Verbatim|lstlisting|minted|comment)\*?$/
 const FIGURES = /^(figure|wrapfigure|SCfigure)\*?$/
@@ -200,7 +192,7 @@ const INCLUDES = /^(input|include|subfile|import|subimport|inputfrom|includefrom
 /** The commands a title block is made of (revtex's and the standard classes'). */
 const FRONT = /^(title|author|affiliation|altaffiliation|address|email|homepage|thanks|date|preprint|keywords|collaboration|noaffiliation)$/
 /** Environments shown by a widget of their own; every other one gets a faint tag at its \begin and \end. */
-const untagged = (env: string) => FIGURES.test(env) || TABLES.test(env) || TABULARS.test(env)
+const hasOwnWidget = (env: string) => FIGURES.test(env) || TABLES.test(env) || TABULARS.test(env)
 
 /**
  * `tokens` without those inside a code block's body: verbatim's contents are
@@ -670,7 +662,7 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
   function beginEnv(tok: EnvToken): void {
     const env = tok.name
     // The tag covers the arguments too, hidden with it; they aren't scanned.
-    const tagged = !untagged(env)
+    const tagged = !hasOwnWidget(env)
     const to = tagged ? envArgsEnd(src, tok.to) : tok.to
     if (tagged) {
       nodes.push({ kind: 'fence', from: tok.from, to, env, begin: true })
@@ -724,7 +716,7 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
       listBodies.push({ from: list.bodyFrom, to: tok.from, depth: list.depth })
       stack.length = i
     }
-    if (untagged(tok.name) || !closing.has(tok.from)) return
+    if (hasOwnWidget(tok.name) || !closing.has(tok.from)) return
     nodes.push({ kind: 'fence', from: tok.from, to: tok.to, env: tok.name, begin: false })
   }
 

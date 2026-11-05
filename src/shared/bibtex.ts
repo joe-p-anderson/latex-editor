@@ -280,6 +280,14 @@ export function citedCount(texts: string[]): number {
   return keys.size
 }
 
+/**
+ * What each cited key shows: the label the last build's .aux gave it
+ * (`compiled`), else its \bibitem's in a thebibliography (`bibitem`), else null.
+ */
+export function citeLabels(keys: string[], compiled: Record<string, string> | undefined, bibitem: (key: string) => string | null | undefined): (string | null)[] {
+  return keys.map((k) => compiled?.[k] || bibitem(k) || null)
+}
+
 // --- The .bib files a document names -----------------------------------------
 
 /** A .bib name as LaTeX reads it: `refs` is refs.bib. */
