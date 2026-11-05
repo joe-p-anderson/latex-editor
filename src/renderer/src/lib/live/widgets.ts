@@ -323,6 +323,54 @@ export class CiteWidget extends WidgetType {
   }
 }
 
+/** A .bib file a bibliography card names: as the card shows it, and where it is (vault-relative). */
+export interface BibCardFile {
+  name: string
+  rel: string
+  missing: boolean
+}
+
+/**
+ * \bibliography{…} or \printbibliography: a one-line card naming the .bib
+ * files and how many keys the project cites. Clicking a file name opens it;
+ * clicking elsewhere shows the source.
+ */
+export class BibliographyWidget extends WidgetType {
+  constructor(
+    readonly files: BibCardFile[],
+    readonly cited: number | null,
+  ) {
+    super()
+  }
+  eq(o: BibliographyWidget): boolean {
+    return o.cited === this.cited && JSON.stringify(o.files) === JSON.stringify(this.files)
+  }
+  toDOM(view: EditorView): HTMLElement {
+    const dom = el('div', 'cm-live-bib')
+    dom.append(el('span', 'cm-live-bib-icon', '❦'))
+    const names = el('span', 'cm-live-bib-files')
+    if (!this.files.length) names.append(el('span', 'cm-live-bib-file missing', 'no .bib file'))
+    this.files.forEach((f, i) => {
+      if (i) names.append(', ')
+      const a = el('span', `cm-live-bib-file${f.missing ? ' missing' : ''}`, f.name)
+      a.title = f.missing ? `${f.rel} wasn't found` : `Open ${f.rel}`
+      if (!f.missing) {
+        a.addEventListener('mousedown', (e) => {
+          if (e.button !== 0) return
+          e.preventDefault()
+          e.stopPropagation()
+          view.dom.dispatchEvent(new CustomEvent<OpenLocation>(OPEN_LOCATION_EVENT, { bubbles: true, detail: { file: f.rel, line: 1 } }))
+        })
+      }
+      names.append(a)
+    })
+    dom.append(names)
+    if (this.cited !== null) dom.append(el('span', '', `· ${this.cited} cited`))
+    revealOnClick(dom, view)
+    return spaced(dom)
+  }
+}
+
 /** What an \input card shows: the file and the numbered headings in it. */
 export interface IncludeCard {
   /** The file it brings in, vault-relative (or the argument, when it can't be resolved). */
