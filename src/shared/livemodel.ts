@@ -173,8 +173,38 @@ const roman = (n: number) => {
 const INCLUDES = /^(input|include|subfile|import|subimport|inputfrom|includefrom|subinputfrom|subincludefrom)$/
 /** The commands a title block is made of (revtex's and the standard classes'). */
 const FRONT = /^(title|author|affiliation|altaffiliation|address|email|homepage|thanks|date|preprint|keywords|collaboration|noaffiliation)$/
-/** Environments shown with a faint tag at \begin and \end, like lists. */
-const TAGGED = /^(abstract|subequations|document)$/
+/** Environments shown by a widget of their own; every other one gets a faint tag at its \begin and \end. */
+const untagged = (env: string) => VERBATIM.test(env) || FIGURES.test(env) || TABLES.test(env) || TABULARS.test(env)
+
+/**
+ * Where the arguments after a \begin{name} that ends at `at` end: any `[…]`
+ * and `{…}` groups that follow on the same line, each closing on it too.
+ * `at` itself when there are none.
+ */
+function envArgsEnd(src: string, at: number): number {
+  let end = at
+  for (let i = at; ; ) {
+    while (src[i] === ' ' || src[i] === '\t') i++
+    let close = -1
+    if (src[i] === '[') {
+      // Braces inside an optional argument can hold a ]: [see \cite{a]b}].
+      for (let j = i + 1, depth = 0; j < src.length && src[j] !== '\n'; j++) {
+        if (src[j] === '\\') j++
+        else if (src[j] === '{') depth++
+        else if (src[j] === '}') depth--
+        else if (src[j] === ']' && depth <= 0) {
+          close = j
+          break
+        }
+      }
+    } else if (src[i] === '{') {
+      close = closingBrace(src, i)
+      if (close >= 0 && src.slice(i, close).includes('\n')) close = -1
+    }
+    if (close < 0) return end
+    end = i = close + 1
+  }
+}
 
 /**
  * A heading's numbers under `style`: what its title shows (`display`) and
@@ -220,6 +250,17 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
   const labels = new Map<string, LabelTarget>()
   const tokens = envTokens(text)
   const tokenAt = new Map<number, EnvToken>(tokens.map((t) => [t.from, t]))
+  // The \ends that close a \begin (by offset); a stray one gets no tag.
+  const closing = new Set<number>()
+  const open = new Map<string, number>()
+  for (const t of tokens) {
+    const n = open.get(t.name) ?? 0
+    if (t.kind === 'begin') open.set(t.name, n + 1)
+    else if (n > 0) {
+      open.set(t.name, n - 1)
+      closing.add(t.from)
+    }
+  }
   const math = findMathRegions(text)
   let mi = 0
   // Math regions already turned into nodes (by offset).
@@ -539,7 +580,13 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
 
   function beginEnv(tok: EnvToken): void {
     const env = tok.name
-    if (TAGGED.test(env)) nodes.push({ kind: 'fence', from: tok.from, to: tok.to, env, begin: true })
+    // The tag covers the arguments too, hidden with it; they aren't scanned.
+    const tagged = !untagged(env)
+    const to = tagged ? envArgsEnd(src, tok.to) : tok.to
+    if (tagged) {
+      nodes.push({ kind: 'fence', from: tok.from, to, env, begin: true })
+      re.lastIndex = to
+    }
     if (env === 'abstract') {
       const close = matchEnd(tokens, tok)
       if (close) insets.push({ from: tok.to, to: close.from })
@@ -563,9 +610,8 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
         depth: (outer?.depth ?? 0) + 1,
         enumDepth: stack.filter((l) => l.env === 'enumerate').length + (env === 'enumerate' ? 1 : 0),
         itemDepth: stack.filter((l) => l.marker === 'item' && l.env !== 'enumerate').length + (marker === 'item' && env !== 'enumerate' ? 1 : 0),
-        bodyFrom: tok.to,
+        bodyFrom: to,
       })
-      nodes.push({ kind: 'fence', from: tok.from, to: tok.to, env, begin: true })
       return
     }
     if (VERBATIM.test(env) || FIGURES.test(env) || TABLES.test(env) || TABULARS.test(env)) {
@@ -579,15 +625,13 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
   }
 
   function endEnv(tok: EnvToken): void {
-    if (TAGGED.test(tok.name)) {
-      nodes.push({ kind: 'fence', from: tok.from, to: tok.to, env: tok.name, begin: false })
-      return
-    }
     const i = stack.findLastIndex((l) => l.env === tok.name)
-    if (i < 0) return
-    const list = stack[i]
-    listBodies.push({ from: list.bodyFrom, to: tok.from, depth: list.depth })
-    stack.length = i
+    if (i >= 0) {
+      const list = stack[i]
+      listBodies.push({ from: list.bodyFrom, to: tok.from, depth: list.depth })
+      stack.length = i
+    }
+    if (untagged(tok.name) || !closing.has(tok.from)) return
     nodes.push({ kind: 'fence', from: tok.from, to: tok.to, env: tok.name, begin: false })
   }
 
