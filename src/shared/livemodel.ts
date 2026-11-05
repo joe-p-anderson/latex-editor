@@ -9,6 +9,7 @@
 // line break), so callers pass state.doc.toString().
 import { blankComments, closingBrace, envTokens, matchEnd, type EnvToken } from './latexedit'
 import { findMathRegions } from './mathregions'
+import { codeSpans } from './codespans'
 import { graphicsPaths } from './images'
 
 export type ItemStyle = 'bullet' | 'number' | 'term' | 'box'
@@ -55,6 +56,8 @@ export type LiveNode =
   | { kind: 'figure'; from: number; to: number; images: string[]; caption: string | null; number: string | null; labels: string[] }
   | { kind: 'table'; from: number; to: number; tabular: Tabular | null; caption: string | null; number: string | null; labels: string[] }
   | { kind: 'verbatim'; from: number; to: number }
+  /** Inline code (\verb|…|, \lstinline, \mintinline): the whole span, and its contents between the delimiters. */
+  | { kind: 'code'; from: number; to: number; bodyFrom: number; bodyTo: number }
   | { kind: 'image'; from: number; to: number; path: string }
   | { kind: 'format'; from: number; to: number; cmd: string; openTo: number; closeFrom: number }
   | { kind: 'label'; from: number; to: number; key: string }
@@ -222,6 +225,8 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
   const tokenAt = new Map<number, EnvToken>(tokens.map((t) => [t.from, t]))
   const math = findMathRegions(text)
   let mi = 0
+  const code = codeSpans(text)
+  let ci = 0
   // Math regions already turned into nodes (by offset).
   const made = new Set<number>()
 
@@ -258,6 +263,14 @@ export function liveModel(text: string, lists: Record<string, string>, opts: Liv
   re.lastIndex = start
   for (let m = re.exec(src); m; m = re.exec(src)) {
     const p = m.index
+    // Inline code: shown as code, never scanned inside.
+    while (ci < code.length && code[ci].to <= p) ci++
+    const span = code[ci]
+    if (span && span.from <= p && p < span.to) {
+      if (p === span.from) nodes.push({ kind: 'code', ...span })
+      re.lastIndex = span.to
+      continue
+    }
     // Math: rendered whole, never scanned inside.
     while (mi < math.length && math[mi].to <= p) mi++
     const region = math[mi]

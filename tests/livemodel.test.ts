@@ -1,7 +1,8 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_LISTS } from '../src/shared/latexedit'
+import { DEFAULT_LISTS, envTokens } from '../src/shared/latexedit'
+import { findMathRegions } from '../src/shared/mathregions'
 import { inlineParts, liveModel, parseTabular, type LiveNode } from '../src/shared/livemodel'
 import { createRenderer } from '../src/shared/mathrender'
 
@@ -239,5 +240,51 @@ describe('citations', () => {
       ['citeauthor', ['e']],
     ])
     expect(text.slice(refs[1].from, refs[1].to)).toBe('\\citep[see][p.~4]{b, c}')
+  })
+})
+
+describe('inline code', () => {
+  it('shows \\verb contents as code and finds no heading or input card in them', () => {
+    const text = 'See \\verb|\\section{x}| and \\verb!\\input{a}!.'
+    const m = model(text)
+    expect(m.nodes.map((n) => n.kind)).toEqual(['code', 'code'])
+    const [a, b] = of(text, 'code')
+    expect(text.slice(a.from, a.to)).toBe('\\verb|\\section{x}|')
+    expect(text.slice(a.bodyFrom, a.bodyTo)).toBe('\\section{x}')
+    expect(text.slice(b.bodyFrom, b.bodyTo)).toBe('\\input{a}')
+  })
+
+  it('opens no environment for a \\begin inside \\verb', () => {
+    const text = 'Type \\verb|\\begin{itemize}| then\n\\item no list here'
+    expect(envTokens(text)).toEqual([])
+    expect(model(text).nodes.map((n) => n.kind)).toEqual(['code'])
+    const real = '\\verb|\\end{itemize}|\n\\begin{itemize}\n\\item a\n\\end{itemize}'
+    expect(envTokens(real).map((t) => t.kind)).toEqual(['begin', 'end'])
+  })
+
+  it('starts no math at a $ inside \\verb', () => {
+    const text = 'Costs \\verb|$| and $x$ and \\lstinline{$$}'
+    expect(findMathRegions(text).map((r) => r.tex)).toEqual(['x'])
+    expect(model(text).nodes.map((n) => n.kind)).toEqual(['code', 'math', 'code'])
+  })
+
+  it('renders every inline code form the same way', () => {
+    const text = '\\lstinline{a} \\lstinline!b! \\mintinline{python}{c} \\verb*|d|'
+    expect(of(text, 'code').map((c) => text.slice(c.bodyFrom, c.bodyTo))).toEqual(['a', 'b', 'c', 'd'])
+  })
+
+  it('leaves an unterminated \\verb as source, still scanning the rest of the line', () => {
+    const text = '\\verb|abc \\textbf{x} $y$'
+    expect(model(text).nodes.map((n) => n.kind)).toEqual(['format', 'math'])
+  })
+
+  it('keeps a % inside \\verb from commenting out the rest of the line', () => {
+    const text = '\\verb|50%| then \\textbf{x}'
+    expect(model(text).nodes.map((n) => n.kind)).toEqual(['code', 'format'])
+  })
+
+  it('still scans \\texttt, so formatting inside it renders', () => {
+    const text = '\\texttt{\\textbf{x}}'
+    expect(of(text, 'format').map((f) => f.cmd)).toEqual(['texttt', 'textbf'])
   })
 })
