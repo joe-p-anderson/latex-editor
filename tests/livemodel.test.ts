@@ -208,6 +208,58 @@ describe('liveModel', () => {
     expect(of(text, 'math')[0].tex).toContain('\\tag{1b}')
   })
 
+  describe('fence tags', () => {
+    const fences = (text: string) => of(text, 'fence').map((f) => `${f.begin ? '+' : '-'}${f.env}`)
+
+    it('tags environments it knows nothing about, user-defined ones included', () => {
+      const text = [
+        '\\newenvironment{mybox}{}{}',
+        '\\begin{document}',
+        '\\begin{acknowledgments}',
+        'Thanks.',
+        '\\end{acknowledgments}',
+        '\\begin{center}x\\end{center}',
+        '\\begin{proof}y\\end{proof}',
+        '\\begin{mybox}z\\end{mybox}',
+        '\\end{document}',
+      ].join('\n')
+      expect(fences(text)).toEqual(['+acknowledgments', '-acknowledgments', '+center', '-center', '+proof', '-proof', '+mybox', '-mybox', '-document'])
+    })
+
+    it('hides the arguments after \\begin{name} with its tag', () => {
+      const text = '\\begin{minipage}[t]{0.5\\textwidth} Body\n\\end{minipage}\n\\begin{theorem}[Pythagoras \\cite{p}]\n$a^2$\n\\end{theorem}\n\\begin{center}\n[not an argument]\n\\end{center}'
+      const begins = of(text, 'fence').filter((f) => f.begin)
+      expect(begins.map((f) => [f.env, text.slice(f.from, f.to)])).toEqual([
+        ['minipage', '\\begin{minipage}[t]{0.5\\textwidth}'],
+        ['theorem', '\\begin{theorem}[Pythagoras \\cite{p}]'],
+        ['center', '\\begin{center}'],
+      ])
+      // Nothing inside the hidden arguments is shown as a construct of its own.
+      expect(of(text, 'ref')).toEqual([])
+      expect(of(text, 'math')).toHaveLength(1)
+    })
+
+    it('leaves environments with a widget of their own untagged', () => {
+      const text = [
+        '\\begin{equation}a\\end{equation}',
+        '\\begin{align*}b\\end{align*}',
+        '\\begin{figure}[h]\\includegraphics{x}\\end{figure}',
+        '\\begin{table}\\begin{tabular}{c}1\\end{tabular}\\end{table}',
+        '\\begin{tabular}{l}2\\end{tabular}',
+      ].join('\n')
+      expect(fences(text)).toEqual([])
+      expect(of(text, 'math')).toHaveLength(2)
+      expect(of(text, 'figure')).toHaveLength(1)
+      expect(of(text, 'table')).toHaveLength(2)
+    })
+
+    it('tags an unclosed \\begin, but not a stray \\end', () => {
+      expect(fences('Text\n\\end{foo}\nMore')).toEqual([])
+      expect(fences('\\begin{proof}\nStill typing')).toEqual(['+proof'])
+      expect(fences('\\begin{proof}a\\end{proof}\n\\end{proof}')).toEqual(['+proof', '-proof'])
+    })
+  })
+
   it('handles every fixture document without throwing, with sorted nodes', () => {
     const root = resolve(import.meta.dirname, '../fixtures')
     const files: string[] = []
