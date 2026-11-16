@@ -75,6 +75,8 @@ const api: Api = {
   },
   search: (query, opts, overrides) => ipcRenderer.invoke('search:run', query, opts, overrides),
   askAboutUnsaved:(files, action) => ipcRenderer.invoke('dialog:unsaved', files, action),
+  keepUnsaved: (root, buffers) => ipcRenderer.invoke('unsaved:keep', root, buffers),
+  recoverUnsaved: (root) => ipcRenderer.invoke('unsaved:recover', root),
   closeWindow: () => ipcRenderer.invoke('window:close'),
   onCloseRequested: (cb) => {
     const listener = () => cb()

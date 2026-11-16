@@ -436,6 +436,19 @@
     }
   }
 
+  /**
+   * Replaces all of `rel`'s text with `text` as one undoable change (opening
+   * it in the background if needed), leaving it unsaved. Returns false if
+   * the text was already that.
+   */
+  export async function replaceText(rel: string, text: string): Promise<boolean> {
+    const state = rel === current ? view.state : await load(rel)
+    const insert = text.replace(/\r?\n/g, state.lineBreak)
+    if (state.sliceDoc() === insert) return false
+    await applyChangesTo(rel, [{ from: 0, to: state.doc.length, insert: text }])
+    return true
+  }
+
   /** Selects `from`–`to` in the open file and scrolls it into view. */
   export function select(from: number, to: number): void {
     const len = view.state.doc.length

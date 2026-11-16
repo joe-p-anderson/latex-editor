@@ -19,6 +19,7 @@ import { startTouchpad, stopTouchpad } from './touchpad'
 import { findTeX, texName } from './tex'
 import { forward, inverse } from './synctex'
 import { Vault } from './vault'
+import { UnsavedStore } from './unsaved'
 import { splitExt } from '../shared/paths'
 import { holdsTex, makeVault, newVaultChoices } from './newvault'
 import * as fileops from './fileops'
@@ -39,6 +40,9 @@ let vault: Vault | null = null
 // Set once the renderer has dealt with unsaved files, so the next close goes through.
 let closeConfirmed = false
 const plugins = new PluginHost(() => win)
+// Copies of unsaved buffers, put back after the window reloads or crashes.
+let unsavedStore: UnsavedStore | null = null
+const unsaved = () => (unsavedStore ??= new UnsavedStore(join(app.getPath('userData'), 'unsaved')))
 
 // The window's (and so the taskbar's) icon: the open vault's palette logo, in
 // the mid tier (24–64 px), dark or light to suit the taskbar. It keeps the
@@ -420,6 +424,8 @@ ipcMain.handle('search:run', (_e, query: string, opts: SearchOptions, overrides:
   searchVault(requireVault(), query, opts, overrides),
 )
 ipcMain.handle('dialog:unsaved', (_e, files: string[], action: string) => askAboutUnsaved(files, action))
+ipcMain.handle('unsaved:keep', (_e, root: string, buffers: Record<string, string>) => unsaved().write(root, buffers))
+ipcMain.handle('unsaved:recover', (_e, root: string) => unsaved().read(root))
 ipcMain.handle('window:close', () => {
   closeConfirmed = true
   win?.close()
