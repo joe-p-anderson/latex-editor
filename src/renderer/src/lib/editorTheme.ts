@@ -30,6 +30,13 @@ const page = EditorView.theme({
   '.cm-content': {
     caretColor: 'var(--ink)',
     flex: '0 0 auto',
+    // CodeMirror pins the content's flex-basis to its width whenever it is
+    // wider than the scroller (the page at its 260px floor in a narrow window),
+    // so long lines don't jitter, and drops the pin only when a re-measure
+    // sees the width change. The pin holds the width still, so the page stayed
+    // narrow after the window widened again. The page has its own width and
+    // lines always wrap, so the pin has no job here.
+    flexBasis: 'auto !important',
     width: 'calc(var(--leaf-w) - var(--pad-l))',
     boxSizing: 'border-box',
     backgroundColor: 'var(--paper)',

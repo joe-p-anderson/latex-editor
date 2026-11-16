@@ -1,6 +1,6 @@
-// First-time hints (.scratch/onboarding/spec.md, "First-time hints"): a
-// dismissible strip under the title bar, one hint at a time, each shown at
-// most once. Dismissals are stored in settings.json (dismissedHints);
+// First-time hints (.scratch/onboarding/spec.md, "First-time hints"): shown
+// in the toast at the bottom of the editor until closed with Got it, one hint
+// at a time, each shown at most once. Dismissals are stored in settings.json (dismissedHints);
 // Help → Show Hints Again clears them. The spec caps the list at three:
 // don't add a fourth without revisiting it.
 //
@@ -25,7 +25,7 @@ export function hintText(hint: Hint, keyFor: (commandId: string) => string | nul
 }
 
 /**
- * Which hint the strip shows, and the ones waiting behind it. Plain
+ * Which hint the toast shows, and the ones waiting behind it. Plain
  * TypeScript, so it can be unit-tested; the renderer mirrors it with `subscribe`.
  */
 export class HintQueue {
@@ -39,7 +39,7 @@ export class HintQueue {
     this.dismissed = new Set(dismissed)
   }
 
-  /** The hint on the strip, or null. */
+  /** The hint showing, or null. */
   get current(): Hint | null {
     const id = this.queue[0]
     return id ? HINTS.find((h) => h.id === id)! : null
@@ -52,7 +52,7 @@ export class HintQueue {
     this.change(() => this.queue.push(id))
   }
 
-  /** Closes the strip's hint; returns its id, to store, or null if none showed. */
+  /** Closes the showing hint; returns its id, to store, or null if none showed. */
   dismiss(): HintId | null {
     const id = this.queue[0] ?? null
     if (!id) return null

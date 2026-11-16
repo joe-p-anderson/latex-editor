@@ -14,8 +14,8 @@
   import Editor from './lib/Editor.svelte'
   import PdfViewer from './lib/PdfViewer.svelte'
   import ProblemsPanel from './lib/ProblemsPanel.svelte'
-  import HintStrip from './lib/HintStrip.svelte'
-  import { showHintsAgainCommand, triggerHint } from './lib/hints.svelte'
+  import { hintText } from '@shared/hints'
+  import { currentHint, dismissHint, showHintsAgainCommand, triggerHint } from './lib/hints.svelte'
   import ImagePicker from './lib/ImagePicker.svelte'
   import Outline from './lib/Outline.svelte'
   import TabBar from './lib/TabBar.svelte'
@@ -117,6 +117,9 @@
       expired?.onExpire?.()
     }, action ? 6000 : 3500)
   }
+  // The first-time hint showing, if any (src/shared/hints.ts): it takes the
+  // toast's place while no note is up, and stays until its Got it.
+  const hint = $derived(currentHint())
   function runNoteAction(): void {
     const action = noteAction
     clearTimeout(noteTimer)
@@ -1056,7 +1059,9 @@
       loadImages()
       loadSnippets()
       refreshBranch()
+      if (v) void recoverUnsaved(v)
     })
+    const keeping = setInterval(() => void keepUnsaved(), KEEP_EVERY_MS)
     const offTree = window.api.onTreeChanged((tree) => {
       if (vault) vault.tree = tree
       loadImages()
@@ -1075,7 +1080,7 @@
       else commands.run(name, commandContext())
     })
     window.api.setSpellcheckMenu(spellOn)
-    return () => (offTree(), offVault(), offClose(), offAppMenu(), offPlugins())
+    return () => (offTree(), offVault(), offClose(), offAppMenu(), offPlugins(), clearInterval(keeping))
   })
 
   /** The welcome screen's "Open a folder…". */
@@ -1089,6 +1094,7 @@
     if (vault && !(await settleUnsaved('opening another vault'))) return false
     const v = await get().catch((e: Error) => (flash(remoteMessage(e)), null))
     if (v) adopt(v)
+    else if (vault) resumeKeeping(vault.root) // still here, with whatever wasn't discarded
     return !!v
   }
 
@@ -1101,6 +1107,69 @@
     loadImages()
     loadSnippets()
     refreshBranch()
+    void recoverUnsaved(v)
+  }
+
+  // --- Keeping a copy of unsaved buffers --------------------------------------
+  // Every couple of seconds the unsaved buffers are copied to disk (by the
+  // main process), so a window that reloads or crashes loses nothing: the
+  // next start puts them back as unsaved changes. A dev build reloads the
+  // window whenever it reconnects to its dev server, e.g. after sleep.
+
+  const KEEP_EVERY_MS = 2000
+  // The vault whose copy is kept up to date: none until its copy was read back.
+  let keptFor: string | null = null
+  let lastKept = ''
+
+  function resumeKeeping(root: string): void {
+    keptFor = root
+    lastKept = ''
+  }
+
+  /** Copies the unsaved buffers to disk, if they changed since the last copy. */
+  async function keepUnsaved(): Promise<void> {
+    if (!vault || !editor || keptFor !== vault.root) return
+    const root = vault.root
+    const buffers = Object.fromEntries(editor.dirtyTexts())
+    const json = JSON.stringify(buffers)
+    if (json === lastKept) return
+    lastKept = json
+    await window.api.keepUnsaved(root, buffers).catch(() => {
+      if (lastKept === json) lastKept = '' // try again next time
+    })
+  }
+
+  /** Stops keeping a copy for the open vault and removes it (its unsaved changes were discarded). */
+  async function dropKept(): Promise<void> {
+    if (!vault) return
+    keptFor = null
+    await window.api.keepUnsaved(vault.root, {}).catch(() => {})
+  }
+
+  /** Puts back `v`'s unsaved buffers kept from before the window reloaded or crashed. */
+  async function recoverUnsaved(v: VaultInfo): Promise<void> {
+    keptFor = null
+    const kept = await window.api.recoverUnsaved(v.root).catch(() => ({}) as Record<string, string>)
+    await tick() // the editor appears once there's a vault
+    if (vault?.root !== v.root) return
+    if (!editor) return resumeKeeping(v.root)
+    const present = new Set(allFiles(v.tree))
+    const restored: string[] = []
+    const gone: string[] = []
+    for (const [rel, text] of Object.entries(kept)) {
+      if (!present.has(rel) || !TEXT_FILE.test(rel)) gone.push(rel)
+      else if (await editor.replaceText(rel, text).catch(() => false)) {
+        addTab(rel)
+        restored.push(rel)
+      }
+    }
+    if (vault?.root !== v.root) return
+    resumeKeeping(v.root)
+    if (restored.length && !active) await openFile(restored[0])
+    const n = restored.length
+    if (n) flash(`Recovered unsaved changes to ${n === 1 ? restored[0].split('/').pop() : `${n} files`}`)
+    if (gone.length) flash(`Couldn't recover unsaved changes to ${gone.join(', ')}: ${gone.length === 1 ? "it's" : "they're"} no longer in the vault`)
+    void keepUnsaved()
   }
 
   /**
@@ -1174,6 +1243,7 @@
 
   /** Forgets the open vault's files, build and tabs. */
   function reset(): void {
+    keptFor = null
     for (const rel of tabs) editor?.close(rel)
     active = null
     tabs = []
@@ -1301,6 +1371,8 @@
     const answer = await window.api.askAboutUnsaved([...texts.keys()], action)
     if (answer === 'cancel') return false
     if (answer === 'save') await saveAll()
+    if (answer === 'discard') await dropKept()
+    else await keepUnsaved()
     return true
   }
 
@@ -2096,7 +2168,6 @@
     ontogglepanel={() => togglePanel()}
     onribbon={() => togglePanel('problems')}
   />
-  <HintStrip {keyFor} />
 
   {#if !started}
     <div class="starting"></div>
@@ -2325,6 +2396,11 @@
             {#if note}
               <div class="note" class:acts={!!noteAction}>
                 {note}{#if noteAction}<button onclick={runNoteAction} title={noteAction.label === 'Undo' ? 'Undo (Ctrl+Z)' : undefined}>{noteAction.label}</button>{/if}
+              </div>
+            {:else if hint}
+              <!-- A first-time hint waits in the toast's place until closed; a passing note shows over it. -->
+              <div class="note acts hint" role="status">
+                {hintText(hint, keyFor)}<button onclick={dismissHint} title="Don't show this again">Got it</button>
               </div>
             {/if}
           </section>
@@ -2793,6 +2869,11 @@
   .note button {
     padding: 1px 10px;
     font-weight: 600;
+    flex-shrink: 0;
+  }
+  .note.hint {
+    width: max-content;
+    max-width: min(560px, calc(100% - 32px));
   }
   .banner {
     display: flex;

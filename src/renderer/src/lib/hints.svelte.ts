@@ -10,7 +10,7 @@ queue.subscribe(() => (current = queue.current))
 // Dismissals come from settings; hints triggered before they arrive wait for them.
 void window.api.dismissedHints().then((ids) => queue.setDismissed(ids))
 
-/** The hint the strip shows, or null. */
+/** The hint the toast shows, or null. */
 export const currentHint = (): Hint | null => current
 
 /** Something happened that a hint explains: shows it unless it was dismissed. */
@@ -18,7 +18,7 @@ export function triggerHint(id: HintId): void {
   queue.trigger(id)
 }
 
-/** Closes the strip's hint for good. */
+/** Closes the showing hint for good. */
 export function dismissHint(): void {
   const id = queue.dismiss()
   if (id) void window.api.dismissHint(id)

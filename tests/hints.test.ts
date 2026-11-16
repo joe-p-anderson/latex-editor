@@ -1,5 +1,5 @@
 // The first-time hints (.scratch/onboarding/spec.md, "First-time hints"):
-// one strip at a time, a queue behind it, and dismissals that stick.
+// one hint at a time, a queue behind it, and dismissals that stick.
 import { describe, expect, it } from 'vitest'
 import { HINTS, HintQueue, hintText } from '../src/shared/hints'
 
@@ -68,7 +68,7 @@ describe('HintQueue', () => {
     expect(q.current?.id).toBe('first-error')
   })
 
-  it('tells its listener when the strip changes', () => {
+  it('tells its listener when the showing hint changes', () => {
     const q = new HintQueue([])
     const seen: (string | null)[] = []
     q.subscribe(() => seen.push(q.current?.id ?? null))

@@ -325,6 +325,10 @@ export interface Api {
   search(query: string, opts: SearchOptions, overrides: Record<string, string>): Promise<SearchResult>
   /** Asks whether to save the unsaved `files` before `action` (e.g. "closing"). */
   askAboutUnsaved(files: string[], action: string): Promise<'save' | 'discard' | 'cancel'>
+  /** Keeps a copy of the vault at `root`'s unsaved buffers on disk ({} clears it), to recover after a reload or crash. */
+  keepUnsaved(root: string, buffers: Record<string, string>): Promise<void>
+  /** The unsaved buffers last kept for the vault at `root`. */
+  recoverUnsaved(root: string): Promise<Record<string, string>>
   /** Closes the window for real (after unsaved files were dealt with). */
   closeWindow(): Promise<void>
   /** The user asked to close the window; the renderer decides, then calls closeWindow. */

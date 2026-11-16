@@ -113,9 +113,6 @@ const PAIRS: Pair[] = [
   { what: 'count badge', fg: 'ink', bg: ['line'], min: TEXT },
   { what: 'error count badge', fg: 'paper', bg: ['err'], min: TEXT },
   { what: 'warning count badge', fg: 'paper', bg: ['warn'], min: TEXT },
-  // The first-time hint strip under the title bar (HintStrip).
-  { what: 'hint text', fg: 'ink', bg: ['side'], min: TEXT },
-  { what: 'hint ×', fg: 'ink-soft', bg: ['side'], min: GRAPHIC },
 ]
 
 const CONFIGS = PALETTES.flatMap((palette) =>
